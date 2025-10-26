@@ -83,7 +83,7 @@ export const useTelegramAuth = () => {
       setLoading(false)
     } catch (err: any) {
       console.error('Telegram auth error:', err)
-      setError(err.response?.data?.detail || err.response?.data?.message || 'Telegram authentication failed')
+      setError(err.response?.data?.detail || err.response?.data?.message || `Telegram authentication failed ${JSON.stringify(err)}`)
       setLoading(false)
     }
   }
