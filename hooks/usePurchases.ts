@@ -12,8 +12,10 @@ export const usePurchases = (page: number = 1) => {
       setLoading(true)
       setError(null)
       const response = await api.get(`/finance/purchase/?page=${pageNum}`)
+      console.log(response)
       setPurchases(response.data)
     } catch (err: any) {
+        console.log(err)
       setError(err.response?.data?.message || 'Failed to fetch purchases')
     } finally {
       setLoading(false)

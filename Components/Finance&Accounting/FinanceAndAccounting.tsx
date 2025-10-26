@@ -137,6 +137,18 @@ const StockContent = () => (
 const ProfileContent = ({ user }: { user: any }) => {
   return (
     <div className="flex flex-col items-center justify-center text-center mt-10">
+      <div onClick={()=>{
+         localStorage.removeItem('access_token')
+    localStorage.removeItem('user_data')
+    
+    // Close Telegram Mini App
+    if (typeof window !== 'undefined' && window?.Telegram?.WebApp?.close) {
+      window.Telegram.WebApp.close()
+    } else {
+      // Fallback: reload the page if not in Telegram
+      window.location.reload()
+    }
+      }}>LOGOUT</div>
       {user ? (
         <>
           <img
@@ -145,6 +157,7 @@ const ProfileContent = ({ user }: { user: any }) => {
             className="w-24 h-24 rounded-full border-2 border-blue-500 mb-3"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://telegram.org/img/t_logo.png'
+
             }}
           />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
