@@ -110,7 +110,7 @@ export const OverviewContent = () => {
                 </div>
               )}
 
-              {purchases?.results.length === 0 && (
+              {purchases?.results?.length === 0 && (
                 <div className="text-center py-12">
                   <Package size={48} className="mx-auto text-gray-400 dark:text-gray-600 mb-4" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No purchases found</h3>
