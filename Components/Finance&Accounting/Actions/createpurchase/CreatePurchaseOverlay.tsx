@@ -1,9 +1,12 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { X, Plus, Trash, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react'
+import { X, Plus, AlertCircle, CheckCircle } from 'lucide-react'
 import api from '@/api'
 import type { AxiosResponse } from 'axios'
+import { MaterialRow } from './MaterialRow'
+import { FileUpload } from './FileUpload'
+import { AccountInfo } from './AccountInfo'
 
 type MaterialOption = {
   id: number
@@ -11,6 +14,15 @@ type MaterialOption = {
   type: string
   type_display: string
   available: string
+}
+
+type Inventory = {
+  id: number
+  name: string
+  type: string
+  admins: any[]
+  created_at: string
+  updated_at: string
 }
 
 type Row = {
@@ -53,21 +65,24 @@ interface CreatePurchaseProps {
 }
 
 export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
-  const [materials, setMaterials] = useState<MaterialOption[]>([])
   const [rows, setRows] = useState<Row[]>(() => [emptyRow('r1')])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [invoice, setInvoice] = useState(false)
-  const [payer, setPayer] = useState<'FINANCE' | 'ADMIN'>('FINANCE')
+  const [payer, setPayer] = useState<'FINANCE' | 'ADMIN'>('ADMIN') // Default to ADMIN
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
   const [paymentConfirmationFile, setPaymentConfirmationFile] = useState<File | null>(null)
   const [paymentCode, setPaymentCode] = useState('')
   const [toAccountNumber, setToAccountNumber] = useState('')
   const [toAccountName, setToAccountName] = useState('')
+  const [selectedInventory, setSelectedInventory] = useState<number | null>(null)
+  const [inventories, setInventories] = useState<Inventory[]>([])
+  const [loadingInventories, setLoadingInventories] = useState(false)
+  const [inventoryError, setInventoryError] = useState<string | null>(null)
   const [globalError, setGlobalError] = useState<string | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  // Get user data from localStorage
+  // Get user data from localStorage and fetch inventories
   useEffect(() => {
     if (!open) return
     
@@ -87,24 +102,43 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
     // Reset form when opening
     setRows([emptyRow('r1')])
     setInvoice(false)
-    setPayer('FINANCE')
+    setPayer('ADMIN') // Reset to ADMIN
     setInvoiceFile(null)
     setPaymentConfirmationFile(null)
     setPaymentCode('')
     setToAccountNumber('')
     setToAccountName('')
+    setSelectedInventory(null)
     setGlobalError(null)
     setSuccessMessage(null)
-    
-    // Fetch materials
-    api.get('/materials/')
-      .then((res: AxiosResponse) => setMaterials(res.data.results || []))
-      .catch((error) => {
-        console.error('Error fetching materials:', error)
-        setGlobalError('Failed to load materials. Please try again.')
-        setMaterials([])
-      })
   }, [open])
+
+  // Fetch inventories when payer is FINANCE and modal is open
+  useEffect(() => {
+    if (open && payer === 'FINANCE') {
+      fetchInventories()
+    }
+  }, [open, payer])
+
+  const fetchInventories = async () => {
+    try {
+      setLoadingInventories(true)
+      setInventoryError(null)
+      const response = await api.get('/inventories/?type=SM')
+      setInventories(response.data)
+      
+      // Set default to second result if available, otherwise first
+      if (response.data.length > 0) {
+        const defaultInventory = response.data.length > 1 ? response.data[1].id : response.data[0].id
+        setSelectedInventory(defaultInventory)
+      }
+    } catch (err: any) {
+      console.error('Error fetching inventories:', err)
+      setInventoryError('Failed to load inventories')
+    } finally {
+      setLoadingInventories(false)
+    }
+  }
 
   useEffect(() => {
     // Recalculate totals whenever rows change
@@ -160,10 +194,13 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
         return false
       }
     }
-    
-    if (!toAccountName || !toAccountNumber) {
-      setGlobalError('Please provide account name and account number to pay to.')
-      return false
+
+    // ADMIN payment validations
+    if (payer === 'ADMIN') {
+      if (!toAccountName || !toAccountNumber) {
+        setGlobalError('Please provide account name and account number to pay to.')
+        return false
+      }
     }
 
     // Finance payment validations
@@ -172,14 +209,11 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
         setGlobalError('Invoice image is required when invoice is selected and paid by Finance.')
         return false
       }
-      if (!paymentConfirmationFile) {
-        setGlobalError('Payment confirmation image is required for Finance payments.')
+      if (!selectedInventory) {
+        setGlobalError('Please select an inventory for the materials.')
         return false
       }
-      if (!paymentCode) {
-        setGlobalError('Payment code is required for Finance payments.')
-        return false
-      }
+      // Finance fields are optional as per requirements
     }
 
     setGlobalError(null)
@@ -222,10 +256,16 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
       // 2) Create Purchase with FormData for file uploads
       const formData = new FormData()
       formData.append('total_amount', String(+grandTotal.toFixed(2)))
-      formData.append('to_account_number', String(toAccountNumber))
+      formData.append('to_account_number', toAccountNumber)
       formData.append('to_account_name', toAccountName)
       formData.append('invoice', String(invoice))
-      formData.append('created_by', String(userData?.id)) // Add created_by field
+      formData.append('created_by', String(userData?.id))
+      formData.append('from_wallet', payer === 'ADMIN' ? 'A' : 'F')
+
+      // Add inventory for Finance payments
+      if (payer === 'FINANCE' && selectedInventory) {
+        formData.append('inventory', selectedInventory.toString())
+      }
 
       // Append each material ID individually for Django to recognize as list
       eachIds.forEach(id => {
@@ -235,8 +275,11 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
       // Set status and request_status based on payer
       if (payer === 'FINANCE') {
         formData.append('status', 'D') // DONE PURCHASED
-        formData.append('request_status', 'NS') // NOT SENT (default)
-        formData.append('payment_code', paymentCode)
+        formData.append('request_status', 'NS') // NOT SENT
+        
+        if (paymentCode) {
+          formData.append('payment_code', paymentCode)
+        }
         
         // Add files for Finance payment
         if (invoice && invoiceFile) {
@@ -246,7 +289,7 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
           formData.append('payment_screenshot', paymentConfirmationFile)
         }
       } else {
-        // ADMIN payment - just a request
+        // ADMIN payment
         formData.append('status', 'P') // IN PROGRESS
         formData.append('request_status', 'S') // SENT
       }
@@ -310,7 +353,7 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => !isSubmitting && onClose()}
-                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800"
+                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
                 disabled={isSubmitting}
               >
                 <X size={20} />
@@ -361,22 +404,6 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
                     </label>
                     <div className="flex gap-2">
                       <label className={`flex-1 text-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
-                        payer === 'FINANCE' 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
-                      } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <input 
-                          type="radio" 
-                          name="payer" 
-                          value="FINANCE" 
-                          checked={payer === 'FINANCE'} 
-                          onChange={() => setPayer('FINANCE')} 
-                          className="hidden" 
-                          disabled={isSubmitting}
-                        />
-                        Finance
-                      </label>
-                      <label className={`flex-1 text-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
                         payer === 'ADMIN' 
                           ? 'bg-blue-500 text-white' 
                           : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
@@ -392,101 +419,106 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
                         />
                         Admin Wallet
                       </label>
+                      <label className={`flex-1 text-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
+                        payer === 'FINANCE' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
+                      } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <input 
+                          type="radio" 
+                          name="payer" 
+                          value="FINANCE" 
+                          checked={payer === 'FINANCE'} 
+                          onChange={() => setPayer('FINANCE')} 
+                          className="hidden" 
+                          disabled={isSubmitting}
+                        />
+                        Finance
+                      </label>
                     </div>
                   </div>
                 </div>
 
-                {/* Account Information */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Inventory Selection - Only for Finance payments */}
+                {payer === 'FINANCE' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      To Account Name *
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Inventory *
                     </label>
-                    <input
-                      value={toAccountName}
-                      onChange={(e) => setToAccountName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white"
-                      placeholder="Account holder name"
-                      disabled={isSubmitting}
-                    />
+                    {loadingInventories ? (
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Loading inventories...
+                      </div>
+                    ) : inventoryError ? (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                        <AlertCircle size={16} />
+                        {inventoryError}
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedInventory || ''}
+                        onChange={(e) => setSelectedInventory(Number(e.target.value))}
+                        className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                        disabled={isSubmitting}
+                      >
+                        <option value="">Select an inventory</option>
+                        {inventories.map((inventory) => (
+                          <option key={inventory.id} value={inventory.id}>
+                            {inventory.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Choose where to store the purchased materials
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      To Account Number *
-                    </label>
-                    <input
-                      value={toAccountNumber}
-                      onChange={(e) => setToAccountNumber(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white"
-                      placeholder="Account number"
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
+                )}
+
+                {/* Account Information - Required for ADMIN, Optional for Finance */}
+                <AccountInfo
+                  toAccountNumber={toAccountNumber}
+                  toAccountName={toAccountName}
+                  onAccountNumberChange={setToAccountNumber}
+                  onAccountNameChange={setToAccountName}
+                  disabled={isSubmitting}
+                  required={payer === 'ADMIN'}
+                />
 
                 {/* Finance Payment Specific Fields */}
                 {payer === 'FINANCE' && (
                   <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Payment Code *
-                        </label>
-                        <input
-                          value={paymentCode}
-                          onChange={(e) => setPaymentCode(e.target.value)}
-                          className="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white"
-                          placeholder="Payment reference code"
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Invoice Upload */}
-                    {invoice && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Invoice Image *
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-gray-500" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
-                            className="flex-1 text-sm"
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                        {invoiceFile && (
-                          <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            ✓ {invoiceFile.name}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Payment Confirmation */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Payment Confirmation *
+                        Payment Code (Optional)
                       </label>
-                      <div className="flex items-center gap-2">
-                        <Upload size={16} className="text-gray-500" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setPaymentConfirmationFile(e.target.files?.[0] ?? null)}
-                          className="flex-1 text-sm"
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      {paymentConfirmationFile && (
-                        <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          ✓ {paymentConfirmationFile.name}
-                        </div>
-                      )}
+                      <input
+                        value={paymentCode}
+                        onChange={(e) => setPaymentCode(e.target.value)}
+                        className="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                        placeholder="Payment reference code"
+                        disabled={isSubmitting}
+                      />
                     </div>
+
+                    {/* Invoice Upload - Only show if invoice is true */}
+                    {invoice && (
+                      <FileUpload
+                        label="Invoice Image"
+                        required={invoice}
+                        value={invoiceFile}
+                        onChange={setInvoiceFile}
+                        disabled={isSubmitting}
+                      />
+                    )}
+
+                    {/* Payment Confirmation - Optional */}
+                    <FileUpload
+                      label="Payment Confirmation (Optional)"
+                      value={paymentConfirmationFile}
+                      onChange={setPaymentConfirmationFile}
+                      disabled={isSubmitting}
+                    />
                   </>
                 )}
 
@@ -494,7 +526,7 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
                 <div className="border-t border-gray-200 dark:border-zinc-700 pt-4">
                   <div className="flex items-center justify-between mb-3">
                     <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Materials
+                      Materials *
                     </h5>
                   </div>
 
@@ -509,71 +541,22 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
 
                   {/* Materials Rows */}
                   <div className="space-y-2">
-                    {rows.map((r, idx) => (
-                      <div key={r.id} className="grid grid-cols-12 gap-2 items-center">
-                        <div className="col-span-5">
-                          <select
-                            value={r.materialId ?? ''}
-                            onChange={(e) => updateRow(r.id, { materialId: e.target.value ? Number(e.target.value) : null })}
-                            className="w-full px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white"
-                            disabled={isSubmitting}
-                          >
-                            <option value="">Select material</option>
-                            {materials.map(m => (
-                              <option key={m.id} value={m.id}>
-                                {m.name} — {m.type_display} (avail {m.available})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="col-span-2">
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={r.amount}
-                            onChange={(e) => updateRow(r.id, { amount: Number(e.target.value) })}
-                            className="w-full px-2 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white"
-                            placeholder="0.00"
-                            disabled={isSubmitting}
-                          />
-                        </div>
-
-                        <div className="col-span-2">
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={r.price}
-                            onChange={(e) => updateRow(r.id, { price: Number(e.target.value) })}
-                            className="w-full px-2 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-white"
-                            placeholder="0.00"
-                            disabled={isSubmitting}
-                          />
-                        </div>
-
-                        <div className="col-span-2 text-sm font-medium text-gray-800 dark:text-white px-2">
-                          ${r.total.toFixed(2)}
-                        </div>
-
-                        <div className="col-span-1 flex justify-center">
-                          <button 
-                            onClick={() => removeRow(r.id)} 
-                            className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 hover:text-red-700"
-                            disabled={rows.length <= 1 || isSubmitting}
-                          >
-                            <Trash size={16} />
-                          </button>
-                        </div>
-                      </div>
+                    {rows.map((row, index) => (
+                      <MaterialRow
+                        key={row.id}
+                        row={row}
+                        onUpdate={updateRow}
+                        onRemove={removeRow}
+                        disabled={isSubmitting}
+                        showRemove={rows.length > 1}
+                      />
                     ))}
                   </div>
 
                   {/* Add Material Button at Bottom */}
                   <button
                     onClick={addRow}
-                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
                     disabled={isSubmitting}
                   >
                     <Plus size={16} />
@@ -607,16 +590,16 @@ export default function CreatePurchase({ open, onClose }: CreatePurchaseProps) {
             <div className="flex items-center justify-end gap-3 px-4 py-3 border-t border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800">
               <button
                 onClick={() => !isSubmitting && onClose()}
-                className="px-6 py-2 rounded-md bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors"
+                className="px-6 py-2 rounded-md bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50"
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={submit}
-                disabled={isSubmitting || !userData}
+                disabled={isSubmitting || !userData || (payer === 'FINANCE' && !selectedInventory)}
                 className={`px-6 py-2 rounded-md text-white transition-colors ${
-                  isSubmitting || !userData
+                  isSubmitting || !userData || (payer === 'FINANCE' && !selectedInventory)
                     ? 'bg-blue-400 cursor-not-allowed' 
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}

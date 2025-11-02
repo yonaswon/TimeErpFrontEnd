@@ -2,62 +2,57 @@
 
 import { useEffect, useState } from 'react'
 import {
-  BarChart3,
-  Zap,
+  Wallet,
   Package,
+  Wrench,
+  UserCircle2,
 } from 'lucide-react'
-import ActionsContent from './Actions/Actions'
-import { OverviewContent } from './Overview/OverviewContent'
+import FinanceContent from './Finace/FinanceContent'
 
-type TabType = 'overview' | 'actions' | 'stock' | 'profile'
+type TabType = 'finance' | 'stock' | 'workshop' | 'profile'
 
-const FinanceAndAccounting = ({ userData,selectedRole,onRoleSelect}:any) => {
-  const [activeTab, setActiveTab] = useState<TabType>('overview')
+const AdminMobile = ({userData,selectedRole,onRoleSelect}:any) => {
+  const [activeTab, setActiveTab] = useState<TabType>('finance')
   const [user, setUser] = useState<any>(null)
 
-  // ✅ Get Telegram user info (Mini App context)
+  // ✅ Telegram Mini App setup
   useEffect(() => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp
       tg.ready()
       setUser(tg.initDataUnsafe?.user)
       tg.expand()
-      // Sync dark mode with Telegram theme
-      // document.documentElement.classList.toggle('dark', tg.colorScheme === 'dark')
     }
   }, [])
 
   const tabs = [
-    { id: 'overview' as TabType, label: 'Overview', icon: BarChart3 },
-    { id: 'actions' as TabType, label: 'Actions', icon: Zap },
+    { id: 'finance' as TabType, label: 'Finance', icon: Wallet },
     { id: 'stock' as TabType, label: 'Stock', icon: Package },
+    { id: 'workshop' as TabType, label: 'Workshop', icon: Wrench },
     { id: 'profile' as TabType, label: 'Profile', icon: null },
   ]
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview':
-        return <OverviewContent />
-      case 'actions':
-        return <ActionsContent />
+      case 'finance':
+        return <FinanceContent />
       case 'stock':
         return <StockContent />
+      case 'workshop':
+        return <WorkshopContent />
       case 'profile':
         return <ProfileContent user={user}
-            userData={userData} 
+        userData={userData} 
             selectedRole={selectedRole} 
             onRoleSelect={onRoleSelect}  />
       default:
-        return <OverviewContent />
+        return <FinanceContent />
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex flex-col pb-16 transition-colors duration-300">
-      {/* Main Content */}
-      <div className="flex-1 p-3">
-        {renderContent()}
-      </div>
+      <div className="flex-1 p-3">{renderContent()}</div>
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 flex justify-around py-2 z-20">
@@ -65,7 +60,6 @@ const FinanceAndAccounting = ({ userData,selectedRole,onRoleSelect}:any) => {
           const isActive = activeTab === tab.id
           const Icon = tab.icon
 
-          // ✅ Profile Tab with User Image
           if (tab.id === 'profile') {
             const imageUrl = user?.username
               ? `https://t.me/i/userpic/160/${user.username}.jpg`
@@ -81,7 +75,8 @@ const FinanceAndAccounting = ({ userData,selectedRole,onRoleSelect}:any) => {
                   src={imageUrl}
                   alt="Profile"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://telegram.org/img/t_logo.png'
+                    (e.target as HTMLImageElement).src =
+                      'https://telegram.org/img/t_logo.png'
                   }}
                   className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
                     isActive ? 'border-blue-500 scale-110' : 'border-transparent'
@@ -100,7 +95,6 @@ const FinanceAndAccounting = ({ userData,selectedRole,onRoleSelect}:any) => {
             )
           }
 
-          // ✅ Other Tabs
           return (
             <button
               key={tab.id}
@@ -121,37 +115,79 @@ const FinanceAndAccounting = ({ userData,selectedRole,onRoleSelect}:any) => {
   )
 }
 
-export default FinanceAndAccounting
+export default AdminMobile
 
-// ----------------------------
-// 🧾 Content Components
-// ----------------------------
+// ---------------------------
+// 📊 Tab Content Components
+// ---------------------------
+
+const ScrollableMenu = ({ items }: { items: string[] }) => (
+  <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+    {items.map((item) => (
+      <button
+        key={item}
+        className="px-4 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-200 dark:hover:bg-zinc-700 transition"
+      >
+        {item}
+      </button>
+    ))}
+  </div>
+)
 
 
 const StockContent = () => (
   <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Stock Management</h2>
-    <p className="text-gray-600 dark:text-gray-300 text-sm">
-      Manage and track your available stock efficiently.
-    </p>
+    <ScrollableMenu items={['Current Stock', 'Incoming Orders']} />
+    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mt-4">
+      Stock Component
+    </h2>
   </div>
 )
 
-const ProfileContent = ({ user, userData,selectedRole,onRoleSelect }: any) => {
+const WorkshopContent = () => (
+  <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
+    <ScrollableMenu items={['Active Jobs', 'Pending Jobs']} />
+    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mt-4">
+      Workshop Component
+    </h2>
+  </div>
+)
+
+import { useTheme } from 'next-themes'
+const ProfileContent = ({ user,onRoleSelect,userData,selectedRole}: any) => {
+  const { theme, setTheme } = useTheme()
   return (
     <div className="flex flex-col items-center justify-center text-center mt-10">
-      <div onClick={()=>{
-         localStorage.removeItem('access_token')
-    localStorage.removeItem('user_data')
-    
-    // Close Telegram Mini App
-    if (typeof window !== 'undefined' && window?.Telegram?.WebApp?.close) {
-      window.Telegram.WebApp.close()
-    } else {
-      // Fallback: reload the page if not in Telegram
-      window.location.reload()
-    }
-      }}>LOGOUT</div>
+      <div
+        onClick={() => {
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('user_data')
+
+          if (
+            typeof window !== 'undefined' &&
+            window?.Telegram?.WebApp?.close
+          ) {
+            window.Telegram.WebApp.close()
+          } else {
+            window.location.reload()
+          }
+        }}
+        className="mb-4 text-sm text-red-500 font-medium cursor-pointer hover:underline"
+      >
+        LOGOUT
+      </div>
+     <button
+                onClick={() => {
+                  setTheme(theme === 'light' ? 'dark' : 'light')
+                }}
+                className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-between"
+              >
+                <span>Toggle Theme</span>
+                <span className="text-sm bg-gray-200 dark:bg-zinc-600 px-2 py-1 rounded">
+                  {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+                </span>
+              </button>
+
       {user ? (
         <>
           <img
@@ -159,8 +195,8 @@ const ProfileContent = ({ user, userData,selectedRole,onRoleSelect }: any) => {
             alt="Profile"
             className="w-24 h-24 rounded-full border-2 border-blue-500 mb-3"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://telegram.org/img/t_logo.png'
-
+              (e.target as HTMLImageElement).src =
+                'https://telegram.org/img/t_logo.png'
             }}
           />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -175,8 +211,7 @@ const ProfileContent = ({ user, userData,selectedRole,onRoleSelect }: any) => {
           Unable to load Telegram user info.
         </p>
       )}
-       {/* Roles Section */}
-              <div className="border-t border-gray-100 dark:border-zinc-700">
+       <div className="border-t border-gray-100 dark:border-zinc-700">
                 <div className="px-4 py-2">
                   <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                     Select Role
@@ -213,14 +248,3 @@ const ProfileContent = ({ user, userData,selectedRole,onRoleSelect }: any) => {
     </div>
   )
 }
-
-
-
-
-// overview/
-// │
-// ├── OverviewContent.tsx          // Main entry point
-// ├── WalletSummary.tsx            // Fetch + display wallet info beautifully
-// ├── NavTabs.tsx                  // Horizontal navigation bar (Purchases | Requests | Notifications)
-// ├── PurchasesList.tsx            // Fetch and render purchases list + pagination
-// └── PurchaseDetailOverlay.tsx    // Shown when a purchase card is clicked

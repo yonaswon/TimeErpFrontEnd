@@ -2,11 +2,9 @@
 
 import { useState } from 'react'
 import { DollarSign, Upload, Search, Settings, Plus } from 'lucide-react'
-import CreatePurchaseOverlay from './createpurchase/CreatePurchaseOverlay'
-import { InWalletTransfer } from './InWalletTransfer/InWalletTransferOverlay'
+import { AdminInWalletTransfer } from './Actions/AdminInWalletTransfer/AdminInWalletTransfer'
 
 const ActionsContent = () => {
-  const [showCreate, setShowCreate] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
 
   const actions = [
@@ -19,7 +17,7 @@ const ActionsContent = () => {
   return (
     <div className="space-y-4">
       <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Actions</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Admin Actions</h3>
 
         <div className="flex flex-col divide-y divide-gray-100 dark:divide-zinc-700">
           {actions.map((a) => {
@@ -28,7 +26,6 @@ const ActionsContent = () => {
               <button
                 key={a.key}
                 onClick={() => {
-                  if (a.key === 'create-purchase') setShowCreate(true)
                   if (a.key === 'wallet-transfer') setShowTransfer(true)
                 }}
                 className="w-full text-left py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-zinc-700 px-2 rounded-md transition"
@@ -47,11 +44,8 @@ const ActionsContent = () => {
         </div>
       </div>
 
-      {/* Create Purchase Overlay */}
-      <CreatePurchaseOverlay open={showCreate} onClose={() => setShowCreate(false)} />
-      
-      {/* Wallet Transfer Overlay */}
-      <InWalletTransfer open={showTransfer} onClose={() => setShowTransfer(false)} />
+      {/* Admin Wallet Transfer Overlay */}
+      <AdminInWalletTransfer open={showTransfer} onClose={() => setShowTransfer(false)} />
     </div>
   )
 }

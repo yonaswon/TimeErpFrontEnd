@@ -1,14 +1,14 @@
+'use client'
+
 import { Purchase } from '@/types/finance'
-import { X, User, Calendar, DollarSign, FileText, Package, CreditCard, CheckCircle, Clock } from 'lucide-react'
+import { X, User, Calendar, DollarSign, FileText, CheckCircle, XCircle, Clock, Building, CreditCard } from 'lucide-react'
 
 interface PurchaseDetailsProps {
-  purchase: Purchase | null
+  purchase: Purchase
   onClose: () => void
 }
 
 export const PurchaseDetails = ({ purchase, onClose }: PurchaseDetailsProps) => {
-  if (!purchase) return null
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -20,24 +20,43 @@ export const PurchaseDetails = ({ purchase, onClose }: PurchaseDetailsProps) => 
   }
 
   const formatAmount = (amount: string) => {
-    return new Intl.NumberFormat('en-US', {
+    return `Birr ${parseFloat(amount).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(parseFloat(amount))
+    })}`
   }
 
-  const getStatusInfo = (status: string, requestStatus: string) => {
-    if (status === 'D') {
-      return { text: 'Completed', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle }
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'D':
+        return { text: 'Completed', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30' }
+      case 'P':
+        return { text: 'In Progress', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' }
+      case 'C':
+        return { text: 'Cancelled', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30' }
+      default:
+        return { text: 'Unknown', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-900/30' }
     }
-    if (status === 'P' && requestStatus === 'S') {
-      return { text: 'Pending Admin Approval', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: Clock }
-    }
-    return { text: 'In Progress', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: Clock }
   }
 
-  const statusInfo = getStatusInfo(purchase.status, purchase.request_status)
-  const StatusIcon = statusInfo.icon
+  const getRequestStatusInfo = (requestStatus: string) => {
+    switch (requestStatus) {
+      case 'C':
+        return { text: 'Confirmed', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle }
+      case 'R':
+        return { text: 'Rejected', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', icon: XCircle }
+      case 'S':
+        return { text: 'Payment Request Sent', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: Clock }
+      case 'NS':
+        return { text: 'Not Sent', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-900/30', icon: Clock }
+      default:
+        return { text: 'Unknown', color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-900/30', icon: Clock }
+    }
+  }
+
+  const statusInfo = getStatusInfo(purchase.status)
+  const requestStatusInfo = getRequestStatusInfo(purchase.request_status)
+  const RequestStatusIcon = requestStatusInfo.icon
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -48,9 +67,9 @@ export const PurchaseDetails = ({ purchase, onClose }: PurchaseDetailsProps) => 
       />
       
       {/* Modal */}
-      <div className="relative bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-gray-200 dark:border-zinc-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-200 dark:border-zinc-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700 sticky top-0 bg-white dark:bg-zinc-900">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700 sticky top-0 bg-white dark:bg-zinc-900 z-10">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Purchase Details #{purchase.id}
@@ -68,122 +87,203 @@ export const PurchaseDetails = ({ purchase, onClose }: PurchaseDetailsProps) => 
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Status and Basic Info */}
+          {/* Status Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`p-4 rounded-lg ${statusInfo.bg}`}>
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${statusInfo.color.replace('text-', 'bg-')}`} />
+                <span className={`font-medium ${statusInfo.color}`}>Status</span>
+              </div>
+              <div className={`text-lg font-semibold mt-1 ${statusInfo.color}`}>
+                {statusInfo.text}
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-lg ${requestStatusInfo.bg}`}>
+              <div className="flex items-center gap-2">
+                <RequestStatusIcon size={16} className={requestStatusInfo.color} />
+                <span className={`font-medium ${requestStatusInfo.color}`}>Request Status</span>
+              </div>
+              <div className={`text-lg font-semibold mt-1 ${requestStatusInfo.color}`}>
+                {requestStatusInfo.text}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <DollarSign size={16} />
+                <span className="font-medium">Total Amount</span>
+              </div>
+              <div className="text-lg font-semibold text-blue-600 dark:text-blue-400 mt-1">
+                {formatAmount(purchase.total_amount)}
+              </div>
+            </div>
+          </div>
+
+          {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${statusInfo.bg}`}>
-                <StatusIcon size={20} className={statusInfo.color} />
-                <span className={`font-medium ${statusInfo.color}`}>
-                  {statusInfo.text}
-                </span>
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Purchase Information</h3>
               
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <User size={18} className="text-gray-500" />
+                  <User size={16} className="text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-500">Created By</p>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Created By</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
                       {purchase.created_by.telegram_user_name}
-                    </p>
+                    </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
-                  <CreditCard size={18} className="text-gray-500" />
+                  <Building size={16} className="text-gray-400" />
                   <div>
-                    <p className="text-sm text-gray-500">Account Details</p>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {purchase.to_account_name} ({purchase.to_account_number})
-                    </p>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">From Wallet</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {purchase.from_wallet === 'A' ? 'Admin' : 'Finance'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <FileText size={16} className="text-gray-400" />
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Invoice</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {purchase.invoice ? 'With Invoice' : 'No Invoice'}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign size={20} className="text-blue-600 dark:text-blue-400" />
-                  <span className="font-semibold text-blue-700 dark:text-blue-300">Total Amount</span>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Payment Information</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <CreditCard size={16} className="text-gray-400" />
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">To Account Name</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {purchase.to_account_name}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-                  ${formatAmount(purchase.total_amount)}
-                </p>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-gray-500">Invoice</p>
-                  <p className={`font-medium ${purchase.invoice ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {purchase.invoice ? 'Yes' : 'No'}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <CreditCard size={16} className="text-gray-400" />
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">To Account Number</div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {purchase.to_account_number}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-500">Payment Code</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {purchase.payment_code || 'N/A'}
-                  </p>
-                </div>
+
+                {purchase.from_account && (
+                  <div className="flex items-center gap-3">
+                    <Building size={16} className="text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">From Account</div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {purchase.from_account.account_name} ({purchase.from_account.bank})
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {purchase.payment_code && (
+                  <div className="flex items-center gap-3">
+                    <FileText size={16} className="text-gray-400" />
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Payment Code</div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {purchase.payment_code}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Materials List */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Package size={20} />
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Materials ({purchase.each_material_purchase.length})
             </h3>
-            <div className="space-y-3">
-              {purchase.each_material_purchase.map((material) => (
-                <div key={material.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-800 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {material.material.name}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {material.material.type_display} • Available: {material.material.available}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      ${formatAmount(material.total_price)}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {material.amount} × ${material.price}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            
+            <div className="border border-gray-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-zinc-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Material
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Unit Price
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Total Price
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
+                  {purchase.each_material_purchase.map((material) => (
+                    <tr key={material.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        <div>
+                          <div className="font-medium">{material.material.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {material.material.type_display}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        {material.amount} units
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        Birr {parseFloat(material.price).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-green-600 dark:text-green-400">
+                        Birr {parseFloat(material.total_price).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Images if available */}
+          {/* Images Section */}
           {(purchase.invoice_image || purchase.payment_screenshot) && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FileText size={20} />
-                Attachments
-              </h3>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Attachments</h3>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {purchase.invoice_image && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-2">Invoice Image</p>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Invoice Image</h4>
                     <img 
                       src={purchase.invoice_image} 
                       alt="Invoice" 
-                      className="rounded-lg border border-gray-200 dark:border-zinc-700 max-h-48 object-cover"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-zinc-700"
                     />
                   </div>
                 )}
+                
                 {purchase.payment_screenshot && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-2">Payment Screenshot</p>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Screenshot</h4>
                     <img 
                       src={purchase.payment_screenshot} 
-                      alt="Payment confirmation" 
-                      className="rounded-lg border border-gray-200 dark:border-zinc-700 max-h-48 object-cover"
+                      alt="Payment Screenshot" 
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-zinc-700"
                     />
                   </div>
                 )}

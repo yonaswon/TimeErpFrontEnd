@@ -1,6 +1,6 @@
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
-
+import { AdminUserManager } from '../Admin/AdminUserManager/AdminUserManager'
 interface ErrorScreenProps {
   error: string
   onRetry: () => void
@@ -26,6 +26,7 @@ export const ErrorScreen = ({ error, onRetry }: ErrorScreenProps) => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-900 transition-colors duration-300">
+      {/* <AdminUserManager /> */}
       <div className="text-center">
         <div className="text-4xl mb-4">❌</div>
         <div className="text-xl text-red-600 dark:text-red-400 mb-4">Error: {error}</div>

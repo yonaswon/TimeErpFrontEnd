@@ -5,7 +5,10 @@ import { NoRolesScreen } from './NoRolesScreen'
 import { UserProfile } from './UserProfile'
 import { UserRoles } from './UserRoles'
 import FinanceAndAccounting from '../Finance&Accounting/FinanceAndAccounting'
+import AdminMobile from "../MobileAdmin/MobileAdmin"
 import { useRouter } from 'next/navigation'
+import StockManager from '../StockManager/StockManager'
+import SalesTeamApp from '../SalesApp/SalesTeamApp'
 
 interface AuthenticatedUserProps {
   userData: UserData
@@ -22,7 +25,25 @@ export const AuthenticatedUser = ({ userData, selectedRole, onRoleSelect }: Auth
 
   return (
     <div className="text-center w-full max-w-md">
-      {selectedRole && selectedRole == "Finance&Accounting" && <FinanceAndAccounting  />}
+      {selectedRole && selectedRole == "Finance&Accounting" && <FinanceAndAccounting
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+        />}
+      {selectedRole && selectedRole == "Admin" && <AdminMobile
+          userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect}   />}
+      {selectedRole && selectedRole == "Stock Manager" && <StockManager 
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+       />}
+      {selectedRole && selectedRole == "Sales" && <SalesTeamApp 
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+       />}
         {/* <AdminUserManager /> */}
 
         {/* {selectedRole && <div className='ext-2xl font-bold text-green-600 dark:text-green-400 mb-4'>{selectedRole}</div>} */}
