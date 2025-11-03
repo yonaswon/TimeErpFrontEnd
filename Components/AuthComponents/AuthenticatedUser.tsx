@@ -9,6 +9,7 @@ import AdminMobile from "../MobileAdmin/MobileAdmin"
 import { useRouter } from 'next/navigation'
 import StockManager from '../StockManager/StockManager'
 import SalesTeamApp from '../SalesApp/SalesTeamApp'
+import GraphicsTeamApp from '../GraphicsTeamApp/GraphicsTeamApp'
 
 interface AuthenticatedUserProps {
   userData: UserData
@@ -40,6 +41,11 @@ export const AuthenticatedUser = ({ userData, selectedRole, onRoleSelect }: Auth
             onRoleSelect={onRoleSelect} 
        />}
       {selectedRole && selectedRole == "Sales" && <SalesTeamApp 
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+       />}
+      {selectedRole && selectedRole == "Graphic Designer" && <GraphicsTeamApp
             userData={userData} 
             selectedRole={selectedRole} 
             onRoleSelect={onRoleSelect} 

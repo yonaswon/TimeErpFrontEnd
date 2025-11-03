@@ -1,5 +1,5 @@
 'use client'
-import { Image as ImageIcon, DollarSign, Ruler, Package, Calendar, FileText } from 'lucide-react'
+import { Image as ImageIcon, DollarSign, Ruler, Package, Calendar, FileText, Clock } from 'lucide-react'
 
 interface Modification {
   id: number
@@ -80,7 +80,6 @@ const getStatusVariant = (status: string) => {
 const formatDate = (dateString: string | null) => {
   if (!dateString) return 'Not set'
   return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -90,217 +89,234 @@ const formatDate = (dateString: string | null) => {
 
 export default function EachModificationDisplayer({ modification }: EachModificationDisplayerProps) {
   return (
-    <div className="space-y-6">
-      {/* Modification Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Modification #{modification.id}
-            </h2>
-            <Badge variant={getStatusVariant(modification.request_status)}>
-              {modification.request_status}
-            </Badge>
-            {modification.is_edit && (
-              <Badge variant="yellow">
-                Edit Request
-              </Badge>
-            )}
+    <div className="space-y-3">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-linear-to-b from-green-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            M{modification.id}
           </div>
-          <p className="text-gray-600 dark:text-gray-300">
-            {modification.note || 'No description provided'}
-          </p>
+          <div>
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">Mod #{modification.id}</span>
+              <Badge variant={getStatusVariant(modification.request_status)}>
+                {modification.request_status}
+              </Badge>
+              {modification.is_edit && (
+                <Badge variant="yellow">
+                  Edit
+                </Badge>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {new Date(modification.requested_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm font-medium">
-            <DollarSign className="w-4 h-4" />
-            Price
+      {/* Modified Mockup Image */}
+      {modification.mockup_image && (
+        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 overflow-hidden">
+          <div className="p-2 bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700">
+            <div className="flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Modified Mockup</span>
+            </div>
           </div>
-          <div className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-            {modification.price ? `$${modification.price}` : 'Not set'}
+          <div className="p-2">
+            <img
+              src={modification.mockup_image}
+              alt={`Modification ${modification.id}`}
+              className="w-full rounded max-h-48 object-contain"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Key Stats - Compact Grid */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white dark:bg-zinc-800 rounded-lg p-2 border border-gray-200 dark:border-zinc-700">
+          <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-1">
+            <DollarSign className="w-3.5 h-3.5" />
+            <span className="text-xs font-medium">Price</span>
+          </div>
+          <div className="text-sm font-bold text-gray-900 dark:text-white">
+            {modification.price ? `$${modification.price}` : "—"}
           </div>
           {modification.price_with_vat && (
-            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Includes VAT</div>
+            <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">With VAT</div>
           )}
         </div>
-        
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-medium">
-            <Ruler className="w-4 h-4" />
-            Dimensions
+
+        <div className="bg-white dark:bg-zinc-800 rounded-lg p-2 border border-gray-200 dark:border-zinc-700">
+          <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-1">
+            <Ruler className="w-3.5 h-3.5" />
+            <span className="text-xs font-medium">Size</span>
           </div>
-          <div className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
-            {modification.width && modification.hieght 
-              ? `${modification.width} × ${modification.hieght}`
-              : 'Not set'
-            }
+          <div className="text-sm font-bold text-gray-900 dark:text-white">
+            {modification.width && modification.hieght ? `${modification.width}×${modification.hieght}` : "—"}
           </div>
         </div>
-        
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
-          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 text-sm font-medium">
-            <Package className="w-4 h-4" />
-            BOM Items
+
+        <div className="bg-white dark:bg-zinc-800 rounded-lg p-2 border border-gray-200 dark:border-zinc-700">
+          <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-1">
+            <Package className="w-3.5 h-3.5" />
+            <span className="text-xs font-medium">BOM</span>
           </div>
-          <div className="text-lg font-semibold text-gray-900 dark:text-white mt-1">
+          <div className="text-sm font-bold text-gray-900 dark:text-white">
             {modification.bom?.length || 0}
           </div>
         </div>
-        
-        <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
-          <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 text-sm font-medium">
-            <Calendar className="w-4 h-4" />
-            Requested
+
+        <div className="bg-white dark:bg-zinc-800 rounded-lg p-2 border border-gray-200 dark:border-zinc-700">
+          <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-1">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="text-xs font-medium">Status</span>
           </div>
-          <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
-            {formatDate(modification.requested_date)}
-          </div>
+          <Badge variant={getStatusVariant(modification.request_status)}>
+            {modification.request_status}
+          </Badge>
         </div>
       </div>
 
-      {/* Reference Images Section */}
-      {modification.reference_images.length > 0 && (
-        <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Reference Images ({modification.reference_images.length})
-          </h3>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {modification.reference_images.map((image) => (
-              <div key={image.id} className="bg-gray-100 dark:bg-zinc-900 rounded-lg h-32 flex items-center justify-center overflow-hidden">
-                <img 
-                  src={image.image} 
-                  alt={`Reference ${image.id}`}
-                  className="max-h-full max-w-full object-cover"
-                />
+      {/* Notes */}
+      {modification.note && (
+        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
+          <div className="p-2 bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700">
+            <div className="flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-green-500" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Modification Notes</span>
+            </div>
+          </div>
+          <div className="p-2">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              {modification.note}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* BOM Items - Compact List */}
+      {modification.bom && modification.bom.length > 0 && (
+        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
+          <div className="p-2 bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700">
+            <div className="flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5 text-purple-500" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Materials</span>
+              <Badge variant="purple">{modification.bom.length}</Badge>
+            </div>
+          </div>
+          <div className="p-2 space-y-1">
+            {modification.bom.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between items-center p-1.5 bg-gray-50 dark:bg-zinc-900 rounded text-xs"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 dark:text-white truncate">
+                    {item.material.name}
+                  </div>
+                  <div className="text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                    {item.material.code_name && <span>{item.material.code_name}</span>}
+                    {item.amount && <span>• Qty: {item.amount}</span>}
+                    {item.width && item.height && <span>• {item.width}×{item.height}</span>}
+                  </div>
+                </div>
+                <div className="text-right ml-2">
+                  {item.total_price ? (
+                    <div className="text-green-600 dark:text-green-400 font-bold text-sm">
+                      ${item.total_price}
+                    </div>
+                  ) : item.estimated_price ? (
+                    <div className="text-blue-600 dark:text-blue-400 font-medium text-sm">
+                      ${item.estimated_price}*
+                    </div>
+                  ) : null}
+                  {item.price_per_unit && (
+                    <div className="text-gray-500 dark:text-gray-400 text-[10px]">
+                      ${item.price_per_unit}/unit
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Mockup Image */}
-      {modification.mockup_image && (
-        <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Modified Mockup
-          </h3>
-          <div className="bg-gray-100 dark:bg-zinc-900 rounded-lg h-64 flex items-center justify-center overflow-hidden">
-            <img 
-              src={modification.mockup_image} 
-              alt={`Modification ${modification.id}`}
-              className="max-h-full max-w-full object-contain"
-            />
+      {/* Reference Images */}
+      {modification.reference_images.length > 0 && (
+        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
+          <div className="p-2 bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700">
+            <div className="flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Reference Images</span>
+              <Badge variant="purple">{modification.reference_images.length}</Badge>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* BOM Section */}
-      {modification.bom && modification.bom.length > 0 && (
-        <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Bill of Materials ({modification.bom.length})
-          </h3>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-zinc-600">
-                  <th className="text-left py-3 px-2 text-gray-500 dark:text-gray-400 font-medium">Material</th>
-                  <th className="text-left py-3 px-2 text-gray-500 dark:text-gray-400 font-medium">Amount</th>
-                  <th className="text-left py-3 px-2 text-gray-500 dark:text-gray-400 font-medium">Dimensions</th>
-                  <th className="text-left py-3 px-2 text-gray-500 dark:text-gray-400 font-medium">Price/Unit</th>
-                  <th className="text-left py-3 px-2 text-gray-500 dark:text-gray-400 font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modification.bom.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 dark:border-zinc-700">
-                    <td className="py-3 px-2">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {item.material.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {item.material.code_name}
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 text-gray-600 dark:text-gray-300">
-                      {item.amount ?? '—'}
-                    </td>
-                    <td className="py-3 px-2 text-gray-600 dark:text-gray-300">
-                      {item.width && item.height ? `${item.width} × ${item.height}` : '—'}
-                    </td>
-                    <td className="py-3 px-2">
-                      {item.price_per_unit ? (
-                        <span className="text-green-600 dark:text-green-400 font-medium">
-                          ${item.price_per_unit}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-2">
-                      {item.total_price ? (
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          ${item.total_price}
-                        </span>
-                      ) : item.estimated_price ? (
-                        <span className="text-blue-600 dark:text-blue-400 font-medium">
-                          ${item.estimated_price}*
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="p-2">
+            <div className="grid grid-cols-3 gap-1">
+              {modification.reference_images.map((image) => (
+                <div
+                  key={image.id}
+                  className="aspect-square bg-gray-100 dark:bg-zinc-900 rounded overflow-hidden"
+                >
+                  <img
+                    src={image.image}
+                    alt={`Reference ${image.id}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* Timeline Info */}
-      <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Timeline</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <div className="text-gray-500 dark:text-gray-400">Requested Date</div>
-            <div className="font-medium text-gray-900 dark:text-white">
-              {formatDate(modification.requested_date)}
-            </div>
+      <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
+        <div className="p-2 bg-gray-50 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-orange-500" />
+            <span className="text-sm font-medium text-gray-900 dark:text-white">Timeline</span>
           </div>
-          
-          <div>
-            <div className="text-gray-500 dark:text-gray-400">Started Date</div>
-            <div className="font-medium text-gray-900 dark:text-white">
-              {formatDate(modification.started_date)}
-            </div>
+        </div>
+        <div className="p-2 space-y-2 text-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-500 dark:text-gray-400">Requested:</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {new Date(modification.requested_date).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+            </span>
           </div>
-          
-          <div>
-            <div className="text-gray-500 dark:text-gray-400">Response Date</div>
-            <div className="font-medium text-gray-900 dark:text-white">
-              {formatDate(modification.response_date)}
+          {modification.started_date && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400">Started:</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {new Date(modification.started_date).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+              </span>
             </div>
-          </div>
+          )}
+          {modification.response_date && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400">Response:</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {new Date(modification.response_date).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Previous Modification Info */}
       {modification.prev_modification && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-            <FileText className="w-4 h-4" />
-            <span className="font-medium">Based on Modification</span>
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-2">
+          <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 mb-1">
+            <FileText className="w-3.5 h-3.5" />
+            <span className="text-sm font-medium">Based on Modification</span>
           </div>
-          <div className="text-sm text-gray-900 dark:text-white">
-            This modification is based on modification #{modification.prev_modification}
+          <div className="text-xs text-blue-700 dark:text-blue-300">
+            Modification #{modification.prev_modification}
           </div>
         </div>
       )}
