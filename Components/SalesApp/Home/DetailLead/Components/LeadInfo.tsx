@@ -10,7 +10,6 @@ interface Lead {
   customer_phonenumber: string
   customer_telegram: string
   note: string
-  design_type: { id: number; name: string }
   sales: number
   created_at: string
   converted_at: string | null
@@ -93,10 +92,10 @@ export default function LeadInfo({ lead }: LeadInfoProps) {
                   {lead.status}
                 </Badge>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-200">
+              {/* <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-200">
                 <Tag className="w-3 h-3" />
                 {lead.design_type.name}
-              </div>
+              </div> */}
             </div>
           </div>
           

@@ -1,10 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import api from '@/api'
-import { Plus, RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import EachModificationDisplayer from './EachModificationDisplayer'
 import CreateModificationOverlay from './CreateModificationOverlay'
 
+// --- INTERFACES (UNCHANGED) ---
 interface Modification {
   id: number
   reference_images: Array<{
@@ -58,6 +59,7 @@ interface ModificationDisplayerProps {
   leadId:number
 }
 
+// --- UTILITY COMPONENTS & FUNCTIONS (UNCHANGED) ---
 const Badge = ({ children, variant = 'gray' }: { children: React.ReactNode; variant?: string }) => {
   const map: Record<string, string> = {
     gray: 'bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-gray-200',
@@ -83,11 +85,82 @@ const getStatusVariant = (status: string) => {
   }
 }
 
-export default function ModificationDisplayer({ mockupId, canCreateModification,leadId}: ModificationDisplayerProps) {
+// Custom Collapsible Modification Item (NEW)
+const CollapsibleModificationItem = ({ 
+    modification, 
+    isLast, 
+    isActive, 
+    onToggle 
+}: { 
+    modification: Modification, 
+    isLast: boolean,
+    isActive: boolean,
+    onToggle: () => void 
+}) => {
+    
+    // Fallback date display for better UI
+    const requestedDate = new Date(modification.requested_date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+    });
+
+    return (
+        <div className="relative">
+            {/* Timeline Line */}
+            {!isLast && (
+                <div className="absolute top-8 left-4 w-0.5 h-full bg-gray-200 dark:bg-zinc-700 transform -translate-y-4"></div>
+            )}
+
+            <div className="flex items-start mb-4">
+                {/* Timeline Dot/Icon */}
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white z-10 shrink-0 border-4 border-white dark:border-zinc-800">
+                    <span className="text-xs font-bold">M{modification.id}</span>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 ml-4 -mt-1">
+                    {/* Header/Toggle Button */}
+                    <button
+                        onClick={onToggle}
+                        className="w-full flex justify-between items-center text-left py-2 px-3 rounded-lg bg-gray-50 dark:bg-zinc-700/50 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors border border-transparent dark:border-zinc-700"
+                    >
+                        <div className="flex flex-col">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                Modification #{modification.id}
+                                <Badge variant={getStatusVariant(modification.request_status)}>{modification.request_status}</Badge>
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Requested on {requestedDate}
+                                {modification.is_edit && <span className="ml-2 font-medium text-yellow-600 dark:text-yellow-400">(Edit)</span>}
+                            </p>
+                        </div>
+                        {isActive ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+                    </button>
+                    
+                    {/* Collapsible Body */}
+                    <div 
+                        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                            isActive ? 'max-h-[2000px] opacity-100 pt-3' : 'max-h-0 opacity-0'
+                        }`}
+                    >
+                        <div className="pl-3 pr-1 pb-1">
+                            {/* Renders the detail component when expanded */}
+                            <EachModificationDisplayer modification={modification} />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+export default function ModificationDisplayer({ mockupId, canCreateModification, leadId}: ModificationDisplayerProps) {
   const [modifications, setModifications] = useState<Modification[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeModification, setActiveModification] = useState<Modification | null>(null)
+  // State now tracks which modification is open, using its ID
+  const [openModificationId, setOpenModificationId] = useState<number | null>(null) 
   const [showCreateOverlay, setShowCreateOverlay] = useState(false)
 
   useEffect(() => {
@@ -98,12 +171,20 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
     try {
       setLoading(true)
       setError(null)
+      // !!! API CALL UNCHANGED
       const response = await api.get(`/lead/modifications/?mockup=${mockupId}`)
       const modificationsData = response.data.results || response.data
-      setModifications(modificationsData)
+      setModifications(modificationsData.reverse()) // Reverse for chronological timeline display
+      
+      // Keep the currently open modification open if it exists, otherwise open the latest one
       if (modificationsData.length > 0) {
-        setActiveModification(modificationsData[0])
+        if (!modificationsData.find((m: Modification) => m.id === openModificationId)) {
+            setOpenModificationId(modificationsData[0].id); // Open the latest one
+        }
+      } else {
+        setOpenModificationId(null)
       }
+
     } catch (error: any) {
       console.error('Error fetching modifications:', error)
       setError('Failed to load modifications')
@@ -117,132 +198,93 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
     fetchModifications()
   }
 
+  const handleToggle = (id: number) => {
+    setOpenModificationId(openModificationId === id ? null : id);
+  };
+  
+  // --- Loading, Error States (Functionality Unchanged) ---
   if (loading) {
     return (
-      <div className="bg-white dark:bg-zinc-800 rounded-xl p-6 border border-gray-200 dark:border-zinc-700">
-        <div className="flex items-center justify-center space-x-3">
-          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <div className="text-gray-900 dark:text-white">Loading modifications...</div>
-        </div>
+      <div className="flex items-center justify-center space-x-3 py-6">
+        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-gray-900 dark:text-white">Loading modifications...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-zinc-800 rounded-xl p-6 border border-gray-200 dark:border-zinc-700">
-        <div className="text-center">
-          <div className="text-red-500 font-medium mb-2">Error</div>
-          <div className="text-gray-600 dark:text-gray-300 mb-4">{error}</div>
-          <button
-            onClick={fetchModifications}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
+      <div className="text-center py-6">
+        <div className="text-red-500 font-medium mb-2">Error</div>
+        <div className="text-gray-600 dark:text-gray-300 mb-4">{error}</div>
+        <button
+          onClick={fetchModifications}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Try Again
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50 p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Modifications</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {modifications.length} modification{modifications.length !== 1 ? 's' : ''} found
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchModifications}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-700"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            
-            {canCreateModification && (
-              <button
-                onClick={() => setShowCreateOverlay(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                New Modification
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-4">
-        {modifications.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-2">🔄</div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Modifications Yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              {canCreateModification 
-                ? "Create the first modification for this mockup"
-                : "No modifications available for this mockup"
-              }
-            </p>
-            {canCreateModification && (
-              <button
-                onClick={() => setShowCreateOverlay(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-4 h-4" />
-                Create First Modification
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Modification Navigation */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
-              {modifications.map((modification) => (
-                <button
-                  key={modification.id}
-                  onClick={() => setActiveModification(modification)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all shrink-0 ${
-                    activeModification?.id === modification.id
-                      ? 'bg-white dark:bg-zinc-700 border-blue-500 shadow-md'
-                      : 'bg-white/70 dark:bg-zinc-700/70 border-gray-200 dark:border-zinc-600 hover:border-gray-300 dark:hover:border-zinc-500'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    Mod #{modification.id}
-                  </div>
-                  <Badge variant={getStatusVariant(modification.request_status)}>
-                    {modification.request_status}
-                  </Badge>
-                </button>
-              ))}
-            </div>
-
-            {/* Active Modification Display */}
-            {activeModification && (
-              <EachModificationDisplayer modification={activeModification} />
-            )}
-          </div>
+    <div className="space-y-4">
+      {/* Modification Count and Create Button */}
+      <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-700 pb-3">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Total: **{modifications.length} modification{modifications.length !== 1 ? 's' : ''}**
+        </p>
+        
+        {canCreateModification && (
+          <button
+            onClick={() => setShowCreateOverlay(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            New
+          </button>
         )}
       </div>
 
-      {/* Create Modification Overlay */}
-   {showCreateOverlay && (
-  <CreateModificationOverlay
-    mockupId={mockupId}
-    leadId={leadId}
-    previousModification={activeModification?.id || null}
-    onClose={() => setShowCreateOverlay(false)}
-    onSuccess={handleModificationCreated}
-  />
-)}
+      {/* Content */}
+      {modifications.length === 0 ? (
+        <div className="text-center py-4">
+          <div className="text-3xl mb-2">🔄</div>
+          <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-1">No Modifications Yet</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            {canCreateModification 
+              ? "Create the first modification for this mockup."
+              : "No modifications have been requested for this mockup."
+            }
+          </p>
+        </div>
+      ) : (
+        <div className="relative pt-2">
+            {/* The actual timeline display using the custom item */}
+            {modifications.map((modification, index) => (
+                <CollapsibleModificationItem
+                    key={modification.id}
+                    modification={modification}
+                    isLast={index === modifications.length - 1}
+                    isActive={openModificationId === modification.id}
+                    onToggle={() => handleToggle(modification.id)}
+                />
+            ))}
+        </div>
+      )}
+
+      {/* Create Modification Overlay (Functionality Unchanged) */}
+      {showCreateOverlay && (
+        <CreateModificationOverlay
+          mockupId={mockupId}
+          leadId={leadId}
+          // Pass the ID of the latest modification (index 0) as previousModification
+          previousModification={modifications.length > 0 ? modifications[0].id : null}
+          onClose={() => setShowCreateOverlay(false)}
+          onSuccess={handleModificationCreated}
+        />
+      )}
     </div>
   )
 }

@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import MockupCard from "./MockupCard";
 import SubmitMockupOverlay from "./SubmitMockupOverlay";
+import SubmitModificationOverlay from "./SubmitModificationOverlay";
 import { Mockup, Modification } from "./utils/types";
+import api from "@/api";
 
 const MockupPage = () => {
   const [mockups, setMockups] = useState<Mockup[]>([]);
@@ -11,7 +13,9 @@ const MockupPage = () => {
   }>({});
   const [loading, setLoading] = useState(true);
   const [showSubmitOverlay, setShowSubmitOverlay] = useState(false);
+  const [showSubmitModificationOverlay, setShowSubmitModificationOverlay] = useState(false);
   const [selectedMockup, setSelectedMockup] = useState<Mockup | null>(null);
+  const [selectedModification, setSelectedModification] = useState<Modification | null>(null);
 
   useEffect(() => {
     fetchMockups();
@@ -24,26 +28,21 @@ const MockupPage = () => {
 
       const user = JSON.parse(userData);
       const designerId = user.id;
-      const token = localStorage.getItem("access_token");
 
-      const response = await fetch(
-        `http://127.0.0.1:8000/lead/mockups/?designer=${designerId}&ordering=-date`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await api.get(
+        `/lead/mockups/?designer=${designerId}&ordering=-date`
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        setMockups(data.results);
+      if (response.data) {
+        setMockups(response.data.results || response.data);
 
         // Fetch modifications for returned mockups
-        data.results.forEach((mockup: Mockup) => {
-          if (mockup.request_status === "RETURNED")
-            fetchModifications(mockup.id);
+        const returnedMockups = (response.data.results || response.data).filter(
+          (mockup: Mockup) => mockup.request_status === "RETURNED"
+        );
+        
+        returnedMockups.forEach((mockup: Mockup) => {
+          fetchModifications(mockup.id);
         });
       }
     } catch (error) {
@@ -55,19 +54,11 @@ const MockupPage = () => {
 
   const fetchModifications = async (mockupId: number) => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `http://127.0.0.1:8000/lead/modifications/?ordering=requested_date&mockup=${mockupId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await api.get(
+        `/lead/modifications/?ordering=requested_date&mockup=${mockupId}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setModifications((prev) => ({ ...prev, [mockupId]: data }));
+      if (response.data) {
+        setModifications((prev) => ({ ...prev, [mockupId]: response.data.results || response.data }));
       }
     } catch (error) {
       console.error("Error fetching modifications:", error);
@@ -76,40 +67,17 @@ const MockupPage = () => {
 
   const startMockup = async (mockupId: number) => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `http://127.0.0.1:8000/lead/mockups/${mockupId}/start/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (response.ok) await fetchMockups();
+      await api.post(`/lead/mockups/${mockupId}/start/`);
+      await fetchMockups();
     } catch (error) {
       console.error("Error starting mockup:", error);
     }
   };
 
-  const startModification = async (
-    modificationId: number,
-    mockupId: number
-  ) => {
+  const startModification = async (modificationId: number, mockupId: number) => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `http://127.0.0.1:8000/lead/modifications/${modificationId}/start/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (response.ok) await fetchModifications(mockupId);
+      await api.post(`/lead/modifications/${modificationId}/start/`);
+      await fetchModifications(mockupId);
     } catch (error) {
       console.error("Error starting modification:", error);
     }
@@ -141,6 +109,10 @@ const MockupPage = () => {
                 setSelectedMockup(mockup);
                 setShowSubmitOverlay(true);
               }}
+              onShowSubmitModificationOverlay={(modification) => {
+                setSelectedModification(modification);
+                setShowSubmitModificationOverlay(true);
+              }}
             />
           ))}
         </div>
@@ -158,7 +130,29 @@ const MockupPage = () => {
           onClose={() => {
             setShowSubmitOverlay(false);
             setSelectedMockup(null);
-            fetchMockups()
+            fetchMockups();
+          }}
+          onSuccess={() => {
+            setShowSubmitOverlay(false);
+            setSelectedMockup(null);
+            fetchMockups();
+          }}
+        />
+      )}
+
+      {/* Submit Modification Overlay */}
+      {showSubmitModificationOverlay && selectedModification && (
+        <SubmitModificationOverlay
+          modification={selectedModification}
+          onClose={() => {
+            setShowSubmitModificationOverlay(false);
+            setSelectedModification(null);
+            fetchMockups();
+          }}
+          onSuccess={() => {
+            setShowSubmitModificationOverlay(false);
+            setSelectedModification(null);
+            fetchMockups();
           }}
         />
       )}

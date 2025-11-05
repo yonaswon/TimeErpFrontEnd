@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import api from '@/api'
-import { Upload, Image as ImageIcon, X, FileText, Ruler, User, Info } from 'lucide-react'
+import { Upload, Image as ImageIcon, X, FileText, Ruler, User, Info, Package } from 'lucide-react'
 
 interface MockupFormProps {
   leadId: number
@@ -27,13 +27,22 @@ interface Designer {
   }>
 }
 
+interface DesignType {
+  id: number
+  name: string
+  date: string
+}
+
 export default function MockupForm({ leadId, onCancel, onSuccess }: MockupFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [designers, setDesigners] = useState<Designer[]>([])
+  const [designTypes, setDesignTypes] = useState<DesignType[]>([])
   const [loadingDesigners, setLoadingDesigners] = useState(true)
+  const [loadingDesignTypes, setLoadingDesignTypes] = useState(true)
   const [formData, setFormData] = useState({
     designer: '',
+    design_type: '',
     note: '',
     width: '',
     height: '',
@@ -44,6 +53,7 @@ export default function MockupForm({ leadId, onCancel, onSuccess }: MockupFormPr
 
   useEffect(() => {
     fetchDesigners()
+    fetchDesignTypes()
   }, [])
 
   const fetchDesigners = async () => {
@@ -56,6 +66,19 @@ export default function MockupForm({ leadId, onCancel, onSuccess }: MockupFormPr
       setError('Failed to load designers')
     } finally {
       setLoadingDesigners(false)
+    }
+  }
+
+  const fetchDesignTypes = async () => {
+    try {
+      setLoadingDesignTypes(true)
+      const response = await api.get('/lead/design-types/')
+      setDesignTypes(response.data)
+    } catch (error: any) {
+      console.error('Error fetching design types:', error)
+      setError('Failed to load design types')
+    } finally {
+      setLoadingDesignTypes(false)
     }
   }
 
@@ -128,7 +151,8 @@ export default function MockupForm({ leadId, onCancel, onSuccess }: MockupFormPr
         ...formData,
         reference_images: uploadedImageIds,
         lead: leadId,
-        designer: parseInt(formData.designer)
+        designer: parseInt(formData.designer),
+        design_type: formData.design_type ? parseInt(formData.design_type) : null
       }
 
       console.log('Submitting mockup data:', submissionData)
@@ -200,6 +224,38 @@ export default function MockupForm({ leadId, onCancel, onSuccess }: MockupFormPr
         )}
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
           Required field. Select which designer should work on this mockup.
+        </p>
+      </div>
+
+      {/* Design Type Selection */}
+      <div>
+        <label htmlFor="design_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Design Type
+          <span className="text-gray-500 dark:text-gray-400 ml-1">(Optional)</span>
+        </label>
+        {loadingDesignTypes ? (
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-gray-500 dark:text-gray-400 text-sm">Loading design types...</div>
+          </div>
+        ) : (
+          <select
+            id="design_type"
+            name="design_type"
+            value={formData.design_type}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-700 dark:text-white"
+          >
+            <option value="">Select a design type</option>
+            {designTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Optional field. Select the type of design for this mockup.
         </p>
       </div>
 

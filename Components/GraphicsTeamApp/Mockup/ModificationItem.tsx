@@ -6,10 +6,15 @@ interface ModificationItemProps {
   modification: Modification
   isLast: boolean
   onStartModification: (modificationId: number) => void
-  onShowSubmitOverlay: () => void
+  onShowSubmitModificationOverlay: (modification: Modification) => void
 }
 
-const ModificationItem = ({ modification, isLast, onStartModification, onShowSubmitOverlay }: ModificationItemProps) => {
+const ModificationItem = ({ 
+  modification, 
+  isLast, 
+  onStartModification, 
+  onShowSubmitModificationOverlay 
+}: ModificationItemProps) => {
   return (
     <div className="flex gap-3 relative">
       {/* Timeline dot */}
@@ -48,7 +53,7 @@ const ModificationItem = ({ modification, isLast, onStartModification, onShowSub
           )}
           {modification.request_status === 'STARTED' && (
             <button
-              onClick={onShowSubmitOverlay}
+              onClick={() => onShowSubmitModificationOverlay(modification)}
               className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded-full"
             >
               <Upload size={12} /> Submit

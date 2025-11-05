@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Mockup, Material, BOMItem, MaterialsResponse } from "./utils/types";
+import { Modification, Material, MaterialsResponse } from "./utils/types";
 import {
   X,
   Plus,
@@ -12,10 +12,10 @@ import {
 } from "lucide-react";
 import api from "@/api";
 
-interface SubmitMockupOverlayProps {
-  mockup: Mockup;
+interface SubmitModificationOverlayProps {
+  modification: Modification;
   onClose: () => void;
-  onSuccess: ()=>void;
+  onSuccess: () => void;
 }
 
 interface BomRow {
@@ -26,7 +26,7 @@ interface BomRow {
   height?: string;
 }
 
-const SubmitMockupOverlay = ({ mockup, onClose,onSuccess }: SubmitMockupOverlayProps) => {
+const SubmitModificationOverlay = ({ modification, onClose, onSuccess }: SubmitModificationOverlayProps) => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loadingMaterials, setLoadingMaterials] = useState(true);
   const [errorMaterials, setErrorMaterials] = useState<string | null>(null);
@@ -124,6 +124,7 @@ const SubmitMockupOverlay = ({ mockup, onClose,onSuccess }: SubmitMockupOverlayP
       reader.readAsDataURL(file);
     }
   };
+
   const handleSubmit = async () => {
     if (!mockupImage) {
       alert("Please upload a mockup image");
@@ -176,28 +177,29 @@ const SubmitMockupOverlay = ({ mockup, onClose,onSuccess }: SubmitMockupOverlayP
         });
       });
 
-      console.log("Submitting form data:");
+      console.log("Submitting modification data:");
       for (let [key, value] of formData.entries()) {
         console.log(key, value);
       }
 
-      await api.post(`/lead/mockups/${mockup.id}/return_mockup/`, formData, {
+      await api.post(`/lead/modifications/${modification.id}/return_modification/`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      onClose();
+      onSuccess();
     } catch (err: any) {
-      console.error("Error submitting mockup:", err);
+      console.error("Error submitting modification:", err);
       if (err.response?.data) {
-        alert(`Failed to submit mockup: ${JSON.stringify(err.response.data)}`);
+        alert(`Failed to submit modification: ${JSON.stringify(err.response.data)}`);
       } else {
-        alert("Failed to submit mockup. Please try again.");
+        alert("Failed to submit modification. Please try again.");
       }
     } finally {
       setSubmitting(false);
     }
   };
+
   const renderMaterialDropdown = (row: BomRow) => {
     if (loadingMaterials && materials.length === 0) {
       return (
@@ -244,7 +246,7 @@ const SubmitMockupOverlay = ({ mockup, onClose,onSuccess }: SubmitMockupOverlayP
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700 sticky top-0 bg-white dark:bg-zinc-800 z-10">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Submit Mockup #{mockup.id}
+              Submit Modification #{modification.id}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Returned Date: {new Date().toLocaleDateString()}
@@ -529,7 +531,7 @@ const SubmitMockupOverlay = ({ mockup, onClose,onSuccess }: SubmitMockupOverlayP
             disabled={!mockupImage || submitting}
             className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-200 font-medium"
           >
-            {submitting ? "Submitting..." : "Submit Mockup"}
+            {submitting ? "Submitting..." : "Submit Modification"}
           </button>
         </div>
       </div>
@@ -537,4 +539,4 @@ const SubmitMockupOverlay = ({ mockup, onClose,onSuccess }: SubmitMockupOverlayP
   );
 };
 
-export default SubmitMockupOverlay;
+export default SubmitModificationOverlay;

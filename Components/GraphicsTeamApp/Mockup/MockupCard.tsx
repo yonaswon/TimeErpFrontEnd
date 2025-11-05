@@ -9,9 +9,17 @@ interface MockupCardProps {
   onStartMockup: (mockupId: number) => void
   onStartModification: (modificationId: number) => void
   onShowSubmitOverlay: (mockup: Mockup) => void
+  onShowSubmitModificationOverlay: (modification: Modification) => void
 }
 
-const MockupCard = ({ mockup, modifications, onStartMockup, onStartModification, onShowSubmitOverlay }: MockupCardProps) => {
+const MockupCard = ({ 
+  mockup, 
+  modifications, 
+  onStartMockup, 
+  onStartModification, 
+  onShowSubmitOverlay,
+  onShowSubmitModificationOverlay 
+}: MockupCardProps) => {
   return (
     <div className="flex border-l-4 rounded-xl overflow-hidden shadow-sm dark:shadow-none mb-4">
       {/* Colored side stripe for status */}
@@ -22,7 +30,7 @@ const MockupCard = ({ mockup, modifications, onStartMockup, onStartModification,
         {/* Header: ID + Status + Date */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900 dark:text-white text-sm">#{mockup.id}</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">MC-{mockup.id}</span>
             {getStatusIcon(mockup.request_status)}
           </div>
           <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -76,7 +84,7 @@ const MockupCard = ({ mockup, modifications, onStartMockup, onStartModification,
                 modification={mod}
                 isLast={idx === modifications.length - 1}
                 onStartModification={onStartModification}
-                onShowSubmitOverlay={() => onShowSubmitOverlay(mockup)}
+                onShowSubmitModificationOverlay={onShowSubmitModificationOverlay}
               />
             ))}
           </div>

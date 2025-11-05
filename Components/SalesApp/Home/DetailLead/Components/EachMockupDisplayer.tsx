@@ -140,6 +140,7 @@ export default function EachMockupDisplayer({
           </div>
         </div>
         
+        {/* The "Modify" button is kept here, but the modification logic is now housed in the ModificationDisplayer below */}
         {isReturned && (
           <button className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium">
             Modify
@@ -355,13 +356,8 @@ export default function EachMockupDisplayer({
           </div>
         </div>
       )}
-
-      {/* Modifications Section */}
-      <ModificationDisplayer
-        mockupId={mockup.id}
-        leadId={mockup.lead}
-        canCreateModification={mockup.request_status === "RETURNED"}
-      />
+      
+      {/* ModificationDisplayer REMOVED from here to be managed by the parent MockUpDisplayer for proper layout. */}
     </div>
   );
 }

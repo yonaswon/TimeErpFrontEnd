@@ -15,7 +15,7 @@ export default function CreateMockupOverlay({ leadId, onClose, onSuccess }: Crea
       <div className="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 p-6">
+        <div className="sticky top-0 z-10 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 p-6 shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Create Mockup Request</h1>
@@ -32,7 +32,7 @@ export default function CreateMockupOverlay({ leadId, onClose, onSuccess }: Crea
         </div>
 
         {/* Form Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto">
           <MockupForm
             leadId={leadId}
             onCancel={onClose}
