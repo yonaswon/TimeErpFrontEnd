@@ -2,17 +2,15 @@
 import { useEffect, useState } from 'react'
 import {
   Home,
-  Package,
-  Clock,
+  ClipboardList,
   User,
 } from 'lucide-react'
-import { CuttingFileComponent } from './CuttingFile/CuttingFile'
+import { TasksContent } from './Tasks/TaskContent'
 
-type TabType = 'mockups' | 'orders' | 'manufacturing' | 'profile'
-import MockupPage from './Mockup/Mockup'
+type TabType = 'overview' | 'tasks' | 'profile'
 
-const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
-  const [activeTab, setActiveTab] = useState<TabType>('mockups')
+const WorkshopSupervisorApp = ({ userData, selectedRole, onRoleSelect }: any) => {
+  const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [user, setUser] = useState<any>(null)
 
   // ✅ Get Telegram user info (Mini App context)
@@ -26,20 +24,17 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
   }, [])
 
   const tabs = [
-    { id: 'mockups' as TabType, label: 'Mockups', icon: Home },
-    { id: 'orders' as TabType, label: 'Orders', icon: Package },
-    { id: 'manufacturing' as TabType, label: 'Manufacturing', icon: Clock },
+    { id: 'overview' as TabType, label: 'Overview', icon: Home },
+    { id: 'tasks' as TabType, label: 'Tasks', icon: ClipboardList },
     { id: 'profile' as TabType, label: 'Profile', icon: null },
   ]
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'mockups':
-        return <MockupPage />
-      case 'orders':
-        return <OrdersContent />
-      case 'manufacturing':
-        return <CuttingFileComponent />
+      case 'overview':
+        return <OverviewContent />
+      case 'tasks':
+        return <TasksContent />
       case 'profile':
         return <ProfileContent 
           user={user} 
@@ -48,7 +43,7 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
           onRoleSelect={onRoleSelect} 
         />
       default:
-        return <MockupPage />
+        return <OverviewContent />
     }
   }
 
@@ -121,65 +116,26 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
   )
 }
 
-export default GraphicsTeamApp
+export default WorkshopSupervisorApp
 
-const OrdersContent = () => (
+const OverviewContent = () => (
   <div className="space-y-4">
-    {/* Active Orders */}
+    {/* Workshop Stats */}
     <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Active Orders</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Workshop Overview</h2>
       
-      <div className="space-y-3">
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">#ORD-001</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">ABC Company - Window Graphics</div>
-            </div>
-            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">In Progress</span>
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Due: Dec 15, 2023 • Size: 48" x 36"</div>
-        </div>
-        
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">#ORD-002</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">XYZ Store - LED Signage</div>
-            </div>
-            <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded">Pending Review</span>
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Due: Dec 18, 2023 • Materials: Acrylic, LED</div>
-        </div>
-        
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">#ORD-003</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">New Restaurant - Store Front</div>
-            </div>
-            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">Ready</span>
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">Due: Dec 20, 2023 • Type: Illuminated Sign</div>
-        </div>
-      </div>
-    </div>
-
-    {/* Order Statistics */}
-    <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Order Overview</h2>
       <div className="grid grid-cols-2 gap-4 text-center">
         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">8</div>
-          <div className="text-xs text-blue-700 dark:text-blue-300">In Progress</div>
+          <div className="text-xs text-blue-700 dark:text-blue-300">Active Tasks</div>
         </div>
         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">12</div>
-          <div className="text-xs text-green-700 dark:text-green-300">Completed</div>
+          <div className="text-xs text-green-700 dark:text-green-300">Completed Today</div>
         </div>
         <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
           <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">3</div>
-          <div className="text-xs text-yellow-700 dark:text-yellow-300">Pending</div>
+          <div className="text-xs text-yellow-700 dark:text-yellow-300">Pending Review</div>
         </div>
         <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
           <div className="text-2xl font-bold text-red-600 dark:text-red-400">1</div>
@@ -187,74 +143,101 @@ const OrdersContent = () => (
         </div>
       </div>
     </div>
-  </div>
-)
 
-const ManufacturingContent = () => (
-  <div className="space-y-4">
-    {/* Production Queue */}
+    {/* Production Progress */}
     <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Production Queue</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Production Progress</h2>
+      
+      <div className="space-y-4">
+        <div>
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-gray-600 dark:text-gray-400">Cutting Department</span>
+            <span className="font-medium text-blue-600 dark:text-blue-400">75%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
+            <div className="bg-blue-600 h-2 rounded-full" style={{ width: '75%' }}></div>
+          </div>
+        </div>
+        
+        <div>
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-gray-600 dark:text-gray-400">Assembly Line</span>
+            <span className="font-medium text-green-600 dark:text-green-400">90%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
+            <div className="bg-green-600 h-2 rounded-full" style={{ width: '90%' }}></div>
+          </div>
+        </div>
+        
+        <div>
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-gray-600 dark:text-gray-400">Quality Control</span>
+            <span className="font-medium text-yellow-600 dark:text-yellow-400">60%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
+            <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '60%' }}></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Team Performance */}
+    <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Team Performance</h2>
       
       <div className="space-y-3">
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex justify-between items-center mb-2">
-            <div className="font-medium text-gray-900 dark:text-white">Cutting</div>
-            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">2 Jobs</span>
+        <div className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-zinc-700 rounded">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">JD</span>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">John Doe</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">CNC Operator</div>
+            </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Vinyl cutting and weeding</div>
+          <div className="text-right">
+            <div className="text-sm font-medium text-green-600 dark:text-green-400">15 tasks</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Today</div>
+          </div>
         </div>
         
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-purple-200 dark:border-purple-800">
-          <div className="flex justify-between items-center mb-2">
-            <div className="font-medium text-gray-900 dark:text-white">Printing</div>
-            <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-1 rounded">3 Jobs</span>
+        <div className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-zinc-700 rounded">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+              <span className="text-xs font-medium text-green-600 dark:text-green-400">SJ</span>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">Sarah Johnson</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Assembly</div>
+            </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Large format digital printing</div>
+          <div className="text-right">
+            <div className="text-sm font-medium text-green-600 dark:text-green-400">12 tasks</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Today</div>
+          </div>
         </div>
         
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-green-200 dark:border-green-800">
-          <div className="flex justify-between items-center mb-2">
-            <div className="font-medium text-gray-900 dark:text-white">Assembly</div>
-            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">1 Job</span>
+        <div className="flex justify-between items-center p-2 hover:bg-gray-50 dark:hover:bg-zinc-700 rounded">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+              <span className="text-xs font-medium text-purple-600 dark:text-purple-400">MB</span>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-900 dark:text-white">Mike Brown</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Quality Control</div>
+            </div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">LED signage assembly</div>
-        </div>
-        
-        <div className="p-3 bg-white dark:bg-zinc-800 rounded-lg border border-orange-200 dark:border-orange-800">
-          <div className="flex justify-between items-center mb-2">
-            <div className="font-medium text-gray-900 dark:text-white">Quality Check</div>
-            <span className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 px-2 py-1 rounded">4 Jobs</span>
+          <div className="text-right">
+            <div className="text-sm font-medium text-green-600 dark:text-green-400">18 tasks</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Today</div>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Final inspection and packaging</div>
-        </div>
-      </div>
-    </div>
-
-    {/* Manufacturing Stats */}
-    <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">This Week</h2>
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Completed Jobs</span>
-          <span className="font-medium text-green-600 dark:text-green-400">15</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">In Progress</span>
-          <span className="font-medium text-blue-600 dark:text-blue-400">8</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Pending Materials</span>
-          <span className="font-medium text-yellow-600 dark:text-yellow-400">3</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">On Time Rate</span>
-          <span className="font-medium text-purple-600 dark:text-purple-400">94%</span>
         </div>
       </div>
     </div>
   </div>
 )
+
 
 const ProfileContent = ({ user, userData, selectedRole, onRoleSelect }: any) => {
   return (
@@ -293,9 +276,9 @@ const ProfileContent = ({ user, userData, selectedRole, onRoleSelect }: any) => 
             <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
           )}
           <div className="mt-4 p-4 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 max-w-sm">
-            <h3 className="font-medium text-gray-900 dark:text-white mb-2">Graphics Team</h3>
+            <h3 className="font-medium text-gray-900 dark:text-white mb-2">Workshop Supervisor</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Create mockups, manage orders, and track manufacturing progress.
+              Manage workshop operations, assign tasks, and monitor production progress.
             </p>
           </div>
         </>

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Check, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import api from '@/api'
 
 interface SelectionStepProps {
@@ -39,7 +39,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
   const [modifications, setModifications] = useState<Modification[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedItems, setSelectedItems] = useState<Map<number, 'mockup' | 'modification'>>(new Map())
-  const [expandedMockups, setExpandedMockups] = useState<Set<number>>(new Set())
+  const [expandedMockups, setExpandedMockups] = useState<any>(new Set())
 
   useEffect(() => {
     fetchReturnedItems()
@@ -136,7 +136,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
 
   return (
     <div className="p-4">
-      {/* Mockups List - Minimal Design */}
+      {/* Mockups List */}
       {mockups.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400 text-sm">
           No returned mockups found
@@ -156,7 +156,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
                 <div className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-zinc-700 rounded">
                   <button
                     onClick={() => toggleSelection(mockup.id, 'mockup', mockup.id)}
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
                       isMockupSelected
                         ? 'bg-blue-500 border-blue-500'
                         : 'border-gray-400 dark:border-zinc-500'
@@ -167,7 +167,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
 
                   {/* Mockup Image */}
                   {mockup.mockup_image && (
-                    <div className="w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded overflow-hidden flex-shrink-0">
+                    <div className="w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded overflow-hidden shrink-0">
                       <img
                         src={mockup.mockup_image}
                         alt=""
@@ -211,7 +211,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
                         >
                           <button
                             onClick={() => toggleSelection(mockup.id, 'modification', modification.id)}
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
                               isModSelected
                                 ? 'bg-blue-500 border-blue-500'
                                 : 'border-gray-400 dark:border-zinc-500'
@@ -222,7 +222,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
 
                           {/* Modification Image */}
                           {modification.mockup_image && (
-                            <div className="w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded overflow-hidden flex-shrink-0">
+                            <div className="w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded overflow-hidden shrink-0">
                               <img
                                 src={modification.mockup_image}
                                 alt=""
@@ -252,7 +252,7 @@ export default function SelectionStep({ leadId, onSelectionComplete, onClose }: 
         </div>
       )}
 
-      {/* Minimal Actions */}
+      {/* Actions */}
       <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200 dark:border-zinc-700">
         <button
           onClick={onClose}

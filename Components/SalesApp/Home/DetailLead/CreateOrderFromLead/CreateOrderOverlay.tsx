@@ -1,8 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import SelectionStep from './SelectionStep'
-import OrderFormStep from './OrderFormStep'
+import SelectionStep from './Components/SelectionStep'
+import OrderFormStep from './Components/OrderFormStep'
 
 interface CreateOrderOverlayProps {
   leadId: number
@@ -40,24 +40,20 @@ export default function CreateOrderOverlay({ leadId, leadData, onClose, onSucces
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         
-        {/* Minimal Header */}
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-700 shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
                 currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500'
-              }`}>
-                1
-              </div>
+              }`}>1</div>
               <span className={currentStep >= 1 ? 'text-blue-600' : 'text-gray-500'}>Select</span>
             </div>
             <div className="w-8 h-0.5 bg-gray-300"></div>
             <div className="flex items-center gap-2 text-sm">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
                 currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500'
-              }`}>
-                2
-              </div>
+              }`}>2</div>
               <span className={currentStep >= 2 ? 'text-blue-600' : 'text-gray-500'}>Order</span>
             </div>
           </div>

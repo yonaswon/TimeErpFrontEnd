@@ -1,0 +1,212 @@
+// PaymentDetailOverlay.tsx
+import { X, User, DollarSign, MapPin, Calendar, FileText, CreditCard, Clock, Mail, Building } from 'lucide-react';
+import { Payment } from '@/types/finance';
+
+interface PaymentDetailOverlayProps {
+  payment: Payment;
+  onClose: () => void;
+  onConfirm: (paymentId: number) => void;
+}
+
+export const PaymentDetailOverlay = ({ payment, onClose, onConfirm }: PaymentDetailOverlayProps) => {
+  const container = payment.order_container;
+  const isPending = payment.status === 'P';
+  const isCashPayment = payment.method === 'CASH';
+  const showConfirmButton = isPending && !isCashPayment;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Payment Details
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Client Information */}
+          <Section title="Client Information">
+            <InfoRow icon={User} label="Client" value={container.client} />
+            <InfoRow icon={Mail} label="Contact" value={container.contact} />
+            <InfoRow icon={MapPin} label="Location" value={container.location} />
+          </Section>
+
+          {/* Order Details */}
+          <Section title="Order Details">
+            <InfoRow 
+              icon={Calendar} 
+              label="Delivery Date" 
+              value={new Date(container.delivery_date).toLocaleDateString()} 
+            />
+            <InfoRow 
+              icon={DollarSign} 
+              label="Full Payment" 
+              value={`$${container.full_payment}`} 
+            />
+            <InfoRow 
+              icon={DollarSign} 
+              label="Advance Paid" 
+              value={`$${payment.amount}`} 
+            />
+            <InfoRow 
+              icon={DollarSign} 
+              label="Remaining" 
+              value={`$${container.remaining_payment}`} 
+            />
+            <InfoRow 
+              icon={FileText} 
+              label="Order Difficulty" 
+              value={container.order_difficulty} 
+            />
+          </Section>
+
+          {/* Payment Information */}
+          <Section title="Payment Information">
+            <InfoRow 
+              icon={CreditCard} 
+              label="Method" 
+              value={payment.method} 
+            />
+            <InfoRow 
+              icon={FileText} 
+              label="Invoice Required" 
+              value={payment.invoice ? 'Yes' : 'No'} 
+            />
+            <InfoRow 
+              icon={Clock} 
+              label="Status" 
+              value={
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  payment.status === 'P' 
+                    ? 'bg-yellow-100 text-yellow-800' 
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {payment.status === 'P' ? 'Pending' : 'Confirmed'}
+                </span>
+              } 
+            />
+            <InfoRow 
+              icon={Building} 
+              label="Wallet" 
+              value={payment.wallet.name} 
+            />
+          </Section>
+
+          {/* Services */}
+          <Section title="Services">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  container.instalation_service ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-sm">Installation Service</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  container.delivery_service ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-sm">Delivery Service</span>
+              </div>
+            </div>
+          </Section>
+
+          {/* Special Requirements & Notes */}
+          {container.special_requerment && (
+            <Section title="Special Requirements">
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                {container.special_requerment}
+              </p>
+            </Section>
+          )}
+
+          {container.note && (
+            <Section title="Container Note">
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                {container.note}
+              </p>
+            </Section>
+          )}
+
+          {payment.note && (
+            <Section title="Payment Note">
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                {payment.note}
+              </p>
+            </Section>
+          )}
+
+          {/* Images */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {payment.invoice_image && (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Invoice Image</h4>
+                <img
+                  src={payment.invoice_image}
+                  alt="Invoice"
+                  className="w-full max-w-md h-64 object-contain rounded-lg border border-gray-300 bg-gray-50"
+                />
+              </div>
+            )}
+
+            {payment.confirmation_image && (
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Confirmation Image</h4>
+                <img
+                  src={payment.confirmation_image}
+                  alt="Payment confirmation"
+                  className="w-full max-w-md h-64 object-contain rounded-lg border border-gray-300 bg-gray-50"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 p-6 border-t border-gray-200 dark:border-zinc-700">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+          >
+            Close
+          </button>
+          {showConfirmButton && (
+            <button
+              onClick={() => onConfirm(payment.id)}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Confirm Payment
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper Components
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div>
+    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">{title}</h3>
+    <div className="space-y-3">{children}</div>
+  </div>
+);
+
+const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: any }) => (
+  <div className="flex items-start space-x-3">
+    <Icon className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-32 flex-shrink-0">
+      {label}:
+    </span>
+    <span className="text-sm text-gray-900 dark:text-white break-words flex-1">
+      {value}
+    </span>
+  </div>
+);

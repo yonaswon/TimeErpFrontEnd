@@ -1,5 +1,4 @@
 'use client'
-import { ShoppingCart } from 'lucide-react'
 import { useState } from 'react'
 import CreateOrderOverlay from './CreateOrderOverlay'
 
@@ -9,27 +8,28 @@ interface CreateOrderButtonProps {
 }
 
 export default function CreateOrderButton({ leadId, leadData }: CreateOrderButtonProps) {
-  const [showOverlay, setShowOverlay] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleSuccess = () => {
+    setIsOpen(false)
+    // You might want to refresh the lead data or show a success message
+  }
 
   return (
     <>
       <button
-        onClick={() => setShowOverlay(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+        onClick={() => setIsOpen(true)}
+        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
       >
-        <ShoppingCart className="w-4 h-4" />
         Create Order
       </button>
 
-      {showOverlay && (
+      {isOpen && (
         <CreateOrderOverlay
           leadId={leadId}
           leadData={leadData}
-          onClose={() => setShowOverlay(false)}
-          onSuccess={() => {
-            setShowOverlay(false)
-            // You can add refresh logic here later
-          }}
+          onClose={() => setIsOpen(false)}
+          onSuccess={handleSuccess}
         />
       )}
     </>

@@ -123,3 +123,69 @@ export interface PurchaseResponse {
   previous: string | null
   results: Purchase[]
 }
+
+
+// types/finance.ts
+// export interface TabType = 'payments' | 'requests' | 'actions';
+
+export interface Payment {
+  id: number;
+  order_container: {
+    id: number;
+    client: string;
+    contact: string;
+    location: string;
+    delivery_date: string;
+    invoice: boolean;
+    full_payment: number;
+    special_requerment: string;
+    advance_payment: string;
+    remaining_payment: string;
+    instalation_service: boolean;
+    order_difficulty: string;
+    note: string;
+    delivery_service: boolean;
+    created_at: string;
+    updated_at: string | null;
+    posted_by: number;
+    lead: number;
+    orders: number[];
+  };
+  accepted_by: {
+    id: number;
+    telegram_id: number;
+    telegram_user_name: string;
+    role: Array<{
+      id: number;
+      Name: string;
+      date: string;
+    }>;
+    first_name: string;
+  };
+  wallet: {
+    id: number;
+    name: string;
+    invoice_balance: string;
+    non_invoice_balance: string;
+    date: string;
+  };
+  confirmed_by: any | null;
+  amount: string;
+  invoice: boolean;
+  invoice_image: string | null;
+  method: string;
+  reason: string;
+  status: 'P' | 'C';
+  confirmation_image: string | null;
+  confirmed_at: string | null;
+  note: string;
+  created_at: string;
+  account: number | null;
+}
+
+export interface PaymentResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Payment[];
+}

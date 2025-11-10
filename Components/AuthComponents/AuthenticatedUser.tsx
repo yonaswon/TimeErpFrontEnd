@@ -10,6 +10,9 @@ import { useRouter } from 'next/navigation'
 import StockManager from '../StockManager/StockManager'
 import SalesTeamApp from '../SalesApp/SalesTeamApp'
 import GraphicsTeamApp from '../GraphicsTeamApp/GraphicsTeamApp'
+import WorkshopSupervisorApp from '../WorkShopSuperVisorApp/WorkshopSupervisorApp'
+import CncOperatorApp from '../CNCoperators/CncOperatorApp'
+import AssemblyDeliveryandInstalationApp from '../AssemblyDeliveryandInstalationApp/AssemblyDeliveryandInstalationApp'
 
 interface AuthenticatedUserProps {
   userData: UserData
@@ -27,6 +30,21 @@ export const AuthenticatedUser = ({ userData, selectedRole, onRoleSelect }: Auth
   return (
     <div className="text-center w-full max-w-md">
       {selectedRole && selectedRole == "Finance&Accounting" && <FinanceAndAccounting
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+        />}
+      {selectedRole && selectedRole == "AssemblyDeliveryandInstalationApp" && <AssemblyDeliveryandInstalationApp
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+        />}
+      {selectedRole && selectedRole == "CNC_OPEREATOR" && <CncOperatorApp
+            userData={userData} 
+            selectedRole={selectedRole} 
+            onRoleSelect={onRoleSelect} 
+        />}
+      {selectedRole && selectedRole == "WorkshopSupervisor" && <WorkshopSupervisorApp
             userData={userData} 
             selectedRole={selectedRole} 
             onRoleSelect={onRoleSelect} 

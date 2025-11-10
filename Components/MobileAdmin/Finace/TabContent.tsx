@@ -2,37 +2,24 @@ import { CheckCircle, FileText, Zap } from 'lucide-react'
 import { TabType } from '@/types/finance'
 import RequestsContent from './Purchase Requests/PurchaseRequests'
 import ActionsContent from './ActionContent'
+import { PaymentConfirmations } from './PaymentRequests/PaymentConfirmations'
 
 interface TabContentProps {
   activeTab: TabType
 }
-
-const PaymentsContent = () => (
-  <div className="space-y-3">
-    <div className="text-center py-8">
-      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-        Payment Confirmations
-      </h3>
-      <p className="text-gray-500 dark:text-gray-400">
-        Review and confirm pending payments
-      </p>
-    </div>
-  </div>
-)
 
 
 export const TabContent = ({ activeTab }: TabContentProps) => {
   const renderContent = () => {
     switch (activeTab) {
       case 'payments':
-        return <PaymentsContent />
+        return <PaymentConfirmations/>
       case 'requests':
         return <RequestsContent />
       case 'actions':
         return <ActionsContent />
       default:
-        return <PaymentsContent />
+        return <PaymentConfirmations/>
     }
   }
 
