@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Truck, Package, CheckCircle } from 'lucide-react';
 import { DeliveryAssignedToYou } from './DeliveryAssignedToYou';
 import { DeliveryStartedTasks } from './DeliveryStartedTasks';
+import { DeliveryCompletedTasks } from './DeliveryCompletedTasks';
 type TaskFilter = 'assigned' | 'started' | 'completed';
 
 export const DeliveryInstallationTeam = () => {
@@ -21,7 +22,7 @@ export const DeliveryInstallationTeam = () => {
       case 'started':
         return <DeliveryStartedTasks/>;
       case 'completed':
-        return <CompletedTasks />;
+        return <DeliveryCompletedTasks />;
       default:
         return <DeliveryAssignedToYou/>;
     }

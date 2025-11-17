@@ -1,7 +1,7 @@
 // Tasks/StartedCutting.tsx
-import { useState, useEffect } from 'react';
-import { Download, CheckCircle, Grid, List, AlertCircle } from 'lucide-react';
-import api from '@/api';
+import { useState, useEffect } from "react";
+import { Download, CheckCircle, Grid, List, AlertCircle } from "lucide-react";
+import api from "@/api";
 
 interface CuttingTask {
   id: number;
@@ -49,7 +49,7 @@ interface CuttingTask {
     material_name: string;
     current_width: string;
     current_height: string;
-    code:number;
+    code: number;
   };
   assigned_to: {
     id: number;
@@ -57,10 +57,10 @@ interface CuttingTask {
   };
 }
 
-type TaskView = 'card' | 'list';
+type TaskView = "card" | "list";
 
 export const StartedCutting = () => {
-  const [viewMode, setViewMode] = useState<TaskView>('card');
+  const [viewMode, setViewMode] = useState<TaskView>("card");
   const [tasks, setTasks] = useState<CuttingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,22 +76,24 @@ export const StartedCutting = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data from localStorage
-      const userData = localStorage.getItem('user_data');
+      const userData = localStorage.getItem("user_data");
       if (!userData) {
-        throw new Error('User data not found');
+        throw new Error("User data not found");
       }
-      
+
       const user = JSON.parse(userData);
       const userId = user.id;
-      
-      const response = await api.get(`/api/cuttingfiles/?status=STARTED&assigned_to=${userId}&page=${currentPage}`);
+
+      const response = await api.get(
+        `/api/cuttingfiles/?status=STARTED&assigned_to=${userId}&page=${currentPage}`
+      );
       setTasks(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / 10));
     } catch (err: any) {
-      setError('Failed to fetch started tasks');
-      console.error('Error fetching tasks:', err);
+      setError("Failed to fetch started tasks");
+      console.error("Error fetching tasks:", err);
     } finally {
       setLoading(false);
     }
@@ -103,20 +105,19 @@ export const StartedCutting = () => {
       setError(null);
 
       await api.post(`/api/cuttingfiles/${cuttingFileId}/complete/`);
-      
+
       // Refresh the task list
       fetchStartedTasks();
-      
     } catch (err: any) {
-      console.error('Error completing task:', err);
-      setError('Failed to complete task. Please try again.');
+      console.error("Error completing task:", err);
+      setError("Failed to complete task. Please try again.");
     } finally {
       setCompletingTask(null);
     }
   };
 
   const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
+    if (!dateString) return "Not set";
     return new Date(dateString).toLocaleString();
   };
 
@@ -128,7 +129,9 @@ export const StartedCutting = () => {
     return (
       <div className="bg-white dark:bg-zinc-800 rounded-lg p-8 border border-gray-200 dark:border-zinc-700 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="text-gray-600 dark:text-gray-400 mt-3">Loading started tasks...</p>
+        <p className="text-gray-600 dark:text-gray-400 mt-3">
+          Loading started tasks...
+        </p>
       </div>
     );
   }
@@ -142,22 +145,22 @@ export const StartedCutting = () => {
         </h2>
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
-            onClick={() => setViewMode('card')}
+            onClick={() => setViewMode("card")}
             className={`p-2 rounded-md transition-colors ${
-              viewMode === 'card'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              viewMode === "card"
+                ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setViewMode('list')}
+            onClick={() => setViewMode("list")}
             className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              viewMode === "list"
+                ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             }`}
             title="List View"
           >
@@ -175,24 +178,30 @@ export const StartedCutting = () => {
 
       {tasks.length === 0 ? (
         <div className="bg-white dark:bg-zinc-800 rounded-lg p-8 border border-gray-200 dark:border-zinc-700 text-center">
-          <p className="text-gray-600 dark:text-gray-400">No tasks in progress</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            No tasks in progress
+          </p>
         </div>
       ) : (
-        <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
+        <div className={viewMode === "card" ? "space-y-4" : "space-y-2"}>
           {tasks.map((task) =>
-            viewMode === 'card' ? (
-              <StartedTaskCard 
-                key={task.id} 
-                task={task} 
+            viewMode === "card" ? (
+              <StartedTaskCard
+                key={task.id}
+                task={task}
                 onComplete={handleComplete}
-                isCompleting={completingTask === task.orders[0].cutting_files[0].id}
+                isCompleting={
+                  completingTask === task.orders[0].cutting_files[0].id
+                }
               />
             ) : (
-              <StartedTaskListItem 
-                key={task.id} 
-                task={task} 
+              <StartedTaskListItem
+                key={task.id}
+                task={task}
                 onComplete={handleComplete}
-                isCompleting={completingTask === task.orders[0].cutting_files[0].id}
+                isCompleting={
+                  completingTask === task.orders[0].cutting_files[0].id
+                }
               />
             )
           )}
@@ -208,8 +217,8 @@ export const StartedCutting = () => {
               onClick={() => handlePageChange(page)}
               className={`px-3 py-1 rounded-lg text-sm ${
                 currentPage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
               }`}
             >
               {page}
@@ -222,11 +231,11 @@ export const StartedCutting = () => {
 };
 
 // Card View Component for Started Tasks
-const StartedTaskCard = ({ 
-  task, 
-  onComplete, 
-  isCompleting 
-}: { 
+const StartedTaskCard = ({
+  task,
+  onComplete,
+  isCompleting,
+}: {
   task: CuttingTask;
   onComplete: (cuttingFileId: number) => void;
   isCompleting: boolean;
@@ -235,7 +244,7 @@ const StartedTaskCard = ({
   const cuttingFile = mainOrder.cutting_files[0];
 
   const downloadFile = (url: string, filename: string) => {
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
@@ -243,8 +252,8 @@ const StartedTaskCard = ({
     document.body.removeChild(link);
   };
 
-   const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return "Not set";
     return new Date(dateString).toLocaleString();
   };
 
@@ -264,7 +273,12 @@ const StartedTaskCard = ({
           </p>
         </div>
         <button
-          onClick={() => downloadFile(cuttingFile.crv3d, `cutting-file-${cuttingFile.id}.crv3d`)}
+          onClick={() =>
+            downloadFile(
+              cuttingFile.crv3d,
+              `cutting-file-${cuttingFile.id}.crv3d`
+            )
+          }
           className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
           title="Download CRV3D file"
         >
@@ -275,22 +289,30 @@ const StartedTaskCard = ({
       {/* Task Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <h4 className="font-medium text-gray-900 dark:text-white mb-2">Schedule</h4>
+          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+            Schedule
+          </h4>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Scheduled Start:</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                Scheduled Start:
+              </span>
               <span className="text-gray-900 dark:text-white">
                 {formatDateTime(cuttingFile.schedule_start_date)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Scheduled Complete:</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                Scheduled Complete:
+              </span>
               <span className="text-gray-900 dark:text-white">
                 {formatDateTime(cuttingFile.schedule_complate_date)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Actual Start:</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                Actual Start:
+              </span>
               <span className="text-green-600 dark:text-green-400">
                 {formatDateTime(cuttingFile.start_date)}
               </span>
@@ -299,7 +321,9 @@ const StartedTaskCard = ({
         </div>
 
         <div>
-          <h4 className="font-medium text-gray-900 dark:text-white mb-2">Material Details</h4>
+          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+            Material Details
+          </h4>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Size:</span>
@@ -314,7 +338,9 @@ const StartedTaskCard = ({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Design Type:</span>
+              <span className="text-gray-600 dark:text-gray-400">
+                Design Type:
+              </span>
               <span className="text-gray-900 dark:text-white">
                 {mainOrder.design_type}
               </span>
@@ -326,7 +352,9 @@ const StartedTaskCard = ({
       {/* Progress Status */}
       <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-blue-700 dark:text-blue-300 font-medium">Status: In Progress</span>
+          <span className="text-blue-700 dark:text-blue-300 font-medium">
+            Status: In Progress
+          </span>
           <span className="text-blue-600 dark:text-blue-400">
             Started {formatDateTime(cuttingFile.start_date)}
           </span>
@@ -334,9 +362,11 @@ const StartedTaskCard = ({
       </div>
 
       {/* Mockup Image Preview */}
-      {mainOrder.mockup.mockup_image && (
+      {mainOrder?.mockup?.mockup_image && (
         <div className="mb-4">
-          <h4 className="font-medium text-gray-900 dark:text-white mb-2">Design Preview</h4>
+          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+            Design Preview
+          </h4>
           <img
             src={mainOrder.mockup.mockup_image}
             alt="Design mockup"
@@ -368,19 +398,19 @@ const StartedTaskCard = ({
 };
 
 // List View Component for Started Tasks
-const StartedTaskListItem = ({ 
-  task, 
-  onComplete, 
-  isCompleting 
-}: { 
+const StartedTaskListItem = ({
+  task,
+  onComplete,
+  isCompleting,
+}: {
   task: CuttingTask;
   onComplete: (cuttingFileId: number) => void;
   isCompleting: boolean;
 }) => {
   const mainOrder = task.orders[0];
   const cuttingFile = mainOrder.cutting_files[0];
-   const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return 'Not set';
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return "Not set";
     return new Date(dateString).toLocaleString();
   };
 
@@ -399,15 +429,19 @@ const StartedTaskListItem = ({
               In Progress
             </span>
           </div>
-          
+
           <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
             <span>Started: {formatDateTime(cuttingFile.start_date)}</span>
-            <span>Schedule: {formatDateTime(cuttingFile.schedule_complate_date)}</span>
-            <span>Size: {task.on.current_width}m x {task.on.current_height}m</span>
+            <span>
+              Schedule: {formatDateTime(cuttingFile.schedule_complate_date)}
+            </span>
+            <span>
+              Size: {task.on.current_width}m x {task.on.current_height}m
+            </span>
             <span>Price: ${mainOrder.price}</span>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4">
           <button
             onClick={() => onComplete(cuttingFile.id)}
@@ -425,4 +459,4 @@ const StartedTaskListItem = ({
       </div>
     </div>
   );
-};      
+};

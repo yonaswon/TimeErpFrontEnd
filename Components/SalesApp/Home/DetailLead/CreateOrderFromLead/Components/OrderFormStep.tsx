@@ -36,6 +36,10 @@ export default function OrderFormStep({
     containerNote,
     specialRequirement,
     orderDifficulty,
+    location,
+    deliveryDate,
+    installationService,
+    deliveryService,
     withInvoice,
     paymentMethod,
     selectedAccount,
@@ -49,6 +53,10 @@ export default function OrderFormStep({
     setContainerNote,
     setSpecialRequirement,
     setOrderDifficulty,
+    setLocation,
+    setDeliveryDate,
+    setInstallationService,
+    setDeliveryService,
     setWithInvoice,
     setPaymentMethod,
     setSelectedAccount,
@@ -118,11 +126,19 @@ export default function OrderFormStep({
         containerNote={containerNote}
         specialRequirement={specialRequirement}
         orderDifficulty={orderDifficulty}
+        location={location}
+        deliveryDate={deliveryDate}
+        installationService={installationService}
+        deliveryService={deliveryService}
         onTotalPaymentChange={handleTotalPaymentChange}
         onAdvancePaymentChange={handleAdvancePaymentChange}
         onContainerNoteChange={setContainerNote}
         onSpecialRequirementChange={setSpecialRequirement}
         onOrderDifficultyChange={setOrderDifficulty}
+        onLocationChange={setLocation}
+        onDeliveryDateChange={setDeliveryDate}
+        onInstallationServiceChange={setInstallationService}
+        onDeliveryServiceChange={setDeliveryService}
       />
 
       {/* Payment Section */}

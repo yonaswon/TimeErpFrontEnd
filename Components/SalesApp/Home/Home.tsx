@@ -44,9 +44,9 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-900">
       {/* Statistics Cards */}
-      <div className="p-4">
+      {/* <div className="p-4">
         <StatisticsCard userId={userId} filters={filters} />
-      </div>
+      </div> */}
 
       {/* Horizontal Navigation */}
       <div className="px-4 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">

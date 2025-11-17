@@ -53,7 +53,7 @@ export interface Modification {
   mockup_image: string | null
   note: string | null
   width: string | null
-  hieght: string | null
+  height: string | null
   telegram_message_id: string | null
   started_date: string | null
   requested_date: string

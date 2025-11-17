@@ -1,7 +1,16 @@
 // AssignAssemblyOverlay.tsx
-import { useState, useEffect } from 'react';
-import { X, Wrench, User, Calendar, Package, AlertCircle, CheckCircle, Users } from 'lucide-react';
-import api from '@/api';
+import { useState, useEffect } from "react";
+import {
+  X,
+  Wrench,
+  User,
+  Calendar,
+  Package,
+  AlertCircle,
+  CheckCircle,
+  Users,
+} from "lucide-react";
+import api from "@/api";
 
 interface Order {
   id: number;
@@ -71,13 +80,16 @@ interface AssignAssemblyOverlayProps {
   onSuccess: () => void;
 }
 
-export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOverlayProps) => {
+export const AssignAssemblyOverlay = ({
+  onClose,
+  onSuccess,
+}: AssignAssemblyOverlayProps) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
-  const [scheduleStartDate, setScheduleStartDate] = useState<string>('');
-  const [scheduleCompleteDate, setScheduleCompleteDate] = useState<string>('');
+  const [scheduleStartDate, setScheduleStartDate] = useState<string>("");
+  const [scheduleCompleteDate, setScheduleCompleteDate] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,15 +107,15 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
       setLoading(true);
       setError(null);
       const response = await api.get(
-        `/api/orders/?order_status=PRE-ACCEPTED%2CPRE-CONFIRMED%2CCNC-STARTED%2CCNC-COMPLETED&has_cutting_file=true&has_assembly_assign=false&page=${currentPage}`
+        `/api/orders/?order_status=PRE-ACCEPTED%2CPRE-CONFIRMED%2CCNC-STARTED%2CCNC-COMPLETED&has_cutting_file=true&has_assembly_assign=false&p=${currentPage}`
       );
-      
-      console.log('Orders fetched:', response.data.results);
+
+      console.log("Orders fetched:", response.data.results);
       setOrders(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / 10));
     } catch (err) {
-      setError('Failed to fetch orders ready for assembly');
-      console.error('Error fetching orders:', err);
+      setError("Failed to fetch orders ready for assembly");
+      console.error("Error fetching orders:", err);
     } finally {
       setLoading(false);
     }
@@ -111,29 +123,35 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
 
   const fetchTeamMembers = async () => {
     try {
-      const response = await api.get('/core/teams/?role=ASSEMBLY');
+      const response = await api.get(
+        "/core/teams/?role=AssemblyDeliveryandInstalationApp"
+      );
       setTeamMembers(response.data);
     } catch (err) {
-      console.error('Error fetching team members:', err);
+      console.error("Error fetching team members:", err);
     }
   };
 
   const handleMemberToggle = (memberId: number) => {
-    setSelectedMembers(prev =>
+    setSelectedMembers((prev) =>
       prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
+        ? prev.filter((id) => id !== memberId)
         : [...prev, memberId]
     );
   };
 
   const handleAssign = async () => {
     if (!selectedOrder) {
-      setError('No order selected');
+      setError("No order selected");
       return;
     }
 
-    if (selectedMembers.length === 0 || !scheduleStartDate || !scheduleCompleteDate) {
-      setError('Please select at least one team member and set schedule dates');
+    if (
+      selectedMembers.length === 0 ||
+      !scheduleStartDate ||
+      !scheduleCompleteDate
+    ) {
+      setError("Please select at least one team member and set schedule dates");
       return;
     }
 
@@ -143,57 +161,58 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
     const now = new Date();
 
     if (startDate <= now) {
-      setError('Start date must be in the future');
+      setError("Start date must be in the future");
       return;
     }
 
     if (completeDate <= startDate) {
-      setError('Completion date must be after start date');
+      setError("Completion date must be after start date");
       return;
     }
 
     try {
       setAssigning(true);
       setError(null);
-      
+
       const payload = {
-          order: selectedOrder.id || selectedOrder.order_code,
-          assigned_to: selectedMembers,
-          schedule_start_date: startDate.toISOString(),
-          schedule_complate_date: completeDate.toISOString(),
-          start_date: null,
-          complate_date: null,
-          status: "ASSIGNED"
-        };
-        
-       console.log(payload,'payload .....',selectedOrder,'selected order ')
-      console.log('Sending assignment payload:', payload);
+        order: selectedOrder.id || selectedOrder.order_code,
+        assigned_to: selectedMembers,
+        schedule_start_date: startDate.toISOString(),
+        schedule_complate_date: completeDate.toISOString(),
+        start_date: null,
+        complate_date: null,
+        status: "ASSIGNED",
+      };
 
-      const response = await api.post('/api/assembly-assign/', payload);
+      console.log(payload, "payload .....", selectedOrder, "selected order ");
+      console.log("Sending assignment payload:", payload);
 
-      setSuccess(`Assembly task for ORD-${selectedOrder.order_code} assigned successfully!`);
-      
+      const response = await api.post("/api/assembly-assign/", payload);
+
+      setSuccess(
+        `Assembly task for ORD-${selectedOrder.order_code} assigned successfully!`
+      );
+
       // Refresh the list and close overlay
       setTimeout(() => {
         fetchOrders();
         setSelectedOrder(null);
         setSelectedMembers([]);
-        setScheduleStartDate('');
-        setScheduleCompleteDate('');
+        setScheduleStartDate("");
+        setScheduleCompleteDate("");
         setSuccess(null);
       }, 2000);
-
     } catch (err: any) {
-      console.error('Assignment error:', err);
-      
+      console.error("Assignment error:", err);
+
       if (err.response?.data) {
-        if (typeof err.response.data === 'object') {
+        if (typeof err.response.data === "object") {
           setError(`Assignment failed: ${JSON.stringify(err.response.data)}`);
         } else {
           setError(`Assignment failed: ${err.response.data}`);
         }
       } else {
-        setError('Failed to assign assembly task. Please try again.');
+        setError("Failed to assign assembly task. Please try again.");
       }
     } finally {
       setAssigning(false);
@@ -205,14 +224,14 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const diffTime = date.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    if (diffDays === 2) return '2 days from now';
-    if (diffDays === 3) return '3 days from now';
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays === 2) return "2 days from now";
+    if (diffDays === 3) return "3 days from now";
     return `${diffDays} days from now`;
   };
 
@@ -229,15 +248,15 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
 
   const getLatestCuttingCompletion = (cuttingFiles: CuttingFile[]) => {
     if (!cuttingFiles.length) return null;
-    
+
     const completionDates = cuttingFiles
-      .map(file => file.schedule_complate_date)
+      .map((file) => file.schedule_complate_date)
       .filter(Boolean)
-      .map(date => new Date(date!));
-    
+      .map((date) => new Date(date!));
+
     if (!completionDates.length) return null;
-    
-    return new Date(Math.max(...completionDates.map(d => d.getTime())));
+
+    return new Date(Math.max(...completionDates.map((d) => d.getTime())));
   };
 
   const handlePageChange = (page: number) => {
@@ -247,8 +266,8 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
   const openAssignmentForm = (order: Order) => {
     setSelectedOrder(order);
     setSelectedMembers([]);
-    setScheduleStartDate('');
-    setScheduleCompleteDate('');
+    setScheduleStartDate("");
+    setScheduleCompleteDate("");
     setError(null);
     setSuccess(null);
   };
@@ -256,8 +275,8 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
   const closeAssignmentForm = () => {
     setSelectedOrder(null);
     setSelectedMembers([]);
-    setScheduleStartDate('');
-    setScheduleCompleteDate('');
+    setScheduleStartDate("");
+    setScheduleCompleteDate("");
     setError(null);
     setSuccess(null);
   };
@@ -267,7 +286,9 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-3 text-center">Loading orders...</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-3 text-center">
+            Loading orders...
+          </p>
         </div>
       </div>
     );
@@ -326,8 +347,10 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
           ) : (
             <div className="space-y-4">
               {orders.map((order) => {
-                const latestCuttingCompletion = getLatestCuttingCompletion(order.cutting_files);
-                
+                const latestCuttingCompletion = getLatestCuttingCompletion(
+                  order.cutting_files
+                );
+
                 return (
                   <div
                     key={order.id}
@@ -353,7 +376,8 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
                               ORD-{order.order_code}
                             </h4>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Created: {new Date(order.created_at).toLocaleDateString()}
+                              Created:{" "}
+                              {new Date(order.created_at).toLocaleDateString()}
                             </p>
                             {order.mockup?.note && (
                               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -361,16 +385,18 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
                               </p>
                             )}
                           </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            order.order_status === 'PRE-ACCEPTED' 
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : order.order_status === 'PRE-CONFIRMED'
-                              ? 'bg-blue-100 text-blue-800'
-                              : order.order_status === 'CNC-STARTED'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {order.order_status.replace('-', ' ')}
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              order.order_status === "PRE-ACCEPTED"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : order.order_status === "PRE-CONFIRMED"
+                                ? "bg-blue-100 text-blue-800"
+                                : order.order_status === "CNC-STARTED"
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {order.order_status.replace("-", " ")}
                           </span>
                         </div>
 
@@ -381,8 +407,12 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
                               Product Details
                             </h5>
                             {order.boms.map((bom) => (
-                              <div key={bom.id} className="text-sm text-gray-600 dark:text-gray-400">
-                                Size: {bom.width} x {bom.height} | Price: ${order.price}
+                              <div
+                                key={bom.id}
+                                className="text-sm text-gray-600 dark:text-gray-400"
+                              >
+                                Size: {bom.width} x {bom.height} | Price: $
+                                {order.price}
                               </div>
                             ))}
                           </div>
@@ -395,7 +425,8 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
                               {order.cutting_files.length} cutting file(s)
                               {latestCuttingCompletion && (
                                 <div className="text-xs text-blue-600 dark:text-blue-400">
-                                  Latest completion: {latestCuttingCompletion.toLocaleDateString()}
+                                  Latest completion:{" "}
+                                  {latestCuttingCompletion.toLocaleDateString()}
                                 </div>
                               )}
                             </div>
@@ -423,19 +454,21 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center space-x-2 mt-6">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    currentPage === page
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-1 rounded-lg text-sm ${
+                      currentPage === page
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
           )}
         </div>
@@ -499,7 +532,7 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
                             @{member.telegram_user_name}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {member.role.map(r => r.Name).join(', ')}
+                            {member.role.map((r) => r.Name).join(", ")}
                           </div>
                         </div>
                       </label>
@@ -562,7 +595,12 @@ export const AssignAssemblyOverlay = ({ onClose, onSuccess }: AssignAssemblyOver
                 </button>
                 <button
                   onClick={handleAssign}
-                  disabled={assigning || selectedMembers.length === 0 || !scheduleStartDate || !scheduleCompleteDate}
+                  disabled={
+                    assigning ||
+                    selectedMembers.length === 0 ||
+                    !scheduleStartDate ||
+                    !scheduleCompleteDate
+                  }
                   className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   {assigning ? (

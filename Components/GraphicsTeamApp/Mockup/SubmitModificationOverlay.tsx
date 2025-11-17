@@ -1,15 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Modification, Material, MaterialsResponse } from "./utils/types";
-import {
-  X,
-  Plus,
-  Trash2,
-  Upload,
-  Image as ImageIcon,
-  DollarSign,
-  Loader2,
-} from "lucide-react";
+import { Modification } from "./utils/types";
+import { X, Upload, DollarSign } from "lucide-react";
 import api from "@/api";
 
 interface SubmitModificationOverlayProps {
@@ -18,100 +10,15 @@ interface SubmitModificationOverlayProps {
   onSuccess: () => void;
 }
 
-interface BomRow {
-  id: string;
-  material?: Material;
-  amount?: string;
-  width?: string;
-  height?: string;
-}
-
-const SubmitModificationOverlay = ({ modification, onClose, onSuccess }: SubmitModificationOverlayProps) => {
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [loadingMaterials, setLoadingMaterials] = useState(true);
-  const [errorMaterials, setErrorMaterials] = useState<string | null>(null);
-  const [nextUrl, setNextUrl] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [bomRows, setBomRows] = useState<BomRow[]>([
-    {
-      id: Date.now().toString(),
-      amount: "",
-      width: "",
-      height: "",
-    },
-  ]);
+const SubmitModificationOverlay = ({
+  modification,
+  onClose,
+  onSuccess,
+}: SubmitModificationOverlayProps) => {
   const [mockupImage, setMockupImage] = useState<File | null>(null);
   const [mockupImagePreview, setMockupImagePreview] = useState<string>("");
   const [price, setPrice] = useState<string>("");
-  const [priceWithVat, setPriceWithVat] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Fetch materials with pagination
-  const fetchMaterials = async (url?: string) => {
-    try {
-      if (url) {
-        setLoadingMore(true);
-      } else {
-        setLoadingMaterials(true);
-      }
-
-      setErrorMaterials(null);
-
-      const response = await api.get(url || "/materials/");
-      const data: MaterialsResponse = response.data;
-
-      if (url) {
-        // Append to existing materials for load more
-        setMaterials((prev) => [...prev, ...data.results]);
-      } else {
-        // Replace materials for initial load
-        setMaterials(data.results || []);
-      }
-
-      setNextUrl(data.next);
-    } catch (err) {
-      console.error("Error fetching materials:", err);
-      setErrorMaterials("Failed to load materials. Please try again.");
-    } finally {
-      setLoadingMaterials(false);
-      setLoadingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMaterials();
-  }, []);
-
-  const loadMoreMaterials = () => {
-    if (nextUrl) {
-      fetchMaterials(nextUrl);
-    }
-  };
-
-  const addBomRow = () => {
-    setBomRows((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        amount: "",
-        width: "",
-        height: "",
-      },
-    ]);
-  };
-
-  const removeBomRow = (id: string) => {
-    // Don't remove if it's the only row
-    if (bomRows.length > 1) {
-      setBomRows((prev) => prev.filter((row) => row.id !== id));
-    }
-  };
-
-  const updateBomRow = (id: string, key: keyof BomRow, value: any) => {
-    setBomRows((prev) =>
-      prev.map((row) => (row.id === id ? { ...row, [key]: value } : row))
-    );
-  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -144,54 +51,28 @@ const SubmitModificationOverlay = ({ modification, onClose, onSuccess }: SubmitM
           Math.round(parseFloat(price) * 100).toString()
         ); // Convert to cents/piasters
       }
-      formData.append("price_with_vat", priceWithVat.toString());
-
-      // Add BOM data - convert each item individually
-      const bomData = bomRows
-        .filter((row) => row.material)
-        .map((row) => {
-          const bomItem: any = {
-            material: row.material!.id,
-          };
-
-          // Handle amount for Piece (P) and Length (L) materials
-          if (row.material!.type !== "A" && row.amount) {
-            bomItem.amount = parseFloat(row.amount) || null;
-          }
-
-          // Handle width and height for Areal (A) materials
-          if (row.material!.type === "A") {
-            if (row.width) bomItem.width = parseFloat(row.width) || null;
-            if (row.height) bomItem.height = parseFloat(row.height) || null;
-          }
-
-          return bomItem;
-        });
-
-      // Append each BOM item individually
-      bomData.forEach((bomItem, index) => {
-        Object.entries(bomItem).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            formData.append(`bom[${index}].${key}`, value.toString());
-          }
-        });
-      });
 
       console.log("Submitting modification data:");
       for (let [key, value] of formData.entries()) {
         console.log(key, value);
       }
 
-      await api.post(`/lead/modifications/${modification.id}/return_modification/`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      await api.post(
+        `/lead/modifications/${modification.id}/return_modification/`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       onSuccess();
     } catch (err: any) {
       console.error("Error submitting modification:", err);
       if (err.response?.data) {
-        alert(`Failed to submit modification: ${JSON.stringify(err.response.data)}`);
+        alert(
+          `Failed to submit modification: ${JSON.stringify(err.response.data)}`
+        );
       } else {
         alert("Failed to submit modification. Please try again.");
       }
@@ -200,48 +81,9 @@ const SubmitModificationOverlay = ({ modification, onClose, onSuccess }: SubmitM
     }
   };
 
-  const renderMaterialDropdown = (row: BomRow) => {
-    if (loadingMaterials && materials.length === 0) {
-      return (
-        <div className="flex items-center space-x-2 py-2 text-gray-500">
-          <Loader2 size={16} className="animate-spin" />
-          <span className="text-sm">Loading materials...</span>
-        </div>
-      );
-    }
-
-    if (errorMaterials && materials.length === 0) {
-      return <div className="text-red-500 text-sm py-2">{errorMaterials}</div>;
-    }
-
-    if (materials.length === 0) {
-      return (
-        <div className="text-gray-500 text-sm py-2">No materials available</div>
-      );
-    }
-
-    return (
-      <select
-        value={row.material?.id || ""}
-        onChange={(e) => {
-          const mat = materials.find((m) => m.id === parseInt(e.target.value));
-          updateBomRow(row.id, "material", mat);
-        }}
-        className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-      >
-        <option value="">Select Material</option>
-        {materials.map((mat) => (
-          <option key={mat.id} value={mat.id}>
-            {mat.name} ({mat.type}) - Stock: {mat.available}
-          </option>
-        ))}
-      </select>
-    );
-  };
-
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700 sticky top-0 bg-white dark:bg-zinc-800 z-10">
           <div>
@@ -316,204 +158,24 @@ const SubmitModificationOverlay = ({ modification, onClose, onSuccess }: SubmitM
           {/* Price Section */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Pricing
+              Price
             </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  Total Price
-                </label>
-                <div className="relative">
-                  <DollarSign
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    size={16}
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  VAT Inclusion
-                </label>
-                <div className="flex items-center space-x-3 p-3 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700">
-                  <input
-                    type="checkbox"
-                    id="price-with-vat"
-                    checked={priceWithVat}
-                    onChange={(e) => setPriceWithVat(e.target.checked)}
-                    className="w-4 h-4 text-blue-500 rounded focus:ring-blue-500"
-                  />
-                  <label
-                    htmlFor="price-with-vat"
-                    className="text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    Price includes VAT
-                  </label>
-                </div>
+            <div className="max-w-xs">
+              <div className="relative">
+                <DollarSign
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={16}
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
-          </div>
-
-          {/* BOM Table */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Bill of Materials
-            </h3>
-
-            <div className="overflow-x-auto border border-gray-200 dark:border-zinc-700 rounded-lg">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-zinc-700/50 border-b border-gray-200 dark:border-zinc-600">
-                    <th className="text-left py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Material
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Dimensions/Amount
-                    </th>
-                    <th className="text-left py-4 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bomRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-gray-100 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/30 transition-colors"
-                    >
-                      {/* Material Column */}
-                      <td className="py-4 px-4 min-w-[200px]">
-                        {renderMaterialDropdown(row)}
-                      </td>
-
-                      {/* Dimensions/Amount Column */}
-                      <td className="py-4 px-4 min-w-[200px]">
-                        {row.material ? (
-                          row.material.type === "A" ? (
-                            <div className="flex space-x-3">
-                              <div className="flex-1">
-                                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                  Width
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.width || ""}
-                                  onChange={(e) =>
-                                    updateBomRow(
-                                      row.id,
-                                      "width",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Width"
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                                />
-                              </div>
-                              <div className="flex-1">
-                                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                  Height
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.height || ""}
-                                  onChange={(e) =>
-                                    updateBomRow(
-                                      row.id,
-                                      "height",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Height"
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                {row.material.type === "P"
-                                  ? "Pieces"
-                                  : "Length"}
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={row.amount || ""}
-                                onChange={(e) =>
-                                  updateBomRow(row.id, "amount", e.target.value)
-                                }
-                                placeholder={
-                                  row.material.type === "P"
-                                    ? "Pieces"
-                                    : "Length"
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                              />
-                            </div>
-                          )
-                        ) : (
-                          <span className="text-gray-400 text-sm">
-                            Select material first
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions Column */}
-                      <td className="py-4 px-4">
-                        <button
-                          onClick={() => removeBomRow(row.id)}
-                          disabled={bomRows.length <= 1}
-                          className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-                          title="Remove row"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Add Row Button at Bottom */}
-            <div className="flex justify-center">
-              <button
-                onClick={addBomRow}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
-              >
-                <Plus size={16} />
-                <span>Add Another Row</span>
-              </button>
-            </div>
-
-            {/* Load More Button for Materials */}
-            {nextUrl && (
-              <div className="text-center">
-                <button
-                  onClick={loadMoreMaterials}
-                  disabled={loadingMore}
-                  className="px-4 py-2 text-sm text-blue-500 hover:text-blue-600 disabled:text-gray-400 transition-colors"
-                >
-                  {loadingMore ? (
-                    <div className="flex items-center space-x-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Loading more materials...</span>
-                    </div>
-                  ) : (
-                    "Load More Materials"
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         </div>
 

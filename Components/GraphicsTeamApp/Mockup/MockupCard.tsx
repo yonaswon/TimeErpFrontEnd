@@ -1,36 +1,40 @@
-import { Mockup, Modification } from './utils/types'
-import { getStatusIcon, getStatusColor } from './utils/statusUtils'
-import ModificationItem from './ModificationItem'
-import { Play, Upload, Image as ImageIcon, MessageSquare } from 'lucide-react'
+import { Mockup, Modification } from "./utils/types";
+import { getStatusIcon, getStatusColor } from "./utils/statusUtils";
+import ModificationItem from "./ModificationItem";
+import { Play, Upload, Image as ImageIcon, MessageSquare } from "lucide-react";
 
 interface MockupCardProps {
-  mockup: Mockup
-  modifications: Modification[]
-  onStartMockup: (mockupId: number) => void
-  onStartModification: (modificationId: number) => void
-  onShowSubmitOverlay: (mockup: Mockup) => void
-  onShowSubmitModificationOverlay: (modification: Modification) => void
+  mockup: Mockup;
+  modifications: Modification[];
+  onStartMockup: (mockupId: number) => void;
+  onStartModification: (modificationId: number) => void;
+  onShowSubmitOverlay: (mockup: Mockup) => void;
+  onShowSubmitModificationOverlay: (modification: Modification) => void;
 }
 
-const MockupCard = ({ 
-  mockup, 
-  modifications, 
-  onStartMockup, 
-  onStartModification, 
+const MockupCard = ({
+  mockup,
+  modifications,
+  onStartMockup,
+  onStartModification,
   onShowSubmitOverlay,
-  onShowSubmitModificationOverlay 
+  onShowSubmitModificationOverlay,
 }: MockupCardProps) => {
   return (
     <div className="flex border-l-4 rounded-xl overflow-hidden shadow-sm dark:shadow-none mb-4">
       {/* Colored side stripe for status */}
-      <div className={`${getStatusColor(mockup.request_status).split(' ')[1]} w-1`} />
+      <div
+        className={`${getStatusColor(mockup.request_status).split(" ")[1]} w-1`}
+      />
 
       {/* Card content */}
       <div className="flex-1 bg-white dark:bg-zinc-900 p-3 flex flex-col gap-2">
         {/* Header: ID + Status + Date */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900 dark:text-white text-sm">MC-{mockup.id}</span>
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">
+              MC-{mockup.id}
+            </span>
             {getStatusIcon(mockup.request_status)}
           </div>
           <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -57,7 +61,7 @@ const MockupCard = ({
 
         {/* Action buttons */}
         <div className="flex gap-2 mt-1">
-          {mockup.request_status === 'SENT' && (
+          {mockup.request_status === "SENT" && (
             <button
               onClick={() => onStartMockup(mockup.id)}
               className="flex items-center gap-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-full"
@@ -65,7 +69,7 @@ const MockupCard = ({
               <Play size={12} /> Start
             </button>
           )}
-          {mockup.request_status === 'STARTED' && (
+          {mockup.request_status === "STARTED" && (
             <button
               onClick={() => onShowSubmitOverlay(mockup)}
               className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded-full"
@@ -76,7 +80,7 @@ const MockupCard = ({
         </div>
 
         {/* Modifications (compact timeline) */}
-        {mockup.request_status === 'RETURNED' && modifications.length > 0 && (
+        {mockup.request_status === "RETURNED" && modifications.length > 0 && (
           <div className="mt-2 flex flex-col gap-2">
             {modifications.map((mod, idx) => (
               <ModificationItem
@@ -84,14 +88,16 @@ const MockupCard = ({
                 modification={mod}
                 isLast={idx === modifications.length - 1}
                 onStartModification={onStartModification}
-                onShowSubmitModificationOverlay={onShowSubmitModificationOverlay}
+                onShowSubmitModificationOverlay={
+                  onShowSubmitModificationOverlay
+                }
               />
             ))}
           </div>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default MockupCard
+export default MockupCard;

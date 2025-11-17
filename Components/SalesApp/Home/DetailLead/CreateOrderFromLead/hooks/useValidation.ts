@@ -20,9 +20,7 @@ export function useValidation() {
     if (designTypes.length === 0) {
       errors.push('Design types are not loaded yet')
     }
-    if (materials.length === 0) {
-      errors.push('Materials are not loaded yet')
-    }
+   
 
     items.forEach((item, index) => {
       if (!item.design_type) {
