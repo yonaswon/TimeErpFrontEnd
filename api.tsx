@@ -4,6 +4,7 @@ const base_url = "https://www.timeerp.duckdns.org"
 
 const api = axios.create({
   baseURL: base_url,
+  withCredentials: true,
 })
 
 // ✅ Add the JWT token to every request if it exists
