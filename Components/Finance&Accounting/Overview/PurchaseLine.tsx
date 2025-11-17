@@ -96,7 +96,7 @@ export const PurchaseLine = ({ purchase, onViewDetails, onFinishPurchase }: Purc
             </div>
 
             <div className="shrink-0 min-w-0 max-w-[120px]">
-              <div className="text-sm text-gray-900 dark:text-white truncate whitespace-nowrap" title={purchase?.to_account_name}>
+              <div className="text-sm text-gray-900 dark:text-white truncate whitespace-nowrap" title={purchase?.to_account_name ?? undefined}>
                 {purchase.to_account_name}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
