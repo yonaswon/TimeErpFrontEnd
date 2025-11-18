@@ -1,22 +1,23 @@
-import axios from 'axios'
+import axios from "axios";
 
-const base_url = "https://www.timeerp.duckdns.org"
+const base_url = "https://www.timeerp.duckdns.org";
+// const base_url = "http://127.0.0.1:8000";
 
 const api = axios.create({
   baseURL: base_url,
   // withCredentials: true,
-})
+});
 
 // ✅ Add the JWT token to every request if it exists
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem("access_token");
     if (token) {
-      config.headers.Authorization = `JWT ${token}`
+      config.headers.Authorization = `JWT ${token}`;
     }
-    return config
+    return config;
   },
   (error) => Promise.reject(error)
-)
+);
 
-export default api
+export default api;

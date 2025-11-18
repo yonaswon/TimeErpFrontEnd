@@ -1,293 +1,214 @@
-import { CheckCircle, FileText, Zap } from 'lucide-react'
-import { TabType } from '@/types/finance'
-import RequestsContent from './Purchase Requests/PurchaseRequests'
-import ActionsContent from './ActionContent'
-
-interface TabContentProps {
-  activeTab: TabType
-}
-
-const PaymentsContent = () => (
-  <div className="space-y-3">
-    <div className="text-center py-8">
-      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-        Payment Confirmations
-      </h3>
-      <p className="text-gray-500 dark:text-gray-400">
-        Review and confirm pending payments
-      </p>
-    </div>
-  </div>
-)
-
-
-export const TabContent = ({ activeTab }: TabContentProps) => {
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'payments':
-        return <PaymentsContent />
-      case 'requests':
-        return <RequestsContent />
-      case 'actions':
-        return <ActionsContent />
-      default:
-        return <PaymentsContent />
+now i want a global component that will handle the material transfer 
+under /MaterialTransfer folder .... 
+first start with a button (that will be embded in another compnent) that will accept from invetoryid as a prop and onclick it will create an overaly a full heigt full width overlay .. on the top 
+fech the invotory informaiton from .. 
+/inventories/ you will get .. [
+    {
+        "id": 1,
+        "name": "Admin",
+        "type": "SM",
+        "admins": [
+            {
+                "id": 1,
+                "username": "yonaswondmagegn",
+                "email": ""
+            }
+        ],
+        "created_at": "2025-11-16T08:54:33.213697+03:00",
+        "updated_at": "2025-11-16T08:54:33.213697+03:00"
+    },
+    {
+        "id": 2,
+        "name": "Stock Keeper",
+        "type": "SM",
+        "admins": [
+            {
+                "id": 1,
+                "username": "yonaswondmagegn",
+                "email": ""
+            }
+        ],
+        "created_at": "2025-11-16T08:55:02.465704+03:00",
+        "updated_at": "2025-11-16T08:55:02.465704+03:00"
     }
-  }
-
-  return (
-    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-4 border border-gray-200 dark:border-zinc-700">
-      {renderContent()}
-    </div>
-  )
-} this is currently my tab content and the payment content is demo and i want you to build that component under 
-PaymentRequest folder ... so ..
-first i want you to fech payments form ... 
-finance/payment/?status=P 
-p for pending and use 'C' for confirmed and wthout status filter for all ... 
-by default pendingyou will get 
+]this type of product and if the invotory id is accepted from teh button then that means from invotry so put that information on the top .. and others can be selected ... on select  
+another page will be redirected by taking tha' invetory id then choise materials ... get list of materials from ... 
 
 {
-    "count": 3,
+    "count": 4,
     "next": null,
     "previous": null,
     "results": [
         {
-            "id": 3,
-            "order_container": {
-                "id": 8,
-                "client": "addis ababa",
-                "contact": "963067788",
-                "location": "kjfhjkg",
-                "delivery_date": "2025-11-06T18:03:05.395000Z",
-                "invoice": false,
-                "full_payment": 8500,
-                "special_requerment": "kjgkjh",
-                "advance_payment": "3400.000",
-                "remaining_payment": "5100.000",
-                "instalation_service": true,
-                "order_difficulty": "MEDIUM",
-                "note": "jhfgujyt",
-                "delivery_service": true,
-                "created_at": "2025-11-06T18:03:05.595133Z",
-                "updated_at": null,
-                "posted_by": 2,
-                "lead": 7,
-                "orders": [
-                    12
-                ]
-            },
-            "accepted_by": {
-                "id": 2,
-                "telegram_id": 5301464167,
-                "telegram_user_name": "yonaswondmagegn",
-                "role": [
+            "id": 1,
+            "name": "8 mm Clear Acleric(Mica)",
+            "type": "A",
+            "code_name": "8mmMica",
+            "available": "8.000",
+            "parsialy_available": "1600.000",
+            "min_threshold": 8,
+            "width": "10.00",
+            "height": "20.00",
+            "date": "2025-11-16T13:20:09.502403+03:00",
+            "stats": {
+                "inventory_distribution": [
                     {
-                        "id": 1,
-                        "Name": "Finance&Accounting",
-                        "date": "2025-10-30T21:45:59.414101Z"
-                    },
-                    {
-                        "id": 2,
-                        "Name": "Admin",
-                        "date": "2025-10-30T21:46:21.222268Z"
-                    },
-                    {
-                        "id": 3,
-                        "Name": "Stock Manager",
-                        "date": "2025-10-30T22:04:31.273141Z"
-                    },
-                    {
-                        "id": 4,
-                        "Name": "Sales",
-                        "date": "2025-11-02T05:55:22.660347Z"
-                    },
-                    {
-                        "id": 5,
-                        "Name": "Graphic Designer",
-                        "date": "2025-11-03T07:58:28.856917Z"
+                        "inventory__name": "Stock Keeper",
+                        "total": 8,
+                        "unstarted": 8,
+                        "started": 0,
+                        "finished": 0
                     }
                 ],
-                "first_name": ""
-            },
-            "wallet": {
-                "id": 2,
-                "name": "Finance&Accounting",
-                "invoice_balance": "45.000",
-                "non_invoice_balance": "-3238.000",
-                "date": "2025-10-30T21:47:53.388311Z"
-            },
-            "confirmed_by": null,
-            "amount": "3400.000",
-            "invoice": false,
-            "invoice_image": null,
-            "method": "CASH",
-            "reason": "PRE",
-            "status": "P",
-            "confirmation_image": null,
-            "confirmed_at": null,
-            "note": "uktgy",
-            "created_at": "2025-11-06T18:03:05.812495Z",
-            "account": null
+                "total_pieces": 8,
+                "unstarted_pieces": 8,
+                "started_pieces": 0,
+                "finished_pieces": 0,
+                "total_area_available": 12800.0
+            }
         },
         {
             "id": 2,
-            "order_container": {
-                "id": 7,
-                "client": "yonas",
-                "contact": "963067788",
-                "location": "sadfabr qanbar adv",
-                "delivery_date": "2025-11-06T17:32:46.497000Z",
-                "invoice": false,
-                "full_payment": 43,
-                "special_requerment": "any specfica requiremnt",
-                "advance_payment": "22.000",
-                "remaining_payment": "22.000",
-                "instalation_service": true,
-                "order_difficulty": "MEDIUM",
-                "note": "container note",
-                "delivery_service": true,
-                "created_at": "2025-11-06T17:32:46.822159Z",
-                "updated_at": null,
-                "posted_by": 2,
-                "lead": 2,
-                "orders": [
-                    11
-                ]
-            },
-            "accepted_by": {
-                "id": 2,
-                "telegram_id": 5301464167,
-                "telegram_user_name": "yonaswondmagegn",
-                "role": [
+            "name": "3mm Clear Acleric",
+            "type": "A",
+            "code_name": "3mmMica",
+            "available": "8.000",
+            "parsialy_available": "1600.000",
+            "min_threshold": 8,
+            "width": "10.00",
+            "height": "20.00",
+            "date": "2025-11-16T13:20:37.698751+03:00",
+            "stats": {
+                "inventory_distribution": [
                     {
-                        "id": 1,
-                        "Name": "Finance&Accounting",
-                        "date": "2025-10-30T21:45:59.414101Z"
-                    },
-                    {
-                        "id": 2,
-                        "Name": "Admin",
-                        "date": "2025-10-30T21:46:21.222268Z"
-                    },
-                    {
-                        "id": 3,
-                        "Name": "Stock Manager",
-                        "date": "2025-10-30T22:04:31.273141Z"
-                    },
-                    {
-                        "id": 4,
-                        "Name": "Sales",
-                        "date": "2025-11-02T05:55:22.660347Z"
-                    },
-                    {
-                        "id": 5,
-                        "Name": "Graphic Designer",
-                        "date": "2025-11-03T07:58:28.856917Z"
+                        "inventory__name": "Stock Keeper",
+                        "total": 8,
+                        "unstarted": 8,
+                        "started": 0,
+                        "finished": 0
                     }
                 ],
-                "first_name": ""
-            },
-            "wallet": {
-                "id": 2,
-                "name": "Finance&Accounting",
-                "invoice_balance": "45.000",
-                "non_invoice_balance": "-3238.000",
-                "date": "2025-10-30T21:47:53.388311Z"
-            },
-            "confirmed_by": null,
-            "amount": "22.000",
-            "invoice": false,
-            "invoice_image": null,
-            "method": "CASH",
-            "reason": "PRE",
-            "status": "P",
-            "confirmation_image": null,
-            "confirmed_at": null,
-            "note": "arf",
-            "created_at": "2025-11-06T17:32:46.954809Z",
-            "account": null
+                "total_pieces": 8,
+                "unstarted_pieces": 8,
+                "started_pieces": 0,
+                "finished_pieces": 0,
+                "total_area_available": 12800.0
+            }
         },
         {
-            "id": 1,
-            "order_container": {
-                "id": 6,
-                "client": "Ephi",
-                "contact": "963067788",
-                "location": "asdfabre",
-                "delivery_date": "2025-11-05T20:03:17.878000Z",
-                "invoice": true,
-                "full_payment": 25000,
-                "special_requerment": "hghhg",
-                "advance_payment": "10000.000",
-                "remaining_payment": "15000.000",
-                "instalation_service": true,
-                "order_difficulty": "MEDIUM",
-                "note": "hghg",
-                "delivery_service": true,
-                "created_at": "2025-11-05T20:03:18.437504Z",
-                "updated_at": null,
-                "posted_by": 2,
-                "lead": 6,
-                "orders": [
-                    10
-                ]
-            },
-            "accepted_by": {
-                "id": 2,
-                "telegram_id": 5301464167,
-                "telegram_user_name": "yonaswondmagegn",
-                "role": [
-                    {
-                        "id": 1,
-                        "Name": "Finance&Accounting",
-                        "date": "2025-10-30T21:45:59.414101Z"
-                    },
-                    {
-                        "id": 2,
-                        "Name": "Admin",
-                        "date": "2025-10-30T21:46:21.222268Z"
-                    },
-                    {
-                        "id": 3,
-                        "Name": "Stock Manager",
-                        "date": "2025-10-30T22:04:31.273141Z"
-                    },
-                    {
-                        "id": 4,
-                        "Name": "Sales",
-                        "date": "2025-11-02T05:55:22.660347Z"
-                    },
-                    {
-                        "id": 5,
-                        "Name": "Graphic Designer",
-                        "date": "2025-11-03T07:58:28.856917Z"
-                    }
-                ],
-                "first_name": ""
-            },
-            "wallet": {
-                "id": 1,
-                "name": "Admin",
-                "invoice_balance": "-2464.800",
-                "non_invoice_balance": "-1188.000",
-                "date": "2025-10-30T21:47:40.321777Z"
-            },
-            "confirmed_by": null,
-            "amount": "10000.000",
-            "invoice": true,
-            "invoice_image": "http://127.0.0.1:8000/media/invoice_image/download_6.png",
-            "method": "BANK",
-            "reason": "PRE",
-            "status": "P",
-            "confirmation_image": "http://127.0.0.1:8000/media/payment_confirmation/photo_6024102133185498148_y.jpg",
-            "confirmed_at": null,
-            "note": "yth",
-            "created_at": "2025-11-05T20:03:18.683085Z",
-            "account": 2
+            "id": 3,
+            "name": "Blue Rope",
+            "type": "L",
+            "code_name": "Blue",
+            "available": "50.000",
+            "parsialy_available": "0.000",
+            "min_threshold": 25,
+            "width": null,
+            "height": null,
+            "date": "2025-11-16T13:20:58.131826+03:00",
+            "stats": {
+                "inventory_distribution": {
+                    "Stock Keeper": 25.0
+                },
+                "total_available": 50.0,
+                "partially_available": 0.0
+            }
+        },
+        {
+            "id": 4,
+            "name": "White Rope",
+            "type": "L",
+            "code_name": "WhiteRope",
+            "available": "1700.000",
+            "parsialy_available": "0.000",
+            "min_threshold": 25,
+            "width": null,
+            "height": null,
+            "date": "2025-11-16T13:21:09.546906+03:00",
+            "stats": {
+                "inventory_distribution": {
+                    "Stock Keeper": 850.0
+                },
+                "total_available": 1700.0,
+                "partially_available": 0.0
+            }
         }
     ]
-}this type of detail result and i want you to display the basic information int first and also in a small way the confirmation image ... then on click dtail overaly that display all infromations about the new order in a beautfull and simple way 
-handle pagination also ..... and confirm button ... that will send a post request to ... /finance/payment/1/confirm/ endpoint to confirm without any data ... use the @api for the api request ... 
-each component must stand alone and functional .. 
+}on the card by maching from invetory information with invetory name ... and available amount display the available amount in the from invetory .. of that material ... then after selecting mateiral next .. another page ... 
+if the material selected is areal material then list all from .. 
+/each-areal-materials/?inventory_id=2&finished=false, invetory id is from invtory accepted 
+and you will get ... 
+[
+    {
+        "id": 1,
+        "material": 1,
+        "material_name": "8 mm Clear Acleric(Mica)",
+        "areal_material_record": 1,
+        "code": 1,
+        "inventory": 2,
+        "inventory_name": "Stock Keeper",
+        "current_width": "10.00",
+        "current_height": "20.00",
+        "started": false,
+        "finished": false,
+        "date": "2025-11-16T13:23:02.216571+03:00"
+    },
+    {
+        "id": 2,
+        "material": 1,
+        "material_name": "8 mm Clear Acleric(Mica)",
+        "areal_material_record": 1,
+        "code": 2,
+        "inventory": 2,
+        "inventory_name": "Stock Keeper",
+        "current_width": "10.00",
+        "current_height": "20.00",
+        "started": false,
+        "finished": false,
+        "date": "2025-11-16T13:23:02.485254+03:00"
+    },..... (display the card .. and the code name -code ... take the code name from the mateiral .. )
+    can select multiple values and take the id .. 
+
+
+if the mateirla is length or piace mateiral then on the next .. inter the amount under the current invetory selected have less that or equel to  only ... 
+
+
+then on submit ... ti will send  a post request to the 
+/areal-records/create_transfer/
+if it's areal mateiral ... 
+
+and ... landp-records/create_transfer/
+
+use the data request format you have context from prev chat .. 
+
+each compnent must stand alone .. 
+give me the inside folder file list first .. 
+
+handle pagination if pagination applied(like material (by adding load more button on the bottom if next is available ))
+must handle dark and white mode 
+mobile first design i will use it mostly in mobile 
+
+use api for all api requests by importig it ... 
+
+
+
+MaterialTransfer/
+├── index.ts
+├── types.ts
+├── hooks/
+│   ├── useInventories.ts
+│   ├── useMaterials.ts
+│   ├── useEachArealMaterials.ts
+│   └── useTransfer.ts
+├── /
+│   ├── TransferButton.tsx
+│   ├── TransferOverlay.tsx
+│   ├── InventorySelection.tsx
+│   ├── MaterialSelection.tsx
+│   ├── ArealMaterialSelection.tsx
+│   ├── AmountInput.tsx
+│   ├── MaterialCard.tsx
+│   ├── ArealMaterialCard.tsx
+│   └── LoadMoreButton.tsx
+└── utils/
+    └── helpers.ts
