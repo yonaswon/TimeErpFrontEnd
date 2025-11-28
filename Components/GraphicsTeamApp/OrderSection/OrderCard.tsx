@@ -5,7 +5,7 @@ import OrderDetailOverlay from './OrderDetailOverlay'
 import BomFormOverlay from './BomFormOverlay'
 
 interface OrderCardProps {
-  order: Order
+  order: any
   onRefresh: () => void
 }
 
