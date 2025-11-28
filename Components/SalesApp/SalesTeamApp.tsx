@@ -7,6 +7,7 @@ import {
   Zap,
 } from 'lucide-react'
 import HomeContent  from './Home/Home'
+import ActionsContent from './Actions/ActionsContent'
 
 type TabType = 'home' | 'actions' | 'history' | 'profile'
 
@@ -123,57 +124,7 @@ const SalesTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
 export default SalesTeamApp
 
 // ----------------------------
-const ActionsContent = () => (
-  <div className="space-y-4">
-    {/* Action Cards */}
-    <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Lead Actions</h2>
-      
-      <div className="space-y-3">
-        <button className="w-full p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left">
-          <div className="font-medium text-blue-900 dark:text-blue-100">Create New Lead</div>
-          <div className="text-sm text-blue-700 dark:text-blue-300">Add a new potential customer</div>
-        </button>
-        
-        <button className="w-full p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors text-left">
-          <div className="font-medium text-purple-900 dark:text-purple-100">Request Mockup</div>
-          <div className="text-sm text-purple-700 dark:text-purple-300">Send design request to graphics team</div>
-        </button>
-        
-        <button className="w-full p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 hover:border-orange-300 dark:hover:border-orange-700 transition-colors text-left">
-          <div className="font-medium text-orange-900 dark:text-orange-100">Modify Mockup</div>
-          <div className="text-sm text-orange-700 dark:text-orange-300">Request changes to existing design</div>
-        </button>
-        
-        <button className="w-full p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-700 transition-colors text-left">
-          <div className="font-medium text-green-900 dark:text-green-100">Convert Lead</div>
-          <div className="text-sm text-green-700 dark:text-green-300">Mark lead as converted to sale</div>
-        </button>
-      </div>
-    </div>
 
-    {/* Pending Actions */}
-    <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Pending Actions</h2>
-      <div className="space-y-2">
-        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-zinc-700">
-          <div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Mockup review - ABC Company</div>
-            <div className="text-xs text-gray-500 dark:text-gray-500">Waiting for graphics team</div>
-          </div>
-          <span className="text-xs text-yellow-500">Pending</span>
-        </div>
-        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-zinc-700">
-          <div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Modification - XYZ Store</div>
-            <div className="text-xs text-gray-500 dark:text-gray-500">Client requested changes</div>
-          </div>
-          <span className="text-xs text-blue-500">In Progress</span>
-        </div>
-      </div>
-    </div>
-  </div>
-)
 
 const HistoryContent = () => (
   <div className="space-y-4">

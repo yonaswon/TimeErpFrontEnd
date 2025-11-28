@@ -1,8 +1,8 @@
 // PaymentConfirmations.tsx
 import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, DollarSign, User, MapPin, Calendar, Filter } from 'lucide-react';
+import { CheckCircle, Clock, DollarSign, User, MapPin, Calendar, Filter, Package } from 'lucide-react';
 import { Payment, PaymentResponse } from '@/types/finance';
-import  api from '@/api'
+import api from '@/api'
 import { PaymentDetailOverlay } from './PaymentDetailOverlay';
 
 type PaymentStatus = 'P' | 'C' | 'all';
@@ -16,6 +16,7 @@ export const PaymentConfirmations = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<PaymentStatus>('P');
   const [confirmationErrors, setConfirmationErrors] = useState<{[key: number]: string}>({});
+  const [confirmingPayments, setConfirmingPayments] = useState<{[key: number]: boolean}>({});
 
   const fetchPayments = async (page: number = 1) => {
     try {
@@ -43,7 +44,9 @@ export const PaymentConfirmations = () => {
 
   const handleConfirmPayment = async (paymentId: number) => {
     try {
+      setConfirmingPayments(prev => ({ ...prev, [paymentId]: true }));
       setConfirmationErrors(prev => ({ ...prev, [paymentId]: '' }));
+      
       await api.post(`/finance/payment/${paymentId}/confirm/`);
       // Remove confirmed payment from list
       setPayments(prev => prev.filter(payment => payment.id !== paymentId));
@@ -53,6 +56,8 @@ export const PaymentConfirmations = () => {
         [paymentId]: err.response?.data?.message || 'Failed to confirm payment'
       }));
       console.error('Error confirming payment:', err);
+    } finally {
+      setConfirmingPayments(prev => ({ ...prev, [paymentId]: false }));
     }
   };
 
@@ -162,6 +167,7 @@ export const PaymentConfirmations = () => {
                 onViewDetails={() => setSelectedPayment(payment)}
                 onConfirm={handleConfirmPayment}
                 error={confirmationErrors[payment.id]}
+                isConfirming={confirmingPayments[payment.id]}
               />
             ))}
           </div>
@@ -193,6 +199,7 @@ export const PaymentConfirmations = () => {
           payment={selectedPayment}
           onClose={() => setSelectedPayment(null)}
           onConfirm={handleConfirmPayment}
+          isConfirming={confirmingPayments[selectedPayment.id]}
         />
       )}
     </div>
@@ -205,30 +212,52 @@ interface PaymentCardProps {
   onViewDetails: () => void;
   onConfirm: (paymentId: number) => void;
   error?: string;
+  isConfirming?: boolean;
 }
 
-const PaymentCard = ({ payment, onViewDetails, onConfirm, error }: PaymentCardProps) => {
+const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }: PaymentCardProps) => {
   const isPending = payment.status === 'P';
   const isCashPayment = payment.method === 'CASH';
   const showConfirmButton = isPending && !isCashPayment;
+  
+  const getReasonDisplay = (reason: string) => {
+    const reasonMap: { [key: string]: string } = {
+      'PRE': 'Pre-Payment',
+      'REM': 'Remaining Payment',
+      'FULL': 'Full Payment',
+      'SALES': 'Product Sales'
+    };
+    return reasonMap[reason] || reason;
+  };
 
   return (
     <div className="bg-gray-50 dark:bg-zinc-700 rounded-xl p-4 border border-gray-200 dark:border-zinc-600">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-3 mb-2">
-            <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
-              <User className="w-4 h-4" />
-              <span className="font-medium">{payment.order_container.client}</span>
-            </div>
+            {/* Client or Sales Indicator */}
+            {payment.order_container ? (
+              <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
+                <User className="w-4 h-4" />
+                <span className="font-medium">{payment.order_container.client}</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
+                <Package className="w-4 h-4" />
+                <span className="font-medium">Product Sales</span>
+              </div>
+            )}
+            
             <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
               <DollarSign className="w-4 h-4" />
               <span className="font-semibold">${payment.amount}</span>
             </div>
+            
             <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
               <Clock className="w-4 h-4" />
               <span>{new Date(payment.created_at).toLocaleDateString()}</span>
             </div>
+            
             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
               payment.status === 'P' 
                 ? 'bg-yellow-100 text-yellow-800' 
@@ -236,25 +265,33 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error }: PaymentCardPr
             }`}>
               {payment.status === 'P' ? 'Pending' : 'Confirmed'}
             </div>
+            
             <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
               {payment.method}
             </div>
+            
+            <div className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+              {getReasonDisplay(payment.reason)}
+            </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center space-x-1">
-              <MapPin className="w-4 h-4 text-gray-500" />
-              <span className="text-gray-600 dark:text-gray-300 truncate">
-                {payment.order_container.location}
-              </span>
+          {/* Order Container Details */}
+          {payment.order_container && (
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <div className="flex items-center space-x-1">
+                <MapPin className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-600 dark:text-gray-300 truncate">
+                  {payment.order_container.location}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-600 dark:text-gray-300">
+                  {new Date(payment.order_container.delivery_date).toLocaleDateString()}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center space-x-1">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-gray-600 dark:text-gray-300">
-                {new Date(payment.order_container.delivery_date).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Confirmation Image Preview */}
           {payment.confirmation_image && (
@@ -286,9 +323,21 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error }: PaymentCardPr
           {showConfirmButton && (
             <button
               onClick={() => onConfirm(payment.id)}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              disabled={isConfirming}
+              className={`px-4 py-2 text-sm text-white rounded-lg transition-colors whitespace-nowrap flex items-center justify-center min-w-[100px] ${
+                isConfirming 
+                  ? 'bg-green-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
             >
-              Confirm
+              {isConfirming ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Confirming...
+                </>
+              ) : (
+                'Confirm'
+              )}
             </button>
           )}
         </div>

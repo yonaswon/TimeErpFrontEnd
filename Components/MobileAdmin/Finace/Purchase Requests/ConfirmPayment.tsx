@@ -1,66 +1,82 @@
-import { useState } from 'react'
-import { Purchase, Account } from '@/types/purchase'
-import { useAccounts } from '@/hooks/useAccounts'
-import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react'
-import api from '@/api'
+import { useState } from "react";
+import { Purchase, Account } from "@/types/purchase";
+import { useAccounts } from "@/hooks/useAccounts";
+import { X, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import api from "@/api";
 
 interface ConfirmPaymentProps {
-  purchase: Purchase
-  onClose: () => void
-  onSuccess: () => void
+  purchase: Purchase;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
-export const ConfirmPayment = ({ purchase, onClose, onSuccess }: ConfirmPaymentProps) => {
-  const [selectedAccount, setSelectedAccount] = useState<string>('')
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export const ConfirmPayment = ({
+  purchase,
+  onClose,
+  onSuccess,
+}: ConfirmPaymentProps) => {
+  const [selectedAccount, setSelectedAccount] = useState<string>("");
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const accountType = purchase.invoice ? 'C' : 'P'
-  const { accounts, loading: accountsLoading, error: accountsError } = useAccounts(accountType)
+  const accountType = purchase.invoice ? "C" : "P";
+  const {
+    accounts,
+    loading: accountsLoading,
+    error: accountsError,
+  } = useAccounts(accountType);
 
   const handleSubmit = async () => {
     if (!selectedAccount) {
-      setError('Please select an account')
-      return
+      setError("Please select an account");
+      return;
     }
 
     if (!paymentScreenshot) {
-      setError('Please upload payment screenshot')
-      return
+      setError("Please upload payment screenshot");
+      return;
     }
 
-    setSubmitting(true)
-    setError(null)
+    setSubmitting(true);
+    setError(null);
 
     try {
-      const formData = new FormData()
-      formData.append('account_id', selectedAccount)
-      formData.append('payment_screenshot', paymentScreenshot)
+      const formData = new FormData();
+      formData.append("account_id", selectedAccount);
+      formData.append("payment_screenshot", paymentScreenshot);
 
       // Use the new payment confirmation endpoint
-      await api.post(`/finance/purchase/${purchase.id}/paymentconfirmation/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      await api.post(
+        `/finance/purchase/${purchase.id}/paymentconfirmation/`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
 
-      onSuccess()
-      onClose()
+      onSuccess();
+      onClose();
     } catch (err: any) {
-      console.error('Error confirming payment:', err)
-      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to confirm payment')
+      console.error("Error confirming payment:", err);
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to confirm payment"
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-200 dark:border-zinc-700 max-w-md w-full">
         {/* Header */}
@@ -85,12 +101,14 @@ export const ConfirmPayment = ({ purchase, onClose, onSuccess }: ConfirmPaymentP
           {/* Account Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select {purchase.invoice ? 'Current' : 'Personal'} Account
+              Select {purchase.invoice ? "Current" : "Personal"} Account
             </label>
             {accountsLoading ? (
               <div className="animate-pulse h-10 bg-gray-200 dark:bg-zinc-700 rounded"></div>
             ) : accountsError ? (
-              <div className="text-red-600 dark:text-red-400 text-sm">{accountsError}</div>
+              <div className="text-red-600 dark:text-red-400 text-sm">
+                {accountsError}
+              </div>
             ) : (
               <select
                 value={selectedAccount}
@@ -100,7 +118,8 @@ export const ConfirmPayment = ({ purchase, onClose, onSuccess }: ConfirmPaymentP
                 <option value="">Select an account</option>
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.bank} - {account.account_name} ({account.account_number})
+                    {account.bank} - {account.account_name} (
+                    {account.account_number})
                   </option>
                 ))}
               </select>
@@ -110,15 +129,17 @@ export const ConfirmPayment = ({ purchase, onClose, onSuccess }: ConfirmPaymentP
           {/* Payment Screenshot Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Payment Screenshot *
+              Payment Screenshot
             </label>
             <div className="flex items-center gap-2">
               <Upload size={16} className="text-gray-500" />
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)}
-                className="flex-1 text-sm"
+                onChange={(e) =>
+                  setPaymentScreenshot(e.target.files?.[0] || null)
+                }
+                className="flex-1 text-sm bg-red-600"
               />
             </div>
             {paymentScreenshot && (
@@ -152,18 +173,18 @@ export const ConfirmPayment = ({ purchase, onClose, onSuccess }: ConfirmPaymentP
             className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-lg transition-colors"
           >
             <CheckCircle size={16} />
-            {submitting ? 'Confirming...' : 'Confirm Payment'}
+            {submitting ? "Confirming..." : "Confirm Payment"}
           </button>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // Helper function
 const formatAmount = (amount: string) => {
-  return `Birr ${parseFloat(amount).toLocaleString('en-US', {
+  return `Birr ${parseFloat(amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`
-}
+    maximumFractionDigits: 2,
+  })}`;
+};

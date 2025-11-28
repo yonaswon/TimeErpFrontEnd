@@ -81,7 +81,11 @@ const OrderList = () => {
       <div className="space-y-3">
         {orders &&
           orders?.map((order) => (
-            <OrderCard key={order.order_code} order={order} />
+            <OrderCard 
+              key={order.order_code} 
+              order={order} 
+              onRefresh={() => fetchOrders(page)}
+            />
           ))}
       </div>
 

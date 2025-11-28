@@ -306,7 +306,6 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
               )}
             </div>
           )}
-
           {/* Step 3: Each Areal Material Selection */}
           {step === 3 && (
             <div>
@@ -333,8 +332,16 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                         {eam.code} - {eam.material_name}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Size: {eam.current_width}x{eam.current_height} | 
-                        Status: {eam.finished ? 'Finished' : eam.started ? 'In Progress' : 'Available'}
+                        Current Size: {eam.current_width}x{eam.current_height} | 
+                        Status: <span className={
+                          eam.finished 
+                            ? 'text-green-600 font-medium' 
+                            : eam.started 
+                              ? 'text-amber-600 font-medium' 
+                              : 'text-blue-600 font-medium'
+                        }>
+                          {eam.finished ? 'Finished' : eam.started ? 'Started' : 'Available'}
+                        </span>
                       </div>
                     </button>
                   ))}
@@ -382,15 +389,35 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                             </span>
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Size: {bom.width} x {bom.height} | 
-                            Price: ${order.price || '0'}
+                            Size: {bom.width} x {bom.height}
                           </div>
-                          {order.mockup?.mockup_image && (
+                          
+                          {/* Mockup Image */}
+                          {(order.mockup_modification?.mockup_image || order.mockup?.mockup_image) && (
                             <img
-                              src={order.mockup.mockup_image}
+                              src={order.mockup_modification?.mockup_image || order.mockup?.mockup_image || ''}
                               alt="Order mockup"
                               className="w-16 h-16 object-cover rounded border border-gray-300 mt-2"
                             />
+                          )}
+
+                          {/* Related Cutting Files */}
+                          {order.cutting_files && order.cutting_files.length > 0 && (
+                            <div className="mt-3">
+                              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Existing Cutting Files:
+                              </div>
+                              <div className="space-y-1">
+                                {order.cutting_files.map(cf => (
+                                  <div 
+                                    key={cf.id} 
+                                    className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800 p-1.5 rounded border border-gray-100 dark:border-zinc-700"
+                                  >
+                                    {cf.on.material_name} - Code: {cf.on.code}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </label>

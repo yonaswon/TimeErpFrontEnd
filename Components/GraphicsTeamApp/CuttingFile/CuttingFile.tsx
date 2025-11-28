@@ -227,7 +227,7 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
           <div className="flex items-center space-x-2">
             <FileText className="w-5 h-5 text-blue-600" />
             <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {fileName}
+              {fileName.length > 15 ? fileName.substring(0, 15) + '...' : fileName}
             </span>
           </div>
           <div className="flex items-center space-x-1">

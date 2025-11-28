@@ -39,6 +39,7 @@ export interface Order {
   rem_confirmed_date: string | null;
   created_at: string;
   design_type: number;
+  cutting_files: CuttingFile[];
 }
 
 export interface Bom {
@@ -50,7 +51,7 @@ export interface Bom {
   total_price: string;
   estimated_price: string;
   date: string;
-  material: number;
+  material: Material;
 }
 
 export interface Mockup {

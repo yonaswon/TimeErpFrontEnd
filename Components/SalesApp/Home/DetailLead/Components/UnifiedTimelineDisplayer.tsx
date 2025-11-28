@@ -4,6 +4,7 @@ import api from "@/api";
 import { Plus, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import EachModificationDisplayer from "./EachModificationDisplayer";
 import CreateModificationOverlay from "./CreateModificationOverlay";
+import MessageButton from "../Message/MessageButton";
 
 // --- INTERFACES ---
 interface ImageObj {
@@ -290,7 +291,9 @@ export default function UnifiedTimelineDisplayer({
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/lead/modifications/?mockup=${mockupId}&ordering=-requested_date`);
+      const response = await api.get(
+        `/lead/modifications/?mockup=${mockupId}&ordering=-requested_date`
+      );
       const modificationsData = response.data.results || response.data;
       setModifications(modificationsData);
 
@@ -395,6 +398,7 @@ export default function UnifiedTimelineDisplayer({
   return (
     <div className="space-y-4">
       {/* Status Header - REMOVED the "New Modification" button from here */}
+
       <div className="flex items-center justify-between border-b border-gray-100 dark:border-zinc-700 pb-3">
         <div className="flex items-center gap-3">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -408,7 +412,14 @@ export default function UnifiedTimelineDisplayer({
           </p>
         </div>
 
-        {/* REMOVED: The "New Modification" button that was here */}
+        {/* Add Message Button */}
+        {/* <MessageButton
+          mockupId={mockupId}
+          mockupModificationId={
+            latestItem?.type === "modification" ? latestItem.id : undefined
+          }
+          leadId={leadId}
+        /> */}
       </div>
       {/* Timeline Content */}
       {timelineItems.map((item, index) => (

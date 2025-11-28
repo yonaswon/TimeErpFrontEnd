@@ -67,6 +67,7 @@ interface EachModificationDisplayerProps {
   modification: Modification;
   isOriginalMockup?: boolean;
 }
+import MessageButton from "../Message/MessageButton";
 
 const Badge = ({
   children,
@@ -116,14 +117,13 @@ export default function EachModificationDisplayer({
 
   return (
     <div className="space-y-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-4">
-      {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-zinc-700">
-        {/* <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div
             className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm ${
               isOriginalMockup
-                ? "bg-gradient-to-br from-purple-500 to-pink-600"
-                : "bg-gradient-to-br from-blue-500 to-cyan-600"
+                ? "bg-linear-to-br from-purple-500 to-pink-600"
+                : "bg-linear-to-br from-blue-500 to-cyan-600"
             }`}
           >
             {isOriginalMockup ? "M" : "R"}
@@ -147,14 +147,14 @@ export default function EachModificationDisplayer({
               {formatDate(modification.requested_date)}
             </div>
           </div>
-        </div> */}
+        </div>
 
-        {isOriginalMockup && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded text-xs font-medium">
-            <Layers className="w-3 h-3" />
-            Base Design
-          </div>
-        )}
+        {/* Add Message Button for each modification/mockup */}
+        <MessageButton
+          mockupId={isOriginalMockup ? modification.id : undefined}
+          mockupModificationId={!isOriginalMockup ? modification.id : undefined}
+          leadId={modification.lead}
+        />
       </div>
 
       {/* Mockup Image at the top for RETURNED status */}

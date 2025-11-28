@@ -6,9 +6,10 @@ import BomFormOverlay from './BomFormOverlay'
 
 interface OrderCardProps {
   order: Order
+  onRefresh: () => void
 }
 
-const OrderCard = ({ order }: OrderCardProps) => {
+const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
   const [showDetailOverlay, setShowDetailOverlay] = useState(false)
   const [showBomOverlay, setShowBomOverlay] = useState(false)
   
@@ -139,7 +140,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
           onClose={() => setShowBomOverlay(false)}
           onSuccess={() => {
             setShowBomOverlay(false)
-            // You might want to refresh the orders list here
+            onRefresh()
           }}
         />
       )}

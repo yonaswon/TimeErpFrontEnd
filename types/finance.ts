@@ -151,6 +151,7 @@ export interface Payment {
     lead: number;
     orders: number[];
   };
+  material_sales_recored:any;
   accepted_by: {
     id: number;
     telegram_id: number;
