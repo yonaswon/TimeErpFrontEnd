@@ -23,22 +23,62 @@ import {
   ChevronRight,
   Receipt,
   Info,
+  Pencil,
+  Type,
 } from "lucide-react";
 import api from "@/api";
+import OrderContainerEdit from "./OrderContainerEdit";
+import OrderEdit from "./OrderEdit";
 
 interface OrderDetailProps {
   order: any;
   onClose: () => void;
+  onOrderUpdate?: (updatedOrder: any) => void; // Optional callback for parent
 }
 
-const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
+const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   const [activeTab, setActiveTab] = useState<
     "overview" | "orders" | "payments"
   >("overview");
   const [payments, setPayments] = useState<any[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [editingContainer, setEditingContainer] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any>(null);
 
+  const [designTypes, setDesignTypes] = useState<any[]>([]);
+  const [loadingDesignTypes, setLoadingDesignTypes] = useState(false);
+
+  // Fetch design types on component mount
+  useEffect(() => {
+    const fetchDesignTypes = async () => {
+      try {
+        setLoadingDesignTypes(true);
+        const response = await api.get("/lead/design-types/");
+        setDesignTypes(response.data);
+      } catch (error) {
+        console.error("Failed to fetch design types:", error);
+      } finally {
+        setLoadingDesignTypes(false);
+      }
+    };
+
+    fetchDesignTypes();
+  }, []);
+
+  // Helper to get design type name
+  const getDesignTypeName = (designTypeId: any) => {
+    if (!designTypeId) return "N/A";
+
+    if (typeof designTypeId === "object") {
+      return designTypeId.name || "N/A";
+    }
+
+    const type = designTypes.find((t) => t.id === designTypeId);
+    return type?.name || `ID: ${designTypeId}`;
+  };
+
+  // ... rest of your existing functions ...
   // Fetch payments for this order
   const fetchPayments = async () => {
     try {
@@ -92,6 +132,24 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(numAmount);
+  };
+
+  const handleContainerUpdate = (updatedData: any) => {
+    // Update the local order data with the new values
+    // Object.keys(updatedData).forEach((key) => {
+    //   if (key in order) {
+    //     order[key] = updatedData[key];
+    //   }
+    // });
+    // // Notify parent component if needed
+    // if (onOrderUpdate) {
+    //   onOrderUpdate(order);
+    // }
+    onClose();
+  };
+
+  const handleOrderUpdate = (updatedOrder: any) => {
+    onClose();
   };
 
   // --- Helpers ---
@@ -183,6 +241,13 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                   {order.orders?.[0]?.order_status?.replace(/-/g, " ") ||
                     "UNKNOWN"}
                 </span>
+                <button
+                  onClick={() => setEditingContainer(true)}
+                  className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                  title="Edit order container"
+                >
+                  <Pencil size={16} />
+                </button>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
                 <span className="flex items-center gap-1">
@@ -212,14 +277,15 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-all"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-all"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
-
         {/* Tabs */}
         <div className="shrink-0 px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
           <div className="flex gap-6 overflow-x-auto py-1">
@@ -274,53 +340,73 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                 </div>
 
                 {/* Services */}
+                {/* Services */}
                 <div>
                   <SectionTitle title="Services & Complexity" icon={Settings} />
-                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="text-center p-2">
-                      <div
-                        className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                          order.instalation_service
-                            ? "bg-green-100 text-green-600 dark:bg-green-900/20"
-                            : "bg-gray-100 text-gray-400 dark:bg-zinc-800"
-                        }`}
-                      >
-                        <Wrench size={20} />
+                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      {/* Installation Service */}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`p-2 rounded-lg ${
+                            order.instalation_service
+                              ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
+                          }`}
+                        >
+                          <Wrench size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Installation
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {order.instalation_service
+                              ? "Included"
+                              : "Not included"}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium dark:text-white">
-                        Installation
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.instalation_service ? "Included" : "No"}
-                      </p>
-                    </div>
-                    <div className="text-center p-2">
-                      <div
-                        className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                          order.delivery_service
-                            ? "bg-blue-100 text-blue-600 dark:bg-blue-900/20"
-                            : "bg-gray-100 text-gray-400 dark:bg-zinc-800"
-                        }`}
-                      >
-                        <Truck size={20} />
+
+                      {/* Delivery Service */}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`p-2 rounded-lg ${
+                            order.delivery_service
+                              ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
+                          }`}
+                        >
+                          <Truck size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Delivery
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {order.delivery_service
+                              ? "Included"
+                              : "Not included"}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium dark:text-white">
-                        Delivery
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.delivery_service ? "Included" : "No"}
-                      </p>
-                    </div>
-                    <div className="text-center p-2">
-                      <div className="mx-auto w-10 h-10 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/20 flex items-center justify-center mb-2">
-                        <Settings size={20} />
+
+                      {/* Invoice */}
+
+                      {/* Difficulty */}
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                          <Settings size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Difficulty
+                          </p>
+                          <p className="text-xs font-medium text-gray-900 dark:text-white">
+                            {order.order_difficulty || "Standard"}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium dark:text-white">
-                        Difficulty
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.order_difficulty || "Standard"}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -405,7 +491,7 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                 order.orders.map((item: any) => (
                   <div
                     key={item.order_code}
-                    className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                    className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
                   >
                     {/* Item Header */}
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-zinc-800">
@@ -414,11 +500,25 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                           <Package size={20} />
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900 dark:text-white">
-                            ORD-{item.order_code}
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-gray-900 dark:text-white">
+                              ORD-{item.order_code}
+                            </h4>
+                            <button
+                              onClick={() => setEditingOrder(item)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                              title="Edit order"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
                           <span className="text-xs text-gray-500">
-                            {item.design_type}
+                            {/* Handle design_type whether it's object or string */}
+                            {typeof item.design_type === "object"
+                              ? item.design_type?.name
+                              : typeof item.design_type === "string"
+                              ? item.design_type
+                              : `Design Type ID: ${item.design_type}`}
                           </span>
                         </div>
                       </div>
@@ -452,14 +552,39 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                         </div>
                       </div>
 
-                      {/* Mockup Preview */}
-                      {item.mockup?.mockup_image && (
+                      {/* Design Type Display */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                          <Type
+                            size={18}
+                            className="text-blue-600 dark:text-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-900 dark:text-white">
+                            Design Type
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {typeof item.design_type === "object"
+                              ? item.design_type?.name
+                              : typeof item.design_type === "string"
+                              ? item.design_type
+                              : `ID: ${item.design_type}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Mockup Preview - Check multiple possible image locations */}
+                      {(item.mockup_image || item.mockup?.mockup_image) && (
                         <div className="flex items-center gap-3">
                           <img
-                            src={item.mockup.mockup_image}
+                            src={item.mockup_image || item.mockup?.mockup_image}
                             alt="Mockup"
                             onClick={() =>
-                              window.open(item.mockup.mockup_image, "_blank")
+                              window.open(
+                                item.mockup_image || item.mockup?.mockup_image,
+                                "_blank"
+                              )
                             }
                             className="w-12 h-12 object-cover rounded bg-white border border-gray-200 dark:border-zinc-700 cursor-pointer hover:scale-105 transition-transform"
                           />
@@ -470,7 +595,11 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                             <p
                               className="text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
                               onClick={() =>
-                                window.open(item.mockup.mockup_image, "_blank")
+                                window.open(
+                                  item.mockup_image ||
+                                    item.mockup?.mockup_image,
+                                  "_blank"
+                                )
                               }
                             >
                               View Image
@@ -511,6 +640,180 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* --- TAB: ORDERS --- */}
+          {activeTab === "orders" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {!order.orders?.length ? (
+                <div className="text-center py-12 text-gray-500">
+                  No sub-orders found.
+                </div>
+              ) : (
+                order.orders.map((item: any) => (
+                  <div
+                    key={item.order_code}
+                    className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
+                  >
+                    {/* Item Header */}
+                    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-zinc-800">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500">
+                          <Package size={20} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-gray-900 dark:text-white">
+                              ORD-{item.order_code}
+                            </h4>
+                            <button
+                              onClick={() => setEditingOrder(item)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                              title="Edit order"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {loadingDesignTypes ? (
+                              <span className="flex items-center gap-1">
+                                <Loader className="animate-spin" size={12} />
+                                Loading design type...
+                              </span>
+                            ) : (
+                              getDesignTypeName(item.design_type)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="font-mono font-medium text-gray-900 dark:text-gray-200">
+                          {formatCurrency(item.price)}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getOrderStatusColor(
+                            item.order_status
+                          )}`}
+                        >
+                          {item.order_status.replace(/-/g, " ")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Item Details */}
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Design Type Info */}
+                      <div className="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg">
+                        <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                          <Type
+                            size={20}
+                            className="text-blue-600 dark:text-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            Design Type
+                          </p>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white mt-1">
+                            {loadingDesignTypes ? (
+                              <span className="flex items-center gap-2">
+                                <Loader className="animate-spin" size={14} />
+                                Loading...
+                              </span>
+                            ) : (
+                              getDesignTypeName(item.design_type)
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Mockup Image */}
+                      {(item.mockup_image || item.mockup?.mockup_image) && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            Mockup
+                          </p>
+                          <div className="relative">
+                            <img
+                              src={
+                                item.mockup_image || item.mockup?.mockup_image
+                              }
+                              alt="Mockup"
+                              onClick={() =>
+                                window.open(
+                                  item.mockup_image ||
+                                    item.mockup?.mockup_image,
+                                  "_blank"
+                                )
+                              }
+                              className="w-full h-40 object-cover rounded-lg border-2 border-gray-200 dark:border-zinc-700 cursor-pointer hover:opacity-90 transition-opacity"
+                            />
+                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                              Click to enlarge
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Modification Image */}
+                      {item.mockup_modification?.mockup_image && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                            Modified Version
+                          </p>
+                          <div className="relative">
+                            <img
+                              src={item.mockup_modification.mockup_image}
+                              alt="Modification"
+                              onClick={() =>
+                                window.open(
+                                  item.mockup_modification.mockup_image,
+                                  "_blank"
+                                )
+                              }
+                              className="w-full h-40 object-cover rounded-lg border-2 border-amber-200 dark:border-amber-900 cursor-pointer hover:opacity-90 transition-opacity"
+                            />
+                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                              Click to enlarge
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Components Info - Only show if no images */}
+                      {!(item.mockup_image || item.mockup?.mockup_image) &&
+                        !item.mockup_modification?.mockup_image && (
+                          <div className="md:col-span-2 flex flex-col gap-3">
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                                Components
+                              </p>
+                              <div className="flex gap-3">
+                                <div className="bg-white dark:bg-zinc-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-zinc-700">
+                                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {item.boms?.length || 0}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    BOM Items
+                                  </p>
+                                </div>
+                                <div className="bg-white dark:bg-zinc-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-zinc-700">
+                                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {item.cutting_files?.length || 0}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    Cutting Files
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                     </div>
                   </div>
                 ))
@@ -628,12 +931,24 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
           )}
         </div>
       </div>
+      {/* Edit Overlays */}
+      {editingContainer && (
+        <OrderContainerEdit
+          container={order}
+          onClose={() => setEditingContainer(false)}
+          onUpdate={handleContainerUpdate}
+        />
+      )}
+
+      {editingOrder && (
+        <OrderEdit
+          order={editingOrder}
+          onClose={() => setEditingOrder(null)}
+          onUpdate={handleOrderUpdate}
+        />
+      )}
     </div>
   );
 };
 
 export default OrderDetail;
-
-
-i will to update this component to handle Order Edits .. and OrderContainer Edits .. after the display add the eDIT iCON ON THE TOP OF VOERVIEW for the container .. and Edit for Each Order ... and on edit clicked an overaly to edit the informasons for the order only the mockup image .. and use /api/orders/{order code }/ endpoint to edit ... and send  pach request .. use 
-api for all api requests use lucid react for icon and must handle dark and white mode .. also mobile first design 

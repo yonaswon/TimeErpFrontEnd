@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import HomeContent  from './Home/Home'
 import ActionsContent from './Actions/ActionsContent'
+import OrdersContent from './Orders/OrdersContent'
 
 type TabType = 'home' | 'actions' | 'history' | 'profile'
 
@@ -39,7 +40,7 @@ const SalesTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
       case 'actions':
         return <ActionsContent />
       case 'history':
-        return <HistoryContent />
+        return <OrdersContent />
       case 'profile':
         return <ProfileContent 
           user={user} 

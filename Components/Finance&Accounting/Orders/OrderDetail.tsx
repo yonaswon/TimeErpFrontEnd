@@ -25,6 +25,7 @@ import {
   Info,
 } from "lucide-react";
 import api from "@/api";
+import PityCostsSection from "./PityCost/PityCostsSection";
 
 interface OrderDetailProps {
   order: any;
@@ -33,7 +34,7 @@ interface OrderDetailProps {
 
 const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "orders" | "payments"
+    "overview" | "orders" | "payments" | "pity-costs"
   >("overview");
   const [payments, setPayments] = useState<any[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -231,6 +232,7 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                 icon: Layers,
               },
               { id: "payments", label: "Payments", icon: CreditCard },
+              { id: "pity-costs", label: "Pity Costs", icon: Settings },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -518,6 +520,12 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
             </div>
           )}
 
+          {activeTab === "pity-costs" && (
+            <div className="animate-in fade-in duration-300">
+              <PityCostsSection orderContainerId={order.id} />
+            </div>
+          )}
+
           {/* --- TAB: PAYMENTS --- */}
           {activeTab === "payments" && (
             <div className="max-w-3xl mx-auto animate-in fade-in duration-300">
@@ -633,7 +641,3 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
 };
 
 export default OrderDetail;
-
-
-i will to update this component to handle Order Edits .. and OrderContainer Edits .. after the display add the eDIT iCON ON THE TOP OF VOERVIEW for the container .. and Edit for Each Order ... and on edit clicked an overaly to edit the informasons for the order only the mockup image .. and use /api/orders/{order code }/ endpoint to edit ... and send  pach request .. use 
-api for all api requests use lucid react for icon and must handle dark and white mode .. also mobile first design 

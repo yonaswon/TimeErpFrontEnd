@@ -1,11 +1,20 @@
 // PaymentConfirmations.tsx
-import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, DollarSign, User, MapPin, Calendar, Filter, Package } from 'lucide-react';
-import { Payment, PaymentResponse } from '@/types/finance';
-import api from '@/api'
-import { PaymentDetailOverlay } from './PaymentDetailOverlay';
+import { useState, useEffect } from "react";
+import {
+  CheckCircle,
+  Clock,
+  DollarSign,
+  User,
+  MapPin,
+  Calendar,
+  Filter,
+  Package,
+} from "lucide-react";
+import { Payment, PaymentResponse } from "@/types/finance";
+import api from "@/api";
+import { PaymentDetailOverlay } from "./PaymentDetailOverlay";
 
-type PaymentStatus = 'P' | 'C' | 'all';
+type PaymentStatus = "P" | "C" | "all";
 
 export const PaymentConfirmations = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -14,25 +23,30 @@ export const PaymentConfirmations = () => {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus>('P');
-  const [confirmationErrors, setConfirmationErrors] = useState<{[key: number]: string}>({});
-  const [confirmingPayments, setConfirmingPayments] = useState<{[key: number]: boolean}>({});
+  const [statusFilter, setStatusFilter] = useState<PaymentStatus>("P");
+  const [confirmationErrors, setConfirmationErrors] = useState<{
+    [key: number]: string;
+  }>({});
+  const [confirmingPayments, setConfirmingPayments] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   const fetchPayments = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
-      const url = statusFilter === 'all' 
-        ? `/finance/payment/?page=${page}`
-        : `/finance/payment/?status=${statusFilter}&page=${page}`;
-      
+      const url =
+        statusFilter === "all"
+          ? `/finance/payment/?p=${page}`
+          : `/finance/payment/?status=${statusFilter}&p=${page}`;
+
       const response = await api.get<PaymentResponse>(url);
       setPayments(response.data.results);
       setTotalPages(Math.ceil(response.data.count / 10));
       setCurrentPage(page);
     } catch (err) {
-      setError('Failed to fetch payments');
-      console.error('Error fetching payments:', err);
+      setError("Failed to fetch payments");
+      console.error("Error fetching payments:", err);
     } finally {
       setLoading(false);
     }
@@ -44,20 +58,20 @@ export const PaymentConfirmations = () => {
 
   const handleConfirmPayment = async (paymentId: number) => {
     try {
-      setConfirmingPayments(prev => ({ ...prev, [paymentId]: true }));
-      setConfirmationErrors(prev => ({ ...prev, [paymentId]: '' }));
-      
+      setConfirmingPayments((prev) => ({ ...prev, [paymentId]: true }));
+      setConfirmationErrors((prev) => ({ ...prev, [paymentId]: "" }));
+
       await api.post(`/finance/payment/${paymentId}/confirm/`);
       // Remove confirmed payment from list
-      setPayments(prev => prev.filter(payment => payment.id !== paymentId));
+      setPayments((prev) => prev.filter((payment) => payment.id !== paymentId));
     } catch (err: any) {
-      setConfirmationErrors(prev => ({
+      setConfirmationErrors((prev) => ({
         ...prev,
-        [paymentId]: err.response?.data?.message || 'Failed to confirm payment'
+        [paymentId]: err.response?.data?.message || "Failed to confirm payment",
       }));
-      console.error('Error confirming payment:', err);
+      console.error("Error confirming payment:", err);
     } finally {
-      setConfirmingPayments(prev => ({ ...prev, [paymentId]: false }));
+      setConfirmingPayments((prev) => ({ ...prev, [paymentId]: false }));
     }
   };
 
@@ -66,7 +80,8 @@ export const PaymentConfirmations = () => {
   };
 
   const getFilterButtonClass = (filter: PaymentStatus) => {
-    const baseClass = "px-3 py-1 rounded-lg text-sm font-medium transition-colors";
+    const baseClass =
+      "px-3 py-1 rounded-lg text-sm font-medium transition-colors";
     return statusFilter === filter
       ? `${baseClass} bg-blue-600 text-white`
       : `${baseClass} bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600`;
@@ -87,8 +102,8 @@ export const PaymentConfirmations = () => {
           <CheckCircle className="w-12 h-12 mx-auto mb-2" />
           <p>{error}</p>
         </div>
-        <button 
-          onClick={() => fetchPayments()} 
+        <button
+          onClick={() => fetchPayments()}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           Retry
@@ -97,7 +112,7 @@ export const PaymentConfirmations = () => {
     );
   }
 
-  const pendingCount = payments.filter(p => p.status === 'P').length;
+  const pendingCount = payments.filter((p) => p.status === "P").length;
 
   return (
     <div className="space-y-4">
@@ -107,7 +122,7 @@ export const PaymentConfirmations = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Payment Confirmations
           </h3>
-          {statusFilter === 'P' && pendingCount > 0 && (
+          {statusFilter === "P" && pendingCount > 0 && (
             <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
               {pendingCount} Pending
             </span>
@@ -118,20 +133,20 @@ export const PaymentConfirmations = () => {
           <Filter className="w-4 h-4 text-gray-500" />
           <div className="flex space-x-1">
             <button
-              onClick={() => setStatusFilter('P')}
-              className={getFilterButtonClass('P')}
+              onClick={() => setStatusFilter("P")}
+              className={getFilterButtonClass("P")}
             >
               Pending
             </button>
             <button
-              onClick={() => setStatusFilter('C')}
-              className={getFilterButtonClass('C')}
+              onClick={() => setStatusFilter("C")}
+              className={getFilterButtonClass("C")}
             >
               Confirmed
             </button>
             <button
-              onClick={() => setStatusFilter('all')}
-              className={getFilterButtonClass('all')}
+              onClick={() => setStatusFilter("all")}
+              className={getFilterButtonClass("all")}
             >
               All
             </button>
@@ -149,12 +164,12 @@ export const PaymentConfirmations = () => {
         <div className="text-center py-8">
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {statusFilter === 'P' ? 'No Pending Payments' : 'No Payments Found'}
+            {statusFilter === "P" ? "No Pending Payments" : "No Payments Found"}
           </h3>
           <p className="text-gray-500 dark:text-gray-400">
-            {statusFilter === 'P' 
-              ? 'All payments have been confirmed' 
-              : 'No payments match the current filter'}
+            {statusFilter === "P"
+              ? "All payments have been confirmed"
+              : "No payments match the current filter"}
           </p>
         </div>
       ) : (
@@ -175,19 +190,21 @@ export const PaymentConfirmations = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center space-x-2 mt-6">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 rounded-lg ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-1 rounded-lg ${
+                      currentPage === page
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
             </div>
           )}
         </>
@@ -215,17 +232,23 @@ interface PaymentCardProps {
   isConfirming?: boolean;
 }
 
-const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }: PaymentCardProps) => {
-  const isPending = payment.status === 'P';
-  const isCashPayment = payment.method === 'CASH';
+const PaymentCard = ({
+  payment,
+  onViewDetails,
+  onConfirm,
+  error,
+  isConfirming,
+}: PaymentCardProps) => {
+  const isPending = payment.status === "P";
+  const isCashPayment = payment.method === "CASH";
   const showConfirmButton = isPending && !isCashPayment;
-  
+
   const getReasonDisplay = (reason: string) => {
     const reasonMap: { [key: string]: string } = {
-      'PRE': 'Pre-Payment',
-      'REM': 'Remaining Payment',
-      'FULL': 'Full Payment',
-      'SALES': 'Product Sales'
+      PRE: "Pre-Payment",
+      REM: "Remaining Payment",
+      FULL: "Full Payment",
+      SALES: "Product Sales",
     };
     return reasonMap[reason] || reason;
   };
@@ -239,7 +262,9 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }:
             {payment.order_container ? (
               <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
                 <User className="w-4 h-4" />
-                <span className="font-medium">{payment.order_container.client}</span>
+                <span className="font-medium">
+                  {payment.order_container.client}
+                </span>
               </div>
             ) : (
               <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
@@ -247,34 +272,36 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }:
                 <span className="font-medium">Product Sales</span>
               </div>
             )}
-            
+
             <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
               <DollarSign className="w-4 h-4" />
               <span className="font-semibold">${payment.amount}</span>
             </div>
-            
+
             <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-300">
               <Clock className="w-4 h-4" />
               <span>{new Date(payment.created_at).toLocaleDateString()}</span>
             </div>
-            
-            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-              payment.status === 'P' 
-                ? 'bg-yellow-100 text-yellow-800' 
-                : 'bg-green-100 text-green-800'
-            }`}>
-              {payment.status === 'P' ? 'Pending' : 'Confirmed'}
+
+            <div
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                payment.status === "P"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-green-100 text-green-800"
+              }`}
+            >
+              {payment.status === "P" ? "Pending" : "Confirmed"}
             </div>
-            
+
             <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
               {payment.method}
             </div>
-            
+
             <div className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
               {getReasonDisplay(payment.reason)}
             </div>
           </div>
-          
+
           {/* Order Container Details */}
           {payment.order_container && (
             <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -287,7 +314,9 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }:
               <div className="flex items-center space-x-1">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <span className="text-gray-600 dark:text-gray-300">
-                  {new Date(payment.order_container.delivery_date).toLocaleDateString()}
+                  {new Date(
+                    payment.order_container.delivery_date
+                  ).toLocaleDateString()}
                 </span>
               </div>
             </div>
@@ -325,9 +354,9 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }:
               onClick={() => onConfirm(payment.id)}
               disabled={isConfirming}
               className={`px-4 py-2 text-sm text-white rounded-lg transition-colors whitespace-nowrap flex items-center justify-center min-w-[100px] ${
-                isConfirming 
-                  ? 'bg-green-400 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700'
+                isConfirming
+                  ? "bg-green-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700"
               }`}
             >
               {isConfirming ? (
@@ -336,7 +365,7 @@ const PaymentCard = ({ payment, onViewDetails, onConfirm, error, isConfirming }:
                   Confirming...
                 </>
               ) : (
-                'Confirm'
+                "Confirm"
               )}
             </button>
           )}

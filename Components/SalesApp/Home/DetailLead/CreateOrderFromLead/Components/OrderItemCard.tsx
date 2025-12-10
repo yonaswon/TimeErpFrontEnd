@@ -60,7 +60,7 @@ export default function OrderItemCard({
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              Design Type *
+              Design Type
             </label>
             <select
               value={item.design_type}
@@ -81,7 +81,7 @@ export default function OrderItemCard({
 
           <div>
             <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              Price *
+              Price
             </label>
             <input
               type="number"
@@ -93,19 +93,6 @@ export default function OrderItemCard({
               }
               className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
               required
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              Note
-            </label>
-            <textarea
-              value={item.note}
-              onChange={(e) => onItemChange(index, "note", e.target.value)}
-              className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
-              rows={2}
-              placeholder="Add any notes for this order..."
             />
           </div>
         </div>

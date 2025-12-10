@@ -2,6 +2,7 @@ import { Mockup, Modification } from "./utils/types";
 import { getStatusIcon, getStatusColor } from "./utils/statusUtils";
 import ModificationItem from "./ModificationItem";
 import { Play, Upload, Image as ImageIcon, MessageSquare } from "lucide-react";
+import MessageButton from "@/Components/SalesApp/Home/DetailLead/Message/MessageButton";
 
 interface MockupCardProps {
   mockup: Mockup;
@@ -57,6 +58,14 @@ const MockupCard = ({
             {mockup.width && <span>W:{mockup.width}"</span>}
             {mockup.hieght && <span>H:{mockup.hieght}"</span>}
           </div>
+        )}
+
+        {mockup.id && (
+          <MessageButton
+            mockupId={mockup.id}
+            mockupModificationId={undefined}
+            leadId={mockup.lead}
+          />
         )}
 
         {/* Action buttons */}

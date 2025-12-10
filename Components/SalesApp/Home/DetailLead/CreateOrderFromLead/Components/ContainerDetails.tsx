@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 
 interface ContainerDetailsProps {
   totalPayment: number;
@@ -43,6 +44,68 @@ export default function ContainerDetails({
   onInstallationServiceChange,
   onDeliveryServiceChange,
 }: ContainerDetailsProps) {
+  const [totalPaymentDisplay, setTotalPaymentDisplay] = useState("");
+  const [advancePaymentDisplay, setAdvancePaymentDisplay] = useState("");
+  const [remainingPaymentDisplay, setRemainingPaymentDisplay] = useState("");
+
+  // Format number with commas
+  const formatNumberWithCommas = (num: number): string => {
+    if (num === 0) return "0";
+    return num.toLocaleString("en-US");
+  };
+
+  // Parse comma-separated string to number
+  const parseCommaSeparatedNumber = (str: string): number => {
+    const cleaned = str.replace(/,/g, "");
+    return parseFloat(cleaned) || 0;
+  };
+
+  // Initialize display values
+  useEffect(() => {
+    setTotalPaymentDisplay(formatNumberWithCommas(totalPayment));
+    setAdvancePaymentDisplay(formatNumberWithCommas(advancePayment));
+    setRemainingPaymentDisplay(formatNumberWithCommas(remainingPayment));
+  }, [totalPayment, advancePayment, remainingPayment]);
+
+  const handleTotalPaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow only numbers and commas
+    if (value === "" || /^[0-9,]*$/.test(value)) {
+      setTotalPaymentDisplay(value);
+
+      // Parse the value when user stops typing (on blur) or when needed for calculation
+      const parsedValue = parseCommaSeparatedNumber(value);
+      onTotalPaymentChange(parsedValue);
+    }
+  };
+
+  const handleAdvancePaymentChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+
+    // Allow only numbers and commas
+    if (value === "" || /^[0-9,]*$/.test(value)) {
+      setAdvancePaymentDisplay(value);
+
+      // Parse the value when user stops typing (on blur) or when needed for calculation
+      const parsedValue = parseCommaSeparatedNumber(value);
+      onAdvancePaymentChange(parsedValue);
+    }
+  };
+
+  // Format input on blur
+  const handleBlur = (type: "total" | "advance") => {
+    if (type === "total") {
+      const parsed = parseCommaSeparatedNumber(totalPaymentDisplay);
+      setTotalPaymentDisplay(formatNumberWithCommas(parsed));
+    } else if (type === "advance") {
+      const parsed = parseCommaSeparatedNumber(advancePaymentDisplay);
+      setAdvancePaymentDisplay(formatNumberWithCommas(parsed));
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg p-4">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -85,43 +148,47 @@ export default function ContainerDetails({
             Full Payment *
           </label>
           <input
-            type="number"
-            value={totalPayment}
-            min={0}
-            step="1"
-            onChange={(e) =>
-              onTotalPaymentChange(parseFloat(e.target.value) || 0)
-            }
+            type="text"
+            value={totalPaymentDisplay}
+            onChange={handleTotalPaymentChange}
+            onBlur={() => handleBlur("total")}
             className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            placeholder="0"
             required
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Actual: {formatNumberWithCommas(totalPayment)}
+          </p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Advance Payment *
           </label>
           <input
-            type="number"
-            value={advancePayment}
-            min={0}
-            step="0.001"
-            onChange={(e) =>
-              onAdvancePaymentChange(parseFloat(e.target.value) || 0)
-            }
+            type="text"
+            value={advancePaymentDisplay}
+            onChange={handleAdvancePaymentChange}
+            onBlur={() => handleBlur("advance")}
             className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            placeholder="0"
             required
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Actual: {formatNumberWithCommas(advancePayment)}
+          </p>
         </div>
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Remaining Payment
           </label>
           <input
-            type="number"
-            value={remainingPayment}
+            type="text"
+            value={remainingPaymentDisplay}
             readOnly
             className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-gray-100 dark:bg-zinc-600"
+            placeholder="0"
           />
+          <p className="text-xs text-gray-500 mt-1">Calculated automatically</p>
         </div>
       </div>
 
@@ -136,6 +203,7 @@ export default function ContainerDetails({
             onChange={(e) => onOrderDifficultyChange(e.target.value)}
             className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
           >
+            <option value="">Select difficulty</option>
             <option value="SIMPLE">Simple</option>
             <option value="MEDIUM">Medium</option>
             <option value="DIFFICULT">Difficult</option>

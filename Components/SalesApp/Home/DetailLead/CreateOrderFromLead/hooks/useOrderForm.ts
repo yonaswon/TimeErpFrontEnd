@@ -67,18 +67,18 @@ export function useOrderForm({
 
     const full = initItems.reduce((sum, i) => sum + i.price, 0);
     setTotalPayment(Math.round(full));
-    setAdvancePayment(Math.round(full * 0.4));
-    setRemainingPayment(Math.round(full * 0.6));
+    setAdvancePayment(Math.round(full * 0.5));
+    setRemainingPayment(Math.round(full * 0.5));
 
     // Set default delivery date to 7 days from now
-    const defaultDeliveryDate = new Date();
-    defaultDeliveryDate.setDate(defaultDeliveryDate.getDate() + 7);
-    setDeliveryDate(defaultDeliveryDate.toISOString().slice(0, 16));
+    // const defaultDeliveryDate = new Date();
+    // defaultDeliveryDate.setDate(defaultDeliveryDate.getDate() + 7);
+    // setDeliveryDate(defaultDeliveryDate.toISOString().slice(0, 16));
 
     // Set location from lead data if available
-    if (leadData.note) {
-      setLocation(leadData.note);
-    }
+    // if (leadData.note) {
+    //   setLocation(leadData.note);
+    // }
   }, [selectedItems, designTypes, leadData]);
 
   // Fetch accounts based on invoice selection

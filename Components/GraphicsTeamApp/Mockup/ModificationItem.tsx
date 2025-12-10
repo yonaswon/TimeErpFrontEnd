@@ -1,6 +1,7 @@
 import { Modification } from './utils/types'
 import { getStatusColor } from './utils/statusUtils'
 import { Play, Upload, Image as ImageIcon, MessageSquare } from 'lucide-react'
+import MessageButton from '@/Components/SalesApp/Home/DetailLead/Message/MessageButton'
 
 interface ModificationItemProps {
   modification: Modification
@@ -60,6 +61,11 @@ const ModificationItem = ({
             </button>
           )}
         </div>
+           {modification.id && <MessageButton
+                  mockupId={undefined}
+                  mockupModificationId={modification.id}
+                  leadId={modification.lead}
+                   />}
       </div>
     </div>
   )
