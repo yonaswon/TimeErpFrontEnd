@@ -299,11 +299,11 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: any }) => (
   <div className="flex items-start space-x-3">
-    <Icon className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-32 flex-shrink-0">
+    <Icon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-32 shrink-0">
       {label}:
     </span>
-    <span className="text-sm text-gray-900 dark:text-white break-words flex-1">
+    <span className="text-sm text-gray-900 dark:text-white wrap-break-word flex-1">
       {value}
     </span>
   </div>

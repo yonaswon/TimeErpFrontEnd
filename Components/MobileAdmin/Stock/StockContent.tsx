@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import { TransferButton, TransferOverlay } from "@/Components/MaterialTransfer";
 import { AddMaterialButton } from "./AddMaterialButton";
 import { AddMaterialOverlay } from "./AddMaterialOverlay";
-
+import { ReleaseList } from "./Releases/ReleaseList";
+import { useSidebar } from "@/Components/GlobalComponents/SideBar/SidebarContext";
 const TransfersContent = () => {
   const [showTransfer, setShowTransfer] = useState(false);
   const fromInventoryId = 1; // This would come from your props/context
@@ -29,6 +30,11 @@ const TransfersContent = () => {
 
 const StockContent = () => {
   const [showAddMaterial, setShowAddMaterial] = useState(false);
+  const { openSidebar, closeSidebar } = useSidebar();
+
+  const handleOpenSidebar = () => {
+    openSidebar(<ReleaseList />, "Realeases");
+  };
 
   const handleMaterialAdded = () => {
     // Refresh your materials list or show success message
@@ -43,7 +49,10 @@ const StockContent = () => {
         isOpen={showAddMaterial}
         onClose={() => setShowAddMaterial(false)}
         onSuccess={handleMaterialAdded}
-      />
+      /><br>
+      </br>
+      <button onClick={handleOpenSidebar}>Releases</button>
+
     </div>
   );
 };

@@ -60,7 +60,7 @@ export const AssemblyTasks = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/api/assembly-assign/?ordering=-date&page=${currentPage}`);
+      const response = await api.get(`/api/assembly-assign/?ordering=-date&p=${currentPage}`);
       setAssignments(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / 10));
     } catch (err) {

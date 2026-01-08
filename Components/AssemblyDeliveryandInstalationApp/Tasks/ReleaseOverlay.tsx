@@ -12,7 +12,7 @@ interface Material {
 
 interface Bom {
   id: number;
-  material: number; // This is the material ID, not the full material object
+  material: Material; // Changed from number to Material object
   amount: string;
   width: string | null;
   height: string | null;
@@ -42,13 +42,6 @@ interface ReleaseItem {
   material_code: string;
 }
 
-interface MaterialDetail {
-  id: number;
-  name: string;
-  type: "L" | "A" | "P";
-  code_name: string;
-}
-
 export const ReleaseOverlay = ({
   task,
   onClose,
@@ -60,44 +53,26 @@ export const ReleaseOverlay = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [materials, setMaterials] = useState<MaterialDetail[]>([]);
-  const [materialsLoading, setMaterialsLoading] = useState(true);
 
-  // Fetch material details
-  useEffect(() => {
-    const fetchMaterials = async () => {
-      try {
-        setMaterialsLoading(true);
+  // Get unique materials from BOMs
+  const getAvailableMaterials = () => {
+    // Extract unique materials from BOMs and filter out areal materials
+    const uniqueMaterials = new Map<number, Material>();
 
-        // Get unique material IDs from BOMs
-        const materialIds = [
-          ...new Set(task.order.boms.map((bom: any) => bom.material)),
-        ];
-
-        // Fetch each material detail
-        const materialPromises = materialIds.map((materialId) =>
-          api.get(`/materials/${materialId}/`)
-        );
-
-        const materialResponses = await Promise.all(materialPromises);
-        const materialData = materialResponses.map((response) => response.data);
-
-        setMaterials(materialData);
-      } catch (err) {
-        console.error("Error fetching materials:", err);
-        setError("Failed to load material details");
-      } finally {
-        setMaterialsLoading(false);
+    task.order.boms.forEach((bom: Bom) => {
+      if (
+        bom.material &&
+        bom.material.type !== "A" &&
+        !uniqueMaterials.has(bom.material.id)
+      ) {
+        uniqueMaterials.set(bom.material.id, bom.material);
       }
-    };
+    });
 
-    fetchMaterials();
-  }, [task.order.boms]);
+    return Array.from(uniqueMaterials.values());
+  };
 
-  // Filter out areal materials and get unique materials from BOMs
-  const availableMaterials = materials.filter(
-    (material) => material.type !== "A"
-  );
+  const availableMaterials = getAvailableMaterials();
 
   // Calculate total length (only length materials, excluding pieces)
   const totalLength = releaseItems.reduce((total, item) => {
@@ -116,19 +91,16 @@ export const ReleaseOverlay = ({
         const existing = releaseItems.find((item) => item.bom_id === bomId);
         if (existing) return existing;
 
-        const bom = task.order.boms.find((b: any) => b.id === bomId);
-        if (!bom) return null;
-
-        const material = materials.find((m) => m.id === bom.material);
-        if (!material) return null;
+        const bom = task.order.boms.find((b: Bom) => b.id === bomId);
+        if (!bom || !bom.material) return null;
 
         return {
           bom_id: bomId,
-          material_id: material.id,
+          material_id: bom.material.id,
           amount: "",
-          material_name: material.name,
-          material_type: material.type as "L" | "P",
-          material_code: material.code_name || "N/A",
+          material_name: bom.material.name,
+          material_type: bom.material.type as "L" | "P",
+          material_code: bom.material.code_name || "N/A",
         };
       })
       .filter(Boolean) as ReleaseItem[];
@@ -139,7 +111,7 @@ export const ReleaseOverlay = ({
     );
 
     setReleaseItems(filteredItems);
-  }, [selectedBoms, materials]);
+  }, [selectedBoms, task.order.boms]);
 
   const handleBomToggle = (bomId: number) => {
     setSelectedBoms((prev) =>
@@ -182,12 +154,12 @@ export const ReleaseOverlay = ({
         );
       }
 
-      // Prepare form data - FIXED: Use bom_id instead of material_id
+      // Prepare form data
       const formData = new FormData();
 
       // Add releases data - using bom_id as expected by backend
       const releasesPayload = releaseItems.map((item) => ({
-        bom_id: item.bom_id, // Changed from material_id to bom_id
+        bom_id: item.bom_id,
         amount: parseFloat(item.amount),
       }));
 
@@ -230,39 +202,21 @@ export const ReleaseOverlay = ({
     }
   };
 
-  const getMaterialIcon = (type: "L" | "P") => {
+  const getMaterialIcon = (type: "L" | "P" | "A") => {
     return type === "L" ? "📏" : "🧩";
   };
 
-  const getUnit = (type: "L" | "P") => {
+  const getUnit = (type: "L" | "P" | "A") => {
     return type === "L" ? "meters" : "pieces";
-  };
-
-  // Get BOMs for a specific material
-  const getBomsForMaterial = (materialId: number) => {
-    return task.order.boms.filter((bom: any) => bom.material === materialId);
   };
 
   // Get first BOM ID for a material
   const getFirstBomIdForMaterial = (materialId: number) => {
-    const boms = getBomsForMaterial(materialId);
+    const boms = task.order.boms.filter(
+      (bom: Bom) => bom.material.id === materialId
+    );
     return boms[0]?.id;
   };
-
-  if (materialsLoading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">
-              Loading materials...
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -316,7 +270,7 @@ export const ReleaseOverlay = ({
                       No materials available for additional release
                     </p>
                   ) : (
-                    availableMaterials.map((material: any) => {
+                    availableMaterials.map((material: Material) => {
                       const bomId = getFirstBomIdForMaterial(material.id);
 
                       return (

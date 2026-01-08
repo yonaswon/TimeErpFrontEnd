@@ -1,639 +1,737 @@
-import { useState, useEffect } from "react";
-import {
-  X,
-  User,
-  Phone,
-  MapPin,
-  Calendar,
-  FileText,
-  CreditCard,
-  CheckCircle,
-  XCircle,
-  Package,
-  Wrench,
-  Truck,
-  Settings,
-  DollarSign,
-  Clock,
-  AlertCircle,
-  Download,
-  Image,
-  Loader,
-  Layers,
-  ChevronRight,
-  Receipt,
-  Info,
-} from "lucide-react";
-import api from "@/api";
+now i want you to build the Realse list and detail View under Release/ Folder 
 
-interface OrderDetailProps {
-  order: any;
-  onClose: () => void;
+get releases from this end point .. /api/release/
+you will get 
+{
+    "count": 41,
+    "next": "http://127.0.0.1:8000/api/release/?p=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "material": {
+                "id": 3,
+                "name": "Blue Rope",
+                "type": "L",
+                "code_name": "Blue",
+                "available": "97.500",
+                "parsialy_available": "0.000",
+                "min_threshold": 25,
+                "width": null,
+                "height": null,
+                "date": "2025-11-16T13:20:58.131826+03:00",
+                "stats": {
+                    "inventory_distribution": {
+                        "Admin": 6.25,
+                        "Stock Keeper": 25.0,
+                        "yon_t12-Inventory": 19.75,
+                        "yonaswondmagegn-Inventory": 46.5
+                    },
+                    "total_available": 97.5,
+                    "partially_available": 0.0
+                }
+            },
+            "reason": "ORDER",
+            "amount": "1.00",
+            "proof_image": null,
+            "confirmed": true,
+            "date": "2025-11-18T07:27:03.638843+03:00",
+            "order": 5,
+            "maintenance": null,
+            "inventory": 3,
+            "released_by": 1,
+            "each_areal_material": []
+        },
+        {
+            "id": 2,
+            "material": {
+                "id": 4,
+                "name": "White Rope",
+                "type": "L",
+                "code_name": "WhiteRope",
+                "available": "481.400",
+                "parsialy_available": "0.000",
+                "min_threshold": 25,
+                "width": null,
+                "height": null,
+                "date": "2025-11-16T13:21:09.546906+03:00",
+                "stats": {
+                    "inventory_distribution": {
+                        "Admin": 320.9,
+                        "Stock Keeper": 157.5,
+                        "yon_t12-Inventory": 3.0,
+                        "yonaswondmagegn-Inventory": 0.0
+                    },
+                    "total_available": 481.4,
+                    "partially_available": 0.0
+                }
+            },
+            "reason": "ORDER",
+            "amount": "1.00",
+            "proof_image": null,
+            "confirmed": true,
+            "date": "2025-11-18T07:27:03.707310+03:00",
+            "order": 5,
+            "maintenance": null,
+            "inventory": 3,
+            "released_by": 1,
+            "each_areal_material": []
+        },
+        {this type of data .. 
+list it in the card  if order ..show ORD-{order id } Maintannce-{maintanve id } and os on ... 
+then on click the detail part  on teh details addsional to relase informsion get .. 
+
+order informasion form 
+api/orders/5/ this end point you will get 
+
+{
+    "order_code": 5,
+    "boms": [
+        {
+            "id": 16,
+            "material": {
+                "id": 1,
+                "name": "8 mm Clear Acleric(Mica)",
+                "type": "A",
+                "code_name": "8mmMica",
+                "available": "7.000",
+                "parsialy_available": "1393.050",
+                "min_threshold": 8,
+                "width": "10.00",
+                "height": "20.00",
+                "date": "2025-11-16T13:20:09.502403+03:00",
+                "stats": {
+                    "inventory_distribution": [
+                        {
+                            "inventory__name": "Admin",
+                            "total": 5,
+                            "unstarted": 3,
+                            "started": 2,
+                            "finished": 0
+                        },
+                        {
+                            "inventory__name": "Stock Keeper",
+                            "total": 3,
+                            "unstarted": 0,
+                            "started": 3,
+                            "finished": 1
+                        }
+                    ],
+                    "total_pieces": 8,
+                    "unstarted_pieces": 3,
+                    "started_pieces": 4,
+                    "finished_pieces": 1,
+                    "total_area_available": 9751.05
+                }
+            },
+            "amount": "0.00",
+            "width": "0.25",
+            "height": "0.2",
+            "price_per_unit": null,
+            "total_price": null,
+            "estimated_price": null,
+            "released": true,
+            "release_date": "2025-11-18T07:27:03.719650+03:00",
+            "date": "2025-11-18T07:20:58.183891+03:00"
+        },
+        {
+            "id": 17,
+            "material": {
+                "id": 3,
+                "name": "Blue Rope",
+                "type": "L",
+                "code_name": "Blue",
+                "available": "97.500",
+                "parsialy_available": "0.000",
+                "min_threshold": 25,
+                "width": null,
+                "height": null,
+                "date": "2025-11-16T13:20:58.131826+03:00",
+                "stats": {
+                    "inventory_distribution": {
+                        "Admin": 6.25,
+                        "Stock Keeper": 25.0,
+                        "yon_t12-Inventory": 19.75,
+                        "yonaswondmagegn-Inventory": 46.5
+                    },
+                    "total_available": 97.5,
+                    "partially_available": 0.0
+                }
+            },
+            "amount": "1.00",
+            "width": "0.00",
+            "height": "0.0",
+            "price_per_unit": null,
+            "total_price": null,
+            "estimated_price": null,
+            "released": true,
+            "release_date": "2025-11-18T07:27:03.697166+03:00",
+            "date": "2025-11-18T07:20:58.186886+03:00"
+        },
+        {
+            "id": 18,
+            "material": {
+                "id": 4,
+                "name": "White Rope",
+                "type": "L",
+                "code_name": "WhiteRope",
+                "available": "481.400",
+                "parsialy_available": "0.000",
+                "min_threshold": 25,
+                "width": null,
+                "height": null,
+                "date": "2025-11-16T13:21:09.546906+03:00",
+                "stats": {
+                    "inventory_distribution": {
+                        "Admin": 320.9,
+                        "Stock Keeper": 157.5,
+                        "yon_t12-Inventory": 3.0,
+                        "yonaswondmagegn-Inventory": 0.0
+                    },
+                    "total_available": 481.4,
+                    "partially_available": 0.0
+                }
+            },
+            "amount": "1.00",
+            "width": "0.00",
+            "height": "0.0",
+            "price_per_unit": null,
+            "total_price": null,
+            "estimated_price": null,
+            "released": true,
+            "release_date": "2025-11-18T07:27:03.707310+03:00",
+            "date": "2025-11-18T07:20:58.187883+03:00"
+        }
+    ],
+    "mockup": {
+        "id": 5,
+        "reference_images": [
+            {
+                "id": 6,
+                "image": "http://127.0.0.1:8000/media/grace_X5DlCyR.png",
+                "date": "2025-11-18T06:59:55.616060+03:00"
+            }
+        ],
+        "bom": [],
+        "designer": {
+            "id": 1,
+            "telegram_id": 5301464167,
+            "telegram_user_name": "yonaswondmagegn",
+            "role": [
+                {
+                    "id": 1,
+                    "Name": "Admin",
+                    "date": "2025-11-16T08:56:52.172944+03:00"
+                },
+                {
+                    "id": 2,
+                    "Name": "Finance&Accounting",
+                    "date": "2025-11-16T08:58:49.968852+03:00"
+                },
+                {
+                    "id": 3,
+                    "Name": "AssemblyDeliveryandInstalationApp",
+                    "date": "2025-11-16T08:59:03.476647+03:00"
+                },
+                {
+                    "id": 8,
+                    "Name": "Sales",
+                    "date": "2025-11-16T09:00:13.106649+03:00"
+                },
+                {
+                    "id": 9,
+                    "Name": "Graphic Designer",
+                    "date": "2025-11-16T09:00:29.295097+03:00"
+                }
+            ],
+            "first_name": ""
+        },
+        "name": "First Mockup",
+        "request_status": "CONVERTED",
+        "note": "some description hear",
+        "price": 250000,
+        "price_with_vat": false,
+        "mockup_image": "http://127.0.0.1:8000/media/mock_up_images/asli_updated_19OEWNC.png",
+        "width": "0.25",
+        "height": "0.35",
+        "telegram_message_id": 122,
+        "requested_date": "2025-11-18T06:59:55.761170+03:00",
+        "first_response_date": "2025-11-18T07:00:33.033490+03:00",
+        "date": "2025-11-18T06:59:55.761170+03:00",
+        "lead": 4,
+        "design_type": 1
+    },
+    "mockup_modification": null,
+    "cutting_files": [
+        {
+            "id": 5,
+            "on": {
+                "id": 1,
+                "material": 1,
+                "material_name": "8 mm Clear Acleric(Mica)",
+                "areal_material_record": 1,
+                "code": 1,
+                "inventory": 2,
+                "inventory_name": "Stock Keeper",
+                "current_width": "10.00",
+                "current_height": "20.00",
+                "started": true,
+                "finished": true,
+                "date": "2025-11-16T13:23:02.216571+03:00"
+            },
+            "assigned_to": {
+                "id": 1,
+                "telegram_id": 5301464167,
+                "telegram_user_name": "yonaswondmagegn",
+                "role": [
+                    {
+                        "id": 1,
+                        "Name": "Admin",
+                        "date": "2025-11-16T08:56:52.172944+03:00"
+                    },
+                    {
+                        "id": 2,
+                        "Name": "Finance&Accounting",
+                        "date": "2025-11-16T08:58:49.968852+03:00"
+                    },
+                    {
+                        "id": 3,
+                        "Name": "AssemblyDeliveryandInstalationApp",
+                        "date": "2025-11-16T08:59:03.476647+03:00"
+                    },
+                    {
+                        "id": 8,
+                        "Name": "Sales",
+                        "date": "2025-11-16T09:00:13.106649+03:00"
+                    },
+                    {
+                        "id": 9,
+                        "Name": "Graphic Designer",
+                        "date": "2025-11-16T09:00:29.295097+03:00"
+                    }
+                ],
+                "first_name": ""
+            },
+            "crv3d": "/media/cutting_files/mica-119-addis_abeba_-part4_fh2RQt2_At03l1T.crv3d",
+            "image": "/media/cutting_files/pngs/photo_5794138455901146054_y_3jpNPXw.jpg",
+            "status": "COMPLATED",
+            "schedule_start_date": "2025-11-25T07:05:00+03:00",
+            "schedule_complate_date": "2025-11-26T07:05:00+03:00",
+            "start_date": "2025-11-18T07:06:34.350875+03:00",
+            "complate_date": "2025-11-18T07:06:45.900778+03:00",
+            "date": "2025-11-18T07:05:29.833188+03:00",
+            "orders": [
+                5
+            ]
+        }
+    ],
+    "releases": [
+        {
+            "id": 1,
+            "reason": "ORDER",
+            "material": 3,
+            "material_name": "Blue Rope",
+            "material_type": "L",
+            "amount": "1.00",
+            "proof_image": null,
+            "inventory": 3,
+            "inventory_name": "yonaswondmagegn-Inventory",
+            "released_by": 1,
+            "released_by_name": "yonaswondmagegn",
+            "confirmed": true,
+            "date": "2025-11-18T07:27:03.638843+03:00"
+        },
+        {
+            "id": 2,
+            "reason": "ORDER",
+            "material": 4,
+            "material_name": "White Rope",
+            "material_type": "L",
+            "amount": "1.00",
+            "proof_image": null,
+            "inventory": 3,
+            "inventory_name": "yonaswondmagegn-Inventory",
+            "released_by": 1,
+            "released_by_name": "yonaswondmagegn",
+            "confirmed": true,
+            "date": "2025-11-18T07:27:03.707310+03:00"
+        },
+        {
+            "id": 6,
+            "reason": "ADD",
+            "material": 4,
+            "material_name": "White Rope",
+            "material_type": "L",
+            "amount": "0.50",
+            "proof_image": null,
+            "inventory": 3,
+            "inventory_name": "yonaswondmagegn-Inventory",
+            "released_by": 1,
+            "released_by_name": "yonaswondmagegn",
+            "confirmed": true,
+            "date": "2025-11-18T11:00:50.841323+03:00"
+        },
+        {
+            "id": 8,
+            "reason": "ADD",
+            "material": 3,
+            "material_name": "Blue Rope",
+            "material_type": "L",
+            "amount": "0.30",
+            "proof_image": "/media/release_proofs/Gemini_Generated_Image_619oy8619oy8619o.png",
+            "inventory": 3,
+            "inventory_name": "yonaswondmagegn-Inventory",
+            "released_by": 1,
+            "released_by_name": "yonaswondmagegn",
+            "confirmed": true,
+            "date": "2025-11-18T12:15:17.507440+03:00"
+        },
+        {
+            "id": 9,
+            "reason": "ADD",
+            "material": 4,
+            "material_name": "White Rope",
+            "material_type": "L",
+            "amount": "0.50",
+            "proof_image": "/media/release_proofs/Gemini_Generated_Image_619oy8619oy8619o_0f60AiL.png",
+            "inventory": 3,
+            "inventory_name": "yonaswondmagegn-Inventory",
+            "released_by": 1,
+            "released_by_name": "yonaswondmagegn",
+            "confirmed": true,
+            "date": "2025-11-18T12:15:17.574709+03:00"
+        }
+    ],
+    "order_status": "REM-CONFIRMED",
+    "mockup_image": null,
+    "price": 250000,
+    "pre_accepted_date": "2025-11-18T07:01:33.550659+03:00",
+    "pre_confirmed_date": null,
+    "cnc_started_date": "2025-11-18T07:06:34.355681+03:00",
+    "cnc_completed_date": "2025-11-18T07:06:45.906411+03:00",
+    "assembly_started_date": "2025-11-18T12:17:36.871809+03:00",
+    "assembly_completed_date": null,
+    "dandi_date": "2025-11-18T13:36:54.113411+03:00",
+    "rem_accepted_date": "2025-11-18T13:37:09.194891+03:00",
+    "rem_confirmed_date": null,
+    "created_at": "2025-11-18T07:01:33.550659+03:00",
+    "design_type": 1
+}this type of data .. so show the mockup image in small and some informasion .. 
+
+if maintance ... then 
+api/maintenance/8/ this end point .. 
+{
+    "id": 8,
+    "order": {
+        "order_code": 9,
+        "boms": [
+            {
+                "id": 27,
+                "material": {
+                    "id": 1,
+                    "name": "8 mm Clear Acleric(Mica)",
+                    "type": "A",
+                    "code_name": "8mmMica",
+                    "available": "7.000",
+                    "parsialy_available": "1393.050",
+                    "min_threshold": 8,
+                    "width": "10.00",
+                    "height": "20.00",
+                    "date": "2025-11-16T13:20:09.502403+03:00",
+                    "stats": {
+                        "inventory_distribution": [
+                            {
+                                "inventory__name": "Admin",
+                                "total": 5,
+                                "unstarted": 3,
+                                "started": 2,
+                                "finished": 0
+                            },
+                            {
+                                "inventory__name": "Stock Keeper",
+                                "total": 3,
+                                "unstarted": 0,
+                                "started": 3,
+                                "finished": 1
+                            }
+                        ],
+                        "total_pieces": 8,
+                        "unstarted_pieces": 3,
+                        "started_pieces": 4,
+                        "finished_pieces": 1,
+                        "total_area_available": 9751.05
+                    }
+                },
+                "amount": "0.00",
+                "width": "0.25",
+                "height": "0.8",
+                "price_per_unit": null,
+                "total_price": null,
+                "estimated_price": "2.66",
+                "released": false,
+                "release_date": null,
+                "date": "2025-11-22T20:47:07.344270+03:00"
+            },
+            {
+                "id": 28,
+                "material": {
+                    "id": 3,
+                    "name": "Blue Rope",
+                    "type": "L",
+                    "code_name": "Blue",
+                    "available": "97.500",
+                    "parsialy_available": "0.000",
+                    "min_threshold": 25,
+                    "width": null,
+                    "height": null,
+                    "date": "2025-11-16T13:20:58.131826+03:00",
+                    "stats": {
+                        "inventory_distribution": {
+                            "Admin": 6.25,
+                            "Stock Keeper": 25.0,
+                            "yon_t12-Inventory": 19.75,
+                            "yonaswondmagegn-Inventory": 46.5
+                        },
+                        "total_available": 97.5,
+                        "partially_available": 0.0
+                    }
+                },
+                "amount": "1.23",
+                "width": "0.00",
+                "height": "0.0",
+                "price_per_unit": "5499.00",
+                "total_price": "6763.77",
+                "estimated_price": null,
+                "released": false,
+                "release_date": null,
+                "date": "2025-11-22T20:47:08.489542+03:00"
+            },
+            {
+                "id": 29,
+                "material": {
+                    "id": 4,
+                    "name": "White Rope",
+                    "type": "L",
+                    "code_name": "WhiteRope",
+                    "available": "481.400",
+                    "parsialy_available": "0.000",
+                    "min_threshold": 25,
+                    "width": null,
+                    "height": null,
+                    "date": "2025-11-16T13:21:09.546906+03:00",
+                    "stats": {
+                        "inventory_distribution": {
+                            "Admin": 320.9,
+                            "Stock Keeper": 157.5,
+                            "yon_t12-Inventory": 3.0,
+                            "yonaswondmagegn-Inventory": 0.0
+                        },
+                        "total_available": 481.4,
+                        "partially_available": 0.0
+                    }
+                },
+                "amount": "0.96",
+                "width": "0.00",
+                "height": "0.0",
+                "price_per_unit": "5499.00",
+                "total_price": "5279.04",
+                "estimated_price": null,
+                "released": false,
+                "release_date": null,
+                "date": "2025-11-22T20:47:08.492739+03:00"
+            }
+        ],
+        "mockup": {
+            "id": 9,
+            "reference_images": [
+                {
+                    "id": 10,
+                    "image": "http://127.0.0.1:8000/media/Amigas_horizontal_rado8Ku.png",
+                    "date": "2025-11-18T13:40:42.271477+03:00"
+                }
+            ],
+            "bom": [],
+            "designer": {
+                "id": 1,
+                "telegram_id": 5301464167,
+                "telegram_user_name": "yonaswondmagegn",
+                "role": [
+                    {
+                        "id": 1,
+                        "Name": "Admin",
+                        "date": "2025-11-16T08:56:52.172944+03:00"
+                    },
+                    {
+                        "id": 2,
+                        "Name": "Finance&Accounting",
+                        "date": "2025-11-16T08:58:49.968852+03:00"
+                    },
+                    {
+                        "id": 3,
+                        "Name": "AssemblyDeliveryandInstalationApp",
+                        "date": "2025-11-16T08:59:03.476647+03:00"
+                    },
+                    {
+                        "id": 8,
+                        "Name": "Sales",
+                        "date": "2025-11-16T09:00:13.106649+03:00"
+                    },
+                    {
+                        "id": 9,
+                        "Name": "Graphic Designer",
+                        "date": "2025-11-16T09:00:29.295097+03:00"
+                    }
+                ],
+                "first_name": ""
+            },
+            "name": "",
+            "request_status": "CONVERTED",
+            "note": ";ouh",
+            "price": 5200000,
+            "price_with_vat": false,
+            "mockup_image": "http://127.0.0.1:8000/media/mock_up_images/grace_qQIL5nS.png",
+            "width": "0.20",
+            "height": "0.30",
+            "telegram_message_id": 138,
+            "requested_date": "2025-11-18T13:40:42.367944+03:00",
+            "first_response_date": "2025-11-18T13:41:38.046453+03:00",
+            "date": "2025-11-18T13:40:42.367944+03:00",
+            "lead": 8,
+            "design_type": 1
+        },
+        "mockup_modification": null,
+        "cutting_files": [],
+        "releases": [],
+        "order_status": "PRE-CONFIRMED",
+        "mockup_image": "http://127.0.0.1:8000/media/order_image_fields/Gemini_Generated_Image_lvbxqslvbxqslvbx.png",
+        "price": 5200000,
+        "pre_accepted_date": "2025-11-18T13:42:28.801747+03:00",
+        "pre_confirmed_date": null,
+        "cnc_started_date": null,
+        "cnc_completed_date": null,
+        "assembly_started_date": null,
+        "assembly_completed_date": null,
+        "dandi_date": null,
+        "rem_accepted_date": null,
+        "rem_confirmed_date": null,
+        "created_at": "2025-11-18T13:42:28.801747+03:00",
+        "design_type": 1
+    },
+    "posted_by": {
+        "id": 1,
+        "telegram_id": 5301464167,
+        "telegram_user_name": "yonaswondmagegn",
+        "role": [
+            {
+                "id": 1,
+                "Name": "Admin",
+                "date": "2025-11-16T08:56:52.172944+03:00"
+            },
+            {
+                "id": 2,
+                "Name": "Finance&Accounting",
+                "date": "2025-11-16T08:58:49.968852+03:00"
+            },
+            {
+                "id": 3,
+                "Name": "AssemblyDeliveryandInstalationApp",
+                "date": "2025-11-16T08:59:03.476647+03:00"
+            },
+            {
+                "id": 8,
+                "Name": "Sales",
+                "date": "2025-11-16T09:00:13.106649+03:00"
+            },
+            {
+                "id": 9,
+                "Name": "Graphic Designer",
+                "date": "2025-11-16T09:00:29.295097+03:00"
+            }
+        ],
+        "first_name": ""
+    },
+    "boms": [],
+    "assigned_to": null,
+    "client_name": "cxfggc",
+    "client_contact": "96325841",
+    "reported_issue": "3a to 5a",
+    "image": "http://127.0.0.1:8000/media/maintenance_image/photo_5794138455901146054_y.jpg",
+    "under_warranty": false,
+    "payment_status": null,
+    "status": "NA",
+    "scheduled_start_date": null,
+    "scheduled_end_date": null,
+    "started": null,
+    "end": null,
+    "order_notification_sent": true,
+    "finance_notification_sent": true,
+    "order_group_message_id": "66",
+    "finance_group_message_id": "181",
+    "created_at": "2025-11-27T00:25:01.723919+03:00"
+}
+this type of information .. 
+and .. 
+if sales 
+api/material-sales-record/ this end point you will get ..
+{
+    "id": 1,
+    "release": [],
+    "recorded_by": {
+        "id": 1,
+        "telegram_id": 5301464167,
+        "telegram_user_name": "yonaswondmagegn",
+        "role": [
+            {
+                "id": 1,
+                "Name": "Admin",
+                "date": "2025-11-16T08:56:52.172944+03:00"
+            },
+            {
+                "id": 2,
+                "Name": "Finance&Accounting",
+                "date": "2025-11-16T08:58:49.968852+03:00"
+            },
+            {
+                "id": 3,
+                "Name": "AssemblyDeliveryandInstalationApp",
+                "date": "2025-11-16T08:59:03.476647+03:00"
+            },
+            {
+                "id": 8,
+                "Name": "Sales",
+                "date": "2025-11-16T09:00:13.106649+03:00"
+            },
+            {
+                "id": 9,
+                "Name": "Graphic Designer",
+                "date": "2025-11-16T09:00:29.295097+03:00"
+            }
+        ],
+        "first_name": ""
+    },
+    "customer_name": "asnake",
+    "customer_contact": "0963067788",
+    "date": "2025-11-24T00:50:09.185854+03:00",
+    "order_group_message_id": null,
+    "finance_group_message_id": null,
+    "order_notification_sent": false,
+    "finance_notification_sent": false
 }
 
-const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "orders" | "payments"
-  >("overview");
-  const [payments, setPayments] = useState<any[]>([]);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
-  // Fetch payments for this order
-  const fetchPayments = async () => {
-    try {
-      setPaymentsLoading(true);
-      setPaymentsError(null);
-      const response = await api.get(
-        `/finance/payment/?order_container=${order.id}`
-      );
-      setPayments(response.data.results || []);
-    } catch (error: any) {
-      console.error("Failed to fetch payments:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to load payment information";
-      setPaymentsError(errorMessage);
-    } finally {
-      setPaymentsLoading(false);
-    }
-  };
+i want the following files .. 
+Release.tsx  
 
-  // Add import at the top
+DetailRelease.tsx 
 
-  // Update the tabs array to include pity-costs
+DetailOrderDisplayer.tsx
+DetailMaintanance.tsx
+DetailProductSalesDisplayer.tsx
 
-  // Add the tab content for pity-costs
+then 3 of  the displayers on the detailrelase overaly .. 
 
-  useEffect(() => {
-    if (activeTab === "payments") {
-      fetchPayments();
-    }
-  }, [order.id, activeTab]);
-
-  // --- Formatters ---
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatCurrency = (amount: string | number) => {
-    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat("en-ET", {
-      style: "currency",
-      currency: "ETB",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(numAmount);
-  };
-
-  // --- Helpers ---
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "C":
-        return <CheckCircle size={18} className="text-emerald-500" />;
-      case "P":
-        return <Clock size={18} className="text-amber-500" />;
-      case "R":
-        return <XCircle size={18} className="text-rose-500" />;
-      default:
-        return <AlertCircle size={18} className="text-gray-400" />;
-    }
-  };
-
-  const getReasonText = (reason: string) => {
-    const map: Record<string, string> = {
-      PRE: "Advance Payment",
-      REM: "Remaining Payment",
-      FULL: "Full Payment",
-      SALES: "Product Sales",
-      MAINTENANCE: "Maintenance",
-    };
-    return map[reason] || reason;
-  };
-
-  const getOrderStatusColor = (status: string) => {
-    if (!status)
-      return "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
-    if (status.includes("CONFIRMED") || status.includes("COMPLETED")) {
-      return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
-    }
-    if (status.includes("STARTED") || status.includes("ACCEPTED")) {
-      return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800";
-    }
-    if (status.includes("PRE")) {
-      return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800";
-    }
-    return "bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300 border-gray-200 dark:border-zinc-700";
-  };
-
-  // --- Components ---
-  const InfoRow = ({ icon: Icon, label, value, subValue }: any) => (
-    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-      <div className="mt-1 p-2 bg-gray-100 dark:bg-zinc-800 rounded-md text-gray-500 dark:text-gray-400">
-        <Icon size={18} />
-      </div>
-      <div>
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          {label}
-        </p>
-        <p className="text-base font-semibold text-gray-900 dark:text-gray-100 mt-0.5">
-          {value || "N/A"}
-        </p>
-        {subValue && (
-          <p className="text-sm text-gray-500 dark:text-gray-500">{subValue}</p>
-        )}
-      </div>
-    </div>
-  );
-
-  const SectionTitle = ({ title, icon: Icon }: any) => (
-    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-zinc-800 pb-2">
-      {Icon && <Icon size={16} className="text-blue-600 dark:text-blue-400" />}
-      {title}
-    </h3>
-  );
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-gray-200 dark:border-zinc-800">
-        {/* Header - Always Visible */}
-        <div className="shrink-0 p-6 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex justify-between items-start">
-          <div className="flex gap-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hidden sm:block">
-              <Package size={28} className="text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {order.client}
-                </h2>
-                <span
-                  className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${getOrderStatusColor(
-                    order.orders?.[0]?.order_status
-                  )}`}
-                >
-                  {order.orders?.[0]?.order_status?.replace(/-/g, " ") ||
-                    "UNKNOWN"}
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
-                <span className="flex items-center gap-1">
-                  {order.orders
-                    ?.slice(0, 3)
-                    .map((item: any) => (
-                      <span
-                        key={item.order_code}
-                        className="font-mono text-xs bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded"
-                      >
-                        ORD-{item.order_code}
-                      </span>
-                    ))
-                    .reduce(
-                      (acc: any[], x: any) =>
-                        acc.length ? [...acc, " ", x] : [x],
-                      []
-                    )}
-                  {order.orders?.length > 3 && (
-                    <span className="text-xs text-blue-600 dark:text-blue-400 ml-1">
-                      +{order.orders.length - 3} more
-                    </span>
-                  )}
-                </span>
-                <span>•</span>
-                <span>{formatDate(order.created_at)}</span>
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-all"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="shrink-0 px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
-          <div className="flex gap-6 overflow-x-auto py-1">
-            {[
-              { id: "overview", label: "Overview", icon: Info },
-              {
-                id: "orders",
-                label: `Sub-Orders (${order.orders?.length || 0})`,
-                icon: Layers,
-              },
-              { id: "payments", label: "Payments", icon: CreditCard },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 py-4 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                }`}
-              >
-                <tab.icon size={16} className="shrink-0" />
-                <span className="truncate max-w-[150px]">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto bg-gray-50/30 dark:bg-zinc-950/30 p-6">
-          {/* --- TAB: OVERVIEW --- */}
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-300">
-              <div className="space-y-8">
-                {/* Client Info Grid */}
-                <div>
-                  <SectionTitle title="Client Information" icon={User} />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <InfoRow icon={User} label="Name" value={order.client} />
-                    <InfoRow
-                      icon={Phone}
-                      label="Contact"
-                      value={order.contact}
-                    />
-                    <InfoRow
-                      icon={MapPin}
-                      label="Location"
-                      value={order.location}
-                      className="sm:col-span-2"
-                    />
-                  </div>
-                </div>
-
-                {/* Services */}
-                <div>
-                  <SectionTitle title="Services & Complexity" icon={Settings} />
-                  <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="text-center p-2">
-                      <div
-                        className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                          order.instalation_service
-                            ? "bg-green-100 text-green-600 dark:bg-green-900/20"
-                            : "bg-gray-100 text-gray-400 dark:bg-zinc-800"
-                        }`}
-                      >
-                        <Wrench size={20} />
-                      </div>
-                      <p className="text-sm font-medium dark:text-white">
-                        Installation
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.instalation_service ? "Included" : "No"}
-                      </p>
-                    </div>
-                    <div className="text-center p-2">
-                      <div
-                        className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                          order.delivery_service
-                            ? "bg-blue-100 text-blue-600 dark:bg-blue-900/20"
-                            : "bg-gray-100 text-gray-400 dark:bg-zinc-800"
-                        }`}
-                      >
-                        <Truck size={20} />
-                      </div>
-                      <p className="text-sm font-medium dark:text-white">
-                        Delivery
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.delivery_service ? "Included" : "No"}
-                      </p>
-                    </div>
-                    <div className="text-center p-2">
-                      <div className="mx-auto w-10 h-10 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/20 flex items-center justify-center mb-2">
-                        <Settings size={20} />
-                      </div>
-                      <p className="text-sm font-medium dark:text-white">
-                        Difficulty
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.order_difficulty || "Standard"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                {/* Logistics */}
-                <div>
-                  <SectionTitle title="Logistics & Finance" icon={Receipt} />
-                  <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800 overflow-hidden">
-                    <InfoRow
-                      icon={Calendar}
-                      label="Delivery Date"
-                      value={formatDate(order.delivery_date)}
-                    />
-                    <div className="border-t border-gray-100 dark:border-zinc-800"></div>
-                    <InfoRow
-                      icon={FileText}
-                      label="Invoice Status"
-                      value={order.invoice ? "Invoice Required" : "No Invoice"}
-                    />
-                    <div className="border-t border-gray-100 dark:border-zinc-800"></div>
-                    <div className="flex items-center gap-3 p-4 bg-blue-50/50 dark:bg-blue-900/10">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md">
-                        <DollarSign size={20} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase">
-                          Total Amount
-                        </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(order.full_payment)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes & Special Req */}
-                {(order.special_requerment || order.note) && (
-                  <div>
-                    <SectionTitle
-                      title="Notes & Requirements"
-                      icon={AlertCircle}
-                    />
-                    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-4 space-y-3">
-                      {order.special_requerment && (
-                        <div>
-                          <p className="text-xs font-bold text-amber-800 dark:text-amber-500 uppercase">
-                            Special Requirement
-                          </p>
-                          <p className="text-sm text-gray-800 dark:text-gray-300 mt-1">
-                            {order.special_requerment}
-                          </p>
-                        </div>
-                      )}
-                      {order.note && (
-                        <div>
-                          <p className="text-xs font-bold text-gray-500 uppercase">
-                            General Note
-                          </p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 italic">
-                            "{order.note}"
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* --- TAB: ORDERS --- */}
-          {activeTab === "orders" && (
-            <div className="space-y-4 animate-in fade-in duration-300">
-              {!order.orders?.length ? (
-                <div className="text-center py-12 text-gray-500">
-                  No sub-orders found.
-                </div>
-              ) : (
-                order.orders.map((item: any) => (
-                  <div
-                    key={item.order_code}
-                    className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
-                  >
-                    {/* Item Header */}
-                    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-zinc-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500">
-                          <Package size={20} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-900 dark:text-white">
-                            ORD-{item.order_code}
-                          </h4>
-                          <span className="text-xs text-gray-500">
-                            {item.design_type}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-mono font-medium text-gray-900 dark:text-gray-200">
-                          {formatCurrency(item.price)}
-                        </span>
-                        <span
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getOrderStatusColor(
-                            item.order_status
-                          )}`}
-                        >
-                          {item.order_status.replace(/-/g, " ")}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Item Details */}
-                    <div className="p-4 bg-gray-50/50 dark:bg-zinc-900/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">
-                          Components
-                        </span>
-                        <div className="flex gap-2 text-gray-700 dark:text-gray-300">
-                          <span className="bg-white dark:bg-zinc-800 px-2 py-1 rounded border border-gray-200 dark:border-zinc-700">
-                            BOM: {item.boms?.length || 0}
-                          </span>
-                          <span className="bg-white dark:bg-zinc-800 px-2 py-1 rounded border border-gray-200 dark:border-zinc-700">
-                            Files: {item.cutting_files?.length || 0}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Mockup Preview */}
-                      {item.mockup?.mockup_image && (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.mockup.mockup_image}
-                            alt="Mockup"
-                            onClick={() =>
-                              window.open(item.mockup.mockup_image, "_blank")
-                            }
-                            className="w-12 h-12 object-cover rounded bg-white border border-gray-200 dark:border-zinc-700 cursor-pointer hover:scale-105 transition-transform"
-                          />
-                          <div>
-                            <p className="text-xs font-medium text-gray-900 dark:text-white">
-                              Mockup
-                            </p>
-                            <p
-                              className="text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                              onClick={() =>
-                                window.open(item.mockup.mockup_image, "_blank")
-                              }
-                            >
-                              View Image
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Modification Preview */}
-                      {item.mockup_modification?.mockup_image && (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.mockup_modification.mockup_image}
-                            alt="Modification"
-                            onClick={() =>
-                              window.open(
-                                item.mockup_modification.mockup_image,
-                                "_blank"
-                              )
-                            }
-                            className="w-12 h-12 object-cover rounded bg-white border border-amber-200 dark:border-amber-900 cursor-pointer hover:scale-105 transition-transform"
-                          />
-                          <div>
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-500">
-                              Modified
-                            </p>
-                            <p
-                              className="text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                              onClick={() =>
-                                window.open(
-                                  item.mockup_modification.mockup_image,
-                                  "_blank"
-                                )
-                              }
-                            >
-                              View Change
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* --- TAB: PAYMENTS --- */}
-          {activeTab === "payments" && (
-            <div className="max-w-3xl mx-auto animate-in fade-in duration-300">
-              {paymentsLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                  <Loader className="animate-spin h-8 w-8 mb-4 text-blue-500" />
-                  <p>Loading financial data...</p>
-                </div>
-              ) : paymentsError ? (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-6 rounded-lg text-center">
-                  <AlertCircle className="mx-auto h-8 w-8 text-red-500 mb-2" />
-                  <p className="text-red-700 dark:text-red-400 mb-4">
-                    {paymentsError}
-                  </p>
-                  <button
-                    onClick={fetchPayments}
-                    className="text-sm font-medium text-red-600 underline"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : payments.length === 0 ? (
-                <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-lg border border-dashed border-gray-300 dark:border-zinc-700">
-                  <CreditCard className="mx-auto h-12 w-12 text-gray-300 dark:text-zinc-600 mb-3" />
-                  <p className="text-gray-500">No payment history recorded.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {payments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-5 flex flex-col md:flex-row gap-6 relative overflow-hidden group hover:shadow-md transition-shadow"
-                    >
-                      {/* Status Indicator Line */}
-                      <div
-                        className={`absolute left-0 top-0 bottom-0 w-1 ${
-                          payment.status === "C"
-                            ? "bg-emerald-500"
-                            : payment.status === "R"
-                            ? "bg-rose-500"
-                            : "bg-amber-500"
-                        }`}
-                      />
-
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h4 className="font-bold text-gray-900 dark:text-white text-lg">
-                            {getReasonText(payment.reason)}
-                          </h4>
-                          {getStatusIcon(payment.status)}
-                        </div>
-                        <p className="text-sm text-gray-500 flex items-center gap-2">
-                          <Calendar size={14} />{" "}
-                          {formatDate(payment.created_at)}
-                        </p>
-
-                        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-xs text-gray-400 uppercase tracking-wider">
-                              Method
-                            </span>
-                            <p className="font-medium text-gray-700 dark:text-gray-300">
-                              {payment.method}{" "}
-                              {payment.account ? `(#${payment.account})` : ""}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-400 uppercase tracking-wider">
-                              Wallet
-                            </span>
-                            <p className="font-medium text-gray-700 dark:text-gray-300">
-                              {payment.wallet?.name || "N/A"}
-                            </p>
-                          </div>
-                          {payment.confirmed_by && (
-                            <div className="col-span-2 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
-                              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                <CheckCircle size={12} /> Confirmed by{" "}
-                                {payment.confirmed_by.telegram_user_name}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Amount & Proof */}
-                      <div className="flex flex-col items-start md:items-end justify-between min-w-[150px]">
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(payment.amount)}
-                        </span>
-
-                        {payment.confirmation_image && (
-                          <button
-                            onClick={() =>
-                              window.open(payment.confirmation_image, "_blank")
-                            }
-                            className="mt-4 flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg w-full md:w-auto justify-center"
-                          >
-                            <Image size={14} /> View Receipt
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default OrderDetail;
-
-
-i will to update this component to handle Order Edits .. and OrderContainer Edits .. after the display add the eDIT iCON ON THE TOP OF VOERVIEW for the container .. and Edit for Each Order ... and on edit clicked an overaly to edit the informasons for the order only the mockup image .. and use /api/orders/{order code }/ endpoint to edit ... and send  pach request .. use 
-api for all api requests use lucid react for icon and must handle dark and white mode .. also mobile first design 
+mobile first desing(i will use it in telegram mini app)
+ handler dark and white mode .. 
+ use api for all requests (api requests) liek api.get .. or api.post ..  import it on the top 
+ use lucid react for icon 
+each component must stand alone 

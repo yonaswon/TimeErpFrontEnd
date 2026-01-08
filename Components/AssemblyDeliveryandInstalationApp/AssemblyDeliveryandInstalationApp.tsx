@@ -39,7 +39,7 @@ const AssemblyDeliveryandInstalationApp = ({
     { id: "assembly" as TabType, label: "Assembly", icon: Wrench },
     {
       id: "delivery-installation" as TabType,
-      label: "Delivery & Install",
+      label: "D&I",
       icon: Truck,
     },
     { id: "stock" as TabType, label: "Stock", icon: Package },

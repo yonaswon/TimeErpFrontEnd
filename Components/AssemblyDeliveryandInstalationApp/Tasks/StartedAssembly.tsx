@@ -9,7 +9,7 @@ import {
   Clock,
 } from "lucide-react";
 import api from "@/api";
-
+import { useSidebar } from "@/Components/GlobalComponents/SideBar/SidebarContext";
 interface AssemblyAssignment {
   id: number;
   order: {
@@ -65,6 +65,7 @@ interface AssemblyAssignment {
   date: string;
 }
 import { ReleaseOverlay } from "./ReleaseOverlay";
+import ReleaseContent from "./Release/ReleaseContent";
 
 type TaskView = "card" | "list";
 
@@ -83,6 +84,11 @@ export const StartedAssembly = () => {
     isOpen: false,
     task: null,
   });
+  const { openSidebar } = useSidebar();
+
+  const openReleaseSideBar = (id: any) => {
+    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
+  };
 
   useEffect(() => {
     fetchStartedTasks();
@@ -103,7 +109,7 @@ export const StartedAssembly = () => {
       const userId = user.id;
 
       const response = await api.get(
-        `/api/assembly-assign/?status=STARTED&assigned_to=${userId}&page=${currentPage}`
+        `/api/assembly-assign/?status=STARTED&assigned_to=${userId}&p=${currentPage}`
       );
       setTasks(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / 10));
@@ -272,7 +278,6 @@ export const StartedAssembly = () => {
         </div>
       )}
       {/* Release Overlay */}
-      // Update the overlay rendering section
       {releaseOverlay.isOpen && releaseOverlay.task && (
         <ReleaseOverlay
           task={releaseOverlay.task}
@@ -301,6 +306,11 @@ const StartedAssemblyCard = ({
   calculateDuration: (startDate: string | null) => string;
 }) => {
   const duration = calculateDuration(task.start_date);
+  const { openSidebar } = useSidebar();
+
+  const openReleaseSideBar = (id: any) => {
+    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
+  };
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-4">
@@ -426,6 +436,14 @@ const StartedAssemblyCard = ({
       {/* Action Buttons */}
       <div className="flex space-x-3">
         <button
+          onClick={() => openReleaseSideBar(task.order.order_code)}
+          className="flex-1 flex items-center justify-center space-x-2 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+        >
+          <Package className="w-4 h-4" />
+          <span>See Release</span>
+        </button>
+
+        <button
           onClick={() => onRelease(task)}
           className="flex-1 flex items-center justify-center space-x-2 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
         >
@@ -471,6 +489,11 @@ const StartedAssemblyListItem = ({
   calculateDuration: (startDate: string | null) => string;
 }) => {
   const duration = calculateDuration(task.start_date);
+  const { openSidebar } = useSidebar();
+
+  const openReleaseSideBar = (id: any) => {
+    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
+  };
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-3">
@@ -507,6 +530,13 @@ const StartedAssemblyListItem = ({
         </div>
 
         <div className="flex items-center space-x-2 ml-4 shrink-0">
+          <button
+            onClick={() => openReleaseSideBar(task.order.order_code)}
+            className="flex items-center space-x-1 px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+          >
+            <Package className="w-3 h-3" />
+            <span>See Release</span>
+          </button>
           <button
             onClick={() => onRelease(task)}
             className="flex items-center space-x-1 px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"

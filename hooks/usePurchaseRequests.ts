@@ -11,7 +11,7 @@ export const usePurchaseRequests = (page: number = 1) => {
     try {
       setLoading(true)
       setError(null)
-      const response = await api.get(`/finance/purchase/?request_status=S&status=P&is_deleted=false&page=${pageNum}`)
+      const response = await api.get(`/finance/purchase/?request_status=S&status=P&is_deleted=false&p=${pageNum}`)
       setPurchases(response.data)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch purchase requests')
