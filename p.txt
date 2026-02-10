@@ -1,737 +1,539 @@
-now i want you to build the Realse list and detail View under Release/ Folder 
+"use client";
 
-get releases from this end point .. /api/release/
-you will get 
-{
-    "count": 41,
-    "next": "http://127.0.0.1:8000/api/release/?p=2",
-    "previous": null,
-    "results": [
-        {
-            "id": 1,
-            "material": {
-                "id": 3,
-                "name": "Blue Rope",
-                "type": "L",
-                "code_name": "Blue",
-                "available": "97.500",
-                "parsialy_available": "0.000",
-                "min_threshold": 25,
-                "width": null,
-                "height": null,
-                "date": "2025-11-16T13:20:58.131826+03:00",
-                "stats": {
-                    "inventory_distribution": {
-                        "Admin": 6.25,
-                        "Stock Keeper": 25.0,
-                        "yon_t12-Inventory": 19.75,
-                        "yonaswondmagegn-Inventory": 46.5
-                    },
-                    "total_available": 97.5,
-                    "partially_available": 0.0
-                }
-            },
-            "reason": "ORDER",
-            "amount": "1.00",
-            "proof_image": null,
-            "confirmed": true,
-            "date": "2025-11-18T07:27:03.638843+03:00",
-            "order": 5,
-            "maintenance": null,
-            "inventory": 3,
-            "released_by": 1,
-            "each_areal_material": []
-        },
-        {
-            "id": 2,
-            "material": {
-                "id": 4,
-                "name": "White Rope",
-                "type": "L",
-                "code_name": "WhiteRope",
-                "available": "481.400",
-                "parsialy_available": "0.000",
-                "min_threshold": 25,
-                "width": null,
-                "height": null,
-                "date": "2025-11-16T13:21:09.546906+03:00",
-                "stats": {
-                    "inventory_distribution": {
-                        "Admin": 320.9,
-                        "Stock Keeper": 157.5,
-                        "yon_t12-Inventory": 3.0,
-                        "yonaswondmagegn-Inventory": 0.0
-                    },
-                    "total_available": 481.4,
-                    "partially_available": 0.0
-                }
-            },
-            "reason": "ORDER",
-            "amount": "1.00",
-            "proof_image": null,
-            "confirmed": true,
-            "date": "2025-11-18T07:27:03.707310+03:00",
-            "order": 5,
-            "maintenance": null,
-            "inventory": 3,
-            "released_by": 1,
-            "each_areal_material": []
-        },
-        {this type of data .. 
-list it in the card  if order ..show ORD-{order id } Maintannce-{maintanve id } and os on ... 
-then on click the detail part  on teh details addsional to relase informsion get .. 
+import React, { useState, useEffect } from "react";
+import api from "@/api";
+import {
+  Package,
+  Filter,
+  ChevronDown,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  ExternalLink,
+  Warehouse,
+  RefreshCw,
+  PlusCircle,
+} from "lucide-react";
 
-order informasion form 
-api/orders/5/ this end point you will get 
-
-{
-    "order_code": 5,
-    "boms": [
-        {
-            "id": 16,
-            "material": {
-                "id": 1,
-                "name": "8 mm Clear Acleric(Mica)",
-                "type": "A",
-                "code_name": "8mmMica",
-                "available": "7.000",
-                "parsialy_available": "1393.050",
-                "min_threshold": 8,
-                "width": "10.00",
-                "height": "20.00",
-                "date": "2025-11-16T13:20:09.502403+03:00",
-                "stats": {
-                    "inventory_distribution": [
-                        {
-                            "inventory__name": "Admin",
-                            "total": 5,
-                            "unstarted": 3,
-                            "started": 2,
-                            "finished": 0
-                        },
-                        {
-                            "inventory__name": "Stock Keeper",
-                            "total": 3,
-                            "unstarted": 0,
-                            "started": 3,
-                            "finished": 1
-                        }
-                    ],
-                    "total_pieces": 8,
-                    "unstarted_pieces": 3,
-                    "started_pieces": 4,
-                    "finished_pieces": 1,
-                    "total_area_available": 9751.05
-                }
-            },
-            "amount": "0.00",
-            "width": "0.25",
-            "height": "0.2",
-            "price_per_unit": null,
-            "total_price": null,
-            "estimated_price": null,
-            "released": true,
-            "release_date": "2025-11-18T07:27:03.719650+03:00",
-            "date": "2025-11-18T07:20:58.183891+03:00"
-        },
-        {
-            "id": 17,
-            "material": {
-                "id": 3,
-                "name": "Blue Rope",
-                "type": "L",
-                "code_name": "Blue",
-                "available": "97.500",
-                "parsialy_available": "0.000",
-                "min_threshold": 25,
-                "width": null,
-                "height": null,
-                "date": "2025-11-16T13:20:58.131826+03:00",
-                "stats": {
-                    "inventory_distribution": {
-                        "Admin": 6.25,
-                        "Stock Keeper": 25.0,
-                        "yon_t12-Inventory": 19.75,
-                        "yonaswondmagegn-Inventory": 46.5
-                    },
-                    "total_available": 97.5,
-                    "partially_available": 0.0
-                }
-            },
-            "amount": "1.00",
-            "width": "0.00",
-            "height": "0.0",
-            "price_per_unit": null,
-            "total_price": null,
-            "estimated_price": null,
-            "released": true,
-            "release_date": "2025-11-18T07:27:03.697166+03:00",
-            "date": "2025-11-18T07:20:58.186886+03:00"
-        },
-        {
-            "id": 18,
-            "material": {
-                "id": 4,
-                "name": "White Rope",
-                "type": "L",
-                "code_name": "WhiteRope",
-                "available": "481.400",
-                "parsialy_available": "0.000",
-                "min_threshold": 25,
-                "width": null,
-                "height": null,
-                "date": "2025-11-16T13:21:09.546906+03:00",
-                "stats": {
-                    "inventory_distribution": {
-                        "Admin": 320.9,
-                        "Stock Keeper": 157.5,
-                        "yon_t12-Inventory": 3.0,
-                        "yonaswondmagegn-Inventory": 0.0
-                    },
-                    "total_available": 481.4,
-                    "partially_available": 0.0
-                }
-            },
-            "amount": "1.00",
-            "width": "0.00",
-            "height": "0.0",
-            "price_per_unit": null,
-            "total_price": null,
-            "estimated_price": null,
-            "released": true,
-            "release_date": "2025-11-18T07:27:03.707310+03:00",
-            "date": "2025-11-18T07:20:58.187883+03:00"
-        }
-    ],
-    "mockup": {
-        "id": 5,
-        "reference_images": [
-            {
-                "id": 6,
-                "image": "http://127.0.0.1:8000/media/grace_X5DlCyR.png",
-                "date": "2025-11-18T06:59:55.616060+03:00"
-            }
-        ],
-        "bom": [],
-        "designer": {
-            "id": 1,
-            "telegram_id": 5301464167,
-            "telegram_user_name": "yonaswondmagegn",
-            "role": [
-                {
-                    "id": 1,
-                    "Name": "Admin",
-                    "date": "2025-11-16T08:56:52.172944+03:00"
-                },
-                {
-                    "id": 2,
-                    "Name": "Finance&Accounting",
-                    "date": "2025-11-16T08:58:49.968852+03:00"
-                },
-                {
-                    "id": 3,
-                    "Name": "AssemblyDeliveryandInstalationApp",
-                    "date": "2025-11-16T08:59:03.476647+03:00"
-                },
-                {
-                    "id": 8,
-                    "Name": "Sales",
-                    "date": "2025-11-16T09:00:13.106649+03:00"
-                },
-                {
-                    "id": 9,
-                    "Name": "Graphic Designer",
-                    "date": "2025-11-16T09:00:29.295097+03:00"
-                }
-            ],
-            "first_name": ""
-        },
-        "name": "First Mockup",
-        "request_status": "CONVERTED",
-        "note": "some description hear",
-        "price": 250000,
-        "price_with_vat": false,
-        "mockup_image": "http://127.0.0.1:8000/media/mock_up_images/asli_updated_19OEWNC.png",
-        "width": "0.25",
-        "height": "0.35",
-        "telegram_message_id": 122,
-        "requested_date": "2025-11-18T06:59:55.761170+03:00",
-        "first_response_date": "2025-11-18T07:00:33.033490+03:00",
-        "date": "2025-11-18T06:59:55.761170+03:00",
-        "lead": 4,
-        "design_type": 1
-    },
-    "mockup_modification": null,
-    "cutting_files": [
-        {
-            "id": 5,
-            "on": {
-                "id": 1,
-                "material": 1,
-                "material_name": "8 mm Clear Acleric(Mica)",
-                "areal_material_record": 1,
-                "code": 1,
-                "inventory": 2,
-                "inventory_name": "Stock Keeper",
-                "current_width": "10.00",
-                "current_height": "20.00",
-                "started": true,
-                "finished": true,
-                "date": "2025-11-16T13:23:02.216571+03:00"
-            },
-            "assigned_to": {
-                "id": 1,
-                "telegram_id": 5301464167,
-                "telegram_user_name": "yonaswondmagegn",
-                "role": [
-                    {
-                        "id": 1,
-                        "Name": "Admin",
-                        "date": "2025-11-16T08:56:52.172944+03:00"
-                    },
-                    {
-                        "id": 2,
-                        "Name": "Finance&Accounting",
-                        "date": "2025-11-16T08:58:49.968852+03:00"
-                    },
-                    {
-                        "id": 3,
-                        "Name": "AssemblyDeliveryandInstalationApp",
-                        "date": "2025-11-16T08:59:03.476647+03:00"
-                    },
-                    {
-                        "id": 8,
-                        "Name": "Sales",
-                        "date": "2025-11-16T09:00:13.106649+03:00"
-                    },
-                    {
-                        "id": 9,
-                        "Name": "Graphic Designer",
-                        "date": "2025-11-16T09:00:29.295097+03:00"
-                    }
-                ],
-                "first_name": ""
-            },
-            "crv3d": "/media/cutting_files/mica-119-addis_abeba_-part4_fh2RQt2_At03l1T.crv3d",
-            "image": "/media/cutting_files/pngs/photo_5794138455901146054_y_3jpNPXw.jpg",
-            "status": "COMPLATED",
-            "schedule_start_date": "2025-11-25T07:05:00+03:00",
-            "schedule_complate_date": "2025-11-26T07:05:00+03:00",
-            "start_date": "2025-11-18T07:06:34.350875+03:00",
-            "complate_date": "2025-11-18T07:06:45.900778+03:00",
-            "date": "2025-11-18T07:05:29.833188+03:00",
-            "orders": [
-                5
-            ]
-        }
-    ],
-    "releases": [
-        {
-            "id": 1,
-            "reason": "ORDER",
-            "material": 3,
-            "material_name": "Blue Rope",
-            "material_type": "L",
-            "amount": "1.00",
-            "proof_image": null,
-            "inventory": 3,
-            "inventory_name": "yonaswondmagegn-Inventory",
-            "released_by": 1,
-            "released_by_name": "yonaswondmagegn",
-            "confirmed": true,
-            "date": "2025-11-18T07:27:03.638843+03:00"
-        },
-        {
-            "id": 2,
-            "reason": "ORDER",
-            "material": 4,
-            "material_name": "White Rope",
-            "material_type": "L",
-            "amount": "1.00",
-            "proof_image": null,
-            "inventory": 3,
-            "inventory_name": "yonaswondmagegn-Inventory",
-            "released_by": 1,
-            "released_by_name": "yonaswondmagegn",
-            "confirmed": true,
-            "date": "2025-11-18T07:27:03.707310+03:00"
-        },
-        {
-            "id": 6,
-            "reason": "ADD",
-            "material": 4,
-            "material_name": "White Rope",
-            "material_type": "L",
-            "amount": "0.50",
-            "proof_image": null,
-            "inventory": 3,
-            "inventory_name": "yonaswondmagegn-Inventory",
-            "released_by": 1,
-            "released_by_name": "yonaswondmagegn",
-            "confirmed": true,
-            "date": "2025-11-18T11:00:50.841323+03:00"
-        },
-        {
-            "id": 8,
-            "reason": "ADD",
-            "material": 3,
-            "material_name": "Blue Rope",
-            "material_type": "L",
-            "amount": "0.30",
-            "proof_image": "/media/release_proofs/Gemini_Generated_Image_619oy8619oy8619o.png",
-            "inventory": 3,
-            "inventory_name": "yonaswondmagegn-Inventory",
-            "released_by": 1,
-            "released_by_name": "yonaswondmagegn",
-            "confirmed": true,
-            "date": "2025-11-18T12:15:17.507440+03:00"
-        },
-        {
-            "id": 9,
-            "reason": "ADD",
-            "material": 4,
-            "material_name": "White Rope",
-            "material_type": "L",
-            "amount": "0.50",
-            "proof_image": "/media/release_proofs/Gemini_Generated_Image_619oy8619oy8619o_0f60AiL.png",
-            "inventory": 3,
-            "inventory_name": "yonaswondmagegn-Inventory",
-            "released_by": 1,
-            "released_by_name": "yonaswondmagegn",
-            "confirmed": true,
-            "date": "2025-11-18T12:15:17.574709+03:00"
-        }
-    ],
-    "order_status": "REM-CONFIRMED",
-    "mockup_image": null,
-    "price": 250000,
-    "pre_accepted_date": "2025-11-18T07:01:33.550659+03:00",
-    "pre_confirmed_date": null,
-    "cnc_started_date": "2025-11-18T07:06:34.355681+03:00",
-    "cnc_completed_date": "2025-11-18T07:06:45.906411+03:00",
-    "assembly_started_date": "2025-11-18T12:17:36.871809+03:00",
-    "assembly_completed_date": null,
-    "dandi_date": "2025-11-18T13:36:54.113411+03:00",
-    "rem_accepted_date": "2025-11-18T13:37:09.194891+03:00",
-    "rem_confirmed_date": null,
-    "created_at": "2025-11-18T07:01:33.550659+03:00",
-    "design_type": 1
-}this type of data .. so show the mockup image in small and some informasion .. 
-
-if maintance ... then 
-api/maintenance/8/ this end point .. 
-{
-    "id": 8,
-    "order": {
-        "order_code": 9,
-        "boms": [
-            {
-                "id": 27,
-                "material": {
-                    "id": 1,
-                    "name": "8 mm Clear Acleric(Mica)",
-                    "type": "A",
-                    "code_name": "8mmMica",
-                    "available": "7.000",
-                    "parsialy_available": "1393.050",
-                    "min_threshold": 8,
-                    "width": "10.00",
-                    "height": "20.00",
-                    "date": "2025-11-16T13:20:09.502403+03:00",
-                    "stats": {
-                        "inventory_distribution": [
-                            {
-                                "inventory__name": "Admin",
-                                "total": 5,
-                                "unstarted": 3,
-                                "started": 2,
-                                "finished": 0
-                            },
-                            {
-                                "inventory__name": "Stock Keeper",
-                                "total": 3,
-                                "unstarted": 0,
-                                "started": 3,
-                                "finished": 1
-                            }
-                        ],
-                        "total_pieces": 8,
-                        "unstarted_pieces": 3,
-                        "started_pieces": 4,
-                        "finished_pieces": 1,
-                        "total_area_available": 9751.05
-                    }
-                },
-                "amount": "0.00",
-                "width": "0.25",
-                "height": "0.8",
-                "price_per_unit": null,
-                "total_price": null,
-                "estimated_price": "2.66",
-                "released": false,
-                "release_date": null,
-                "date": "2025-11-22T20:47:07.344270+03:00"
-            },
-            {
-                "id": 28,
-                "material": {
-                    "id": 3,
-                    "name": "Blue Rope",
-                    "type": "L",
-                    "code_name": "Blue",
-                    "available": "97.500",
-                    "parsialy_available": "0.000",
-                    "min_threshold": 25,
-                    "width": null,
-                    "height": null,
-                    "date": "2025-11-16T13:20:58.131826+03:00",
-                    "stats": {
-                        "inventory_distribution": {
-                            "Admin": 6.25,
-                            "Stock Keeper": 25.0,
-                            "yon_t12-Inventory": 19.75,
-                            "yonaswondmagegn-Inventory": 46.5
-                        },
-                        "total_available": 97.5,
-                        "partially_available": 0.0
-                    }
-                },
-                "amount": "1.23",
-                "width": "0.00",
-                "height": "0.0",
-                "price_per_unit": "5499.00",
-                "total_price": "6763.77",
-                "estimated_price": null,
-                "released": false,
-                "release_date": null,
-                "date": "2025-11-22T20:47:08.489542+03:00"
-            },
-            {
-                "id": 29,
-                "material": {
-                    "id": 4,
-                    "name": "White Rope",
-                    "type": "L",
-                    "code_name": "WhiteRope",
-                    "available": "481.400",
-                    "parsialy_available": "0.000",
-                    "min_threshold": 25,
-                    "width": null,
-                    "height": null,
-                    "date": "2025-11-16T13:21:09.546906+03:00",
-                    "stats": {
-                        "inventory_distribution": {
-                            "Admin": 320.9,
-                            "Stock Keeper": 157.5,
-                            "yon_t12-Inventory": 3.0,
-                            "yonaswondmagegn-Inventory": 0.0
-                        },
-                        "total_available": 481.4,
-                        "partially_available": 0.0
-                    }
-                },
-                "amount": "0.96",
-                "width": "0.00",
-                "height": "0.0",
-                "price_per_unit": "5499.00",
-                "total_price": "5279.04",
-                "estimated_price": null,
-                "released": false,
-                "release_date": null,
-                "date": "2025-11-22T20:47:08.492739+03:00"
-            }
-        ],
-        "mockup": {
-            "id": 9,
-            "reference_images": [
-                {
-                    "id": 10,
-                    "image": "http://127.0.0.1:8000/media/Amigas_horizontal_rado8Ku.png",
-                    "date": "2025-11-18T13:40:42.271477+03:00"
-                }
-            ],
-            "bom": [],
-            "designer": {
-                "id": 1,
-                "telegram_id": 5301464167,
-                "telegram_user_name": "yonaswondmagegn",
-                "role": [
-                    {
-                        "id": 1,
-                        "Name": "Admin",
-                        "date": "2025-11-16T08:56:52.172944+03:00"
-                    },
-                    {
-                        "id": 2,
-                        "Name": "Finance&Accounting",
-                        "date": "2025-11-16T08:58:49.968852+03:00"
-                    },
-                    {
-                        "id": 3,
-                        "Name": "AssemblyDeliveryandInstalationApp",
-                        "date": "2025-11-16T08:59:03.476647+03:00"
-                    },
-                    {
-                        "id": 8,
-                        "Name": "Sales",
-                        "date": "2025-11-16T09:00:13.106649+03:00"
-                    },
-                    {
-                        "id": 9,
-                        "Name": "Graphic Designer",
-                        "date": "2025-11-16T09:00:29.295097+03:00"
-                    }
-                ],
-                "first_name": ""
-            },
-            "name": "",
-            "request_status": "CONVERTED",
-            "note": ";ouh",
-            "price": 5200000,
-            "price_with_vat": false,
-            "mockup_image": "http://127.0.0.1:8000/media/mock_up_images/grace_qQIL5nS.png",
-            "width": "0.20",
-            "height": "0.30",
-            "telegram_message_id": 138,
-            "requested_date": "2025-11-18T13:40:42.367944+03:00",
-            "first_response_date": "2025-11-18T13:41:38.046453+03:00",
-            "date": "2025-11-18T13:40:42.367944+03:00",
-            "lead": 8,
-            "design_type": 1
-        },
-        "mockup_modification": null,
-        "cutting_files": [],
-        "releases": [],
-        "order_status": "PRE-CONFIRMED",
-        "mockup_image": "http://127.0.0.1:8000/media/order_image_fields/Gemini_Generated_Image_lvbxqslvbxqslvbx.png",
-        "price": 5200000,
-        "pre_accepted_date": "2025-11-18T13:42:28.801747+03:00",
-        "pre_confirmed_date": null,
-        "cnc_started_date": null,
-        "cnc_completed_date": null,
-        "assembly_started_date": null,
-        "assembly_completed_date": null,
-        "dandi_date": null,
-        "rem_accepted_date": null,
-        "rem_confirmed_date": null,
-        "created_at": "2025-11-18T13:42:28.801747+03:00",
-        "design_type": 1
-    },
-    "posted_by": {
-        "id": 1,
-        "telegram_id": 5301464167,
-        "telegram_user_name": "yonaswondmagegn",
-        "role": [
-            {
-                "id": 1,
-                "Name": "Admin",
-                "date": "2025-11-16T08:56:52.172944+03:00"
-            },
-            {
-                "id": 2,
-                "Name": "Finance&Accounting",
-                "date": "2025-11-16T08:58:49.968852+03:00"
-            },
-            {
-                "id": 3,
-                "Name": "AssemblyDeliveryandInstalationApp",
-                "date": "2025-11-16T08:59:03.476647+03:00"
-            },
-            {
-                "id": 8,
-                "Name": "Sales",
-                "date": "2025-11-16T09:00:13.106649+03:00"
-            },
-            {
-                "id": 9,
-                "Name": "Graphic Designer",
-                "date": "2025-11-16T09:00:29.295097+03:00"
-            }
-        ],
-        "first_name": ""
-    },
-    "boms": [],
-    "assigned_to": null,
-    "client_name": "cxfggc",
-    "client_contact": "96325841",
-    "reported_issue": "3a to 5a",
-    "image": "http://127.0.0.1:8000/media/maintenance_image/photo_5794138455901146054_y.jpg",
-    "under_warranty": false,
-    "payment_status": null,
-    "status": "NA",
-    "scheduled_start_date": null,
-    "scheduled_end_date": null,
-    "started": null,
-    "end": null,
-    "order_notification_sent": true,
-    "finance_notification_sent": true,
-    "order_group_message_id": "66",
-    "finance_group_message_id": "181",
-    "created_at": "2025-11-27T00:25:01.723919+03:00"
-}
-this type of information .. 
-and .. 
-if sales 
-api/material-sales-record/ this end point you will get ..
-{
-    "id": 1,
-    "release": [],
-    "recorded_by": {
-        "id": 1,
-        "telegram_id": 5301464167,
-        "telegram_user_name": "yonaswondmagegn",
-        "role": [
-            {
-                "id": 1,
-                "Name": "Admin",
-                "date": "2025-11-16T08:56:52.172944+03:00"
-            },
-            {
-                "id": 2,
-                "Name": "Finance&Accounting",
-                "date": "2025-11-16T08:58:49.968852+03:00"
-            },
-            {
-                "id": 3,
-                "Name": "AssemblyDeliveryandInstalationApp",
-                "date": "2025-11-16T08:59:03.476647+03:00"
-            },
-            {
-                "id": 8,
-                "Name": "Sales",
-                "date": "2025-11-16T09:00:13.106649+03:00"
-            },
-            {
-                "id": 9,
-                "Name": "Graphic Designer",
-                "date": "2025-11-16T09:00:29.295097+03:00"
-            }
-        ],
-        "first_name": ""
-    },
-    "customer_name": "asnake",
-    "customer_contact": "0963067788",
-    "date": "2025-11-24T00:50:09.185854+03:00",
-    "order_group_message_id": null,
-    "finance_group_message_id": null,
-    "order_notification_sent": false,
-    "finance_notification_sent": false
+interface Release {
+  id: number;
+  material: {
+    id: number;
+    name: string;
+    type: string;
+    code_name: string;
+    available: string;
+    parsialy_available: string;
+    min_threshold: number;
+    width: string | null;
+    height: string | null;
+    date: string;
+    stats: any;
+  };
+  reason:
+    | "ORDER"
+    | "ADD"
+    | "MAINTENANCE"
+    | "SALES"
+    | "TRANSFER"
+    | "WASTE"
+    | "DAMAGED";
+  amount: string;
+  proof_image: string | null;
+  confirmed: boolean;
+  date: string;
+  order: number;
+  maintenance: number | null;
+  inventory: number;
+  released_by: number;
+  each_areal_material: any[];
 }
 
+interface ReleasesResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Release[];
+}
 
-i want the following files .. 
-Release.tsx  
+const ReleaseContent = ({ id }: { id: number }) => {
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
-DetailRelease.tsx 
+  // Filter states
+  const [reasonFilter, setReasonFilter] = useState<string>("ALL"); // ALL, ORDER, ADD
+  const [inventoryFilter, setInventoryFilter] = useState<string>("ALL");
+  const [showFilters, setShowFilters] = useState(false);
+  const [availableInventories, setAvailableInventories] = useState<number[]>(
+    []
+  );
 
-DetailOrderDisplayer.tsx
-DetailMaintanance.tsx
-DetailProductSalesDisplayer.tsx
+  const fetchReleases = async (url?: string, append: boolean = false) => {
+    try {
+      if (url) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
 
-then 3 of  the displayers on the detailrelase overaly .. 
+      const endpoint = url || `/api/release/?order=${id}`;
+      const response = await api.get<ReleasesResponse>(endpoint);
 
-mobile first desing(i will use it in telegram mini app)
- handler dark and white mode .. 
- use api for all requests (api requests) liek api.get .. or api.post ..  import it on the top 
- use lucid react for icon 
-each component must stand alone 
+      if (append) {
+        // Append to existing releases for load more
+        setReleases((prev) => [...prev, ...response.data.results]);
+      } else {
+        // Initial load
+        setReleases(response.data.results);
+        // Extract unique inventory IDs for filter
+        const inventories = [
+          ...new Set(response.data.results.map((r) => r.inventory)),
+        ];
+        setAvailableInventories(inventories);
+      }
+
+      setNextUrl(response.data.next);
+      setHasMore(!!response.data.next);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to fetch releases");
+      console.error("Error fetching releases:", err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReleases();
+  }, [id]);
+
+  const handleLoadMore = () => {
+    if (nextUrl && !loadingMore) {
+      fetchReleases(nextUrl, true);
+    }
+  };
+
+  const handleFilterChange = () => {
+    // Filter logic will be applied client-side
+    setShowFilters(false);
+  };
+
+  const handleResetFilters = () => {
+    setReasonFilter("ALL");
+    setInventoryFilter("ALL");
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getReasonColor = (reason: string) => {
+    switch (reason) {
+      case "ORDER":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+      case "ADD":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+      case "MAINTENANCE":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+      case "SALES":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+    }
+  };
+
+  const getReasonLabel = (reason: string) => {
+    switch (reason) {
+      case "ORDER":
+        return "Order";
+      case "ADD":
+        return "Additional";
+      case "MAINTENANCE":
+        return "Maintenance";
+      case "SALES":
+        return "Sales";
+      default:
+        return reason;
+    }
+  };
+
+  // Filter releases based on selected filters
+  const filteredReleases = releases.filter((release) => {
+    if (reasonFilter !== "ALL" && release.reason !== reasonFilter) {
+      return false;
+    }
+    if (
+      inventoryFilter !== "ALL" &&
+      release.inventory.toString() !== inventoryFilter
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const formatAmount = (amount: string, type: string) => {
+    return `${amount} ${type === "A" ? "m²" : "m"}`;
+  };
+
+  // Loading state
+  if (loading && releases.length === 0) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="bg-white dark:bg-zinc-800 rounded-xl p-4 animate-pulse"
+          >
+            <div className="h-5 bg-gray-200 dark:bg-zinc-700 rounded mb-3 w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded mb-2 w-2/3"></div>
+            <div className="h-8 bg-gray-200 dark:bg-zinc-700 rounded"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && releases.length === 0) {
+    return (
+      <div className="text-center py-8 px-4">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+          <Package className="w-6 h-6 text-red-600 dark:text-red-400" />
+        </div>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+          Error Loading Releases
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
+        <button
+          onClick={() => fetchReleases()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (releases.length === 0) {
+    return (
+      <div className="text-center py-8 px-4">
+        <Package
+          size={40}
+          className="mx-auto text-gray-400 dark:text-gray-600 mb-3"
+        />
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+          No Releases Found
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No releases have been recorded for this order yet.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl p-4 border border-blue-200 dark:border-blue-800/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-blue-900 dark:text-blue-300">
+              ORD-{id}
+            </h2>
+            <p className="text-sm text-blue-700 dark:text-blue-400">
+              Order Releases: {releases.length} total releases
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Filter className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              Filters
+            </h3>
+            <button
+              onClick={handleResetFilters}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Reset All
+            </button>
+          </div>
+
+          {/* Reason Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Release Reason
+            </label>
+            <div className="flex gap-2">
+              {["ALL", "ORDER", "ADD"].map((reason) => (
+                <button
+                  key={reason}
+                  onClick={() => setReasonFilter(reason)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    reasonFilter === reason
+                      ? reason === "ALL"
+                        ? "bg-gray-800 text-white dark:bg-gray-700"
+                        : getReasonColor(reason)
+                      : "bg-gray-100 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
+                  }`}
+                >
+                  {reason === "ALL" ? "All" : getReasonLabel(reason)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Inventory Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Inventory
+            </label>
+            <div className="relative">
+              <select
+                value={inventoryFilter}
+                onChange={(e) => setInventoryFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white text-sm"
+              >
+                <option value="ALL">All Inventories</option>
+                {availableInventories.map((invId) => (
+                  <option key={invId} value={invId.toString()}>
+                    Inventory #{invId}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          <button
+            onClick={handleFilterChange}
+            className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Apply Filters
+          </button>
+        </div>
+      )}
+
+      {/* Filter Summary */}
+      {(reasonFilter !== "ALL" || inventoryFilter !== "ALL") && (
+        <div className="flex items-center justify-between text-sm">
+          <div className="text-gray-600 dark:text-gray-400">
+            Showing {filteredReleases.length} of {releases.length} releases
+          </div>
+          <button
+            onClick={handleResetFilters}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {/* Releases List */}
+      <div className="space-y-3">
+        {filteredReleases.map((release) => (
+          <div
+            key={release.id}
+            className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Package className="w-4 h-4 text-gray-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                    {release.material.name}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span>{release.material.code_name}</span>
+                  <span>•</span>
+                  <span>{formatDate(release.date)}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${getReasonColor(
+                    release.reason
+                  )}`}
+                >
+                  {getReasonLabel(release.reason)}
+                </span>
+                <div className="flex items-center gap-1">
+                  {release.confirmed ? (
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                  ) : (
+                    <XCircle className="w-3 h-3 text-yellow-500" />
+                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {release.confirmed ? "Confirmed" : "Pending"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Amount
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  {formatAmount(release.amount, release.material.type)}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Inventory
+                </div>
+                <div className="flex items-center gap-1">
+                  <Warehouse className="w-3 h-3 text-gray-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    #{release.inventory}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-zinc-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Release #{release.id}
+              </div>
+              {release.proof_image && (
+                <div className="text-xs text-green-600 dark:text-green-400">
+                  Proof available
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Load More Button */}
+      {hasMore && filteredReleases.length > 0 && (
+        <div className="pt-4">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="w-full px-4 py-3 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <span className="text-sm font-medium">Loading more...</span>
+              </>
+            ) : (
+              <>
+                <PlusCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Load More Releases</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* No results after filtering */}
+      {filteredReleases.length === 0 && releases.length > 0 && (
+        <div className="text-center py-8 px-4">
+          <Filter
+            size={40}
+            className="mx-auto text-gray-400 dark:text-gray-600 mb-3"
+          />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+            No matching releases
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Try changing your filter settings
+          </p>
+          <button
+            onClick={handleResetFilters}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Reset Filters
+          </button>
+        </div>
+      )}
+
+      {/* Stats Footer */}
+      <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-zinc-700">
+        Showing {filteredReleases.length} releases • Order #{id}
+      </div>
+    </div>
+  );
+};
+
+export default ReleaseContent;
+ This is working every thing as it is bu ti need to add the edit functionality and display the edited amount 
+
+ 
+class ReleaseModelViewSet(viewsets.ModelViewSet):
+    queryset = Release.objects.all()
+    serializer_class = ReleaseViewDetailSerializer
+    pagination_class = ReleasePagination
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['reason', 'maintenance', "order"]
+
+    @action(detail  = True, methods = ['post'])
+    def edit_release(self,request,pk=None):
+        try:
+            new_amount = request.data.get('amount')
+            if not new_amount:
+                return Response({'error':"Amount is Requered"},status = status.HTTP_400_BAD_REQUEST)
+            
+            release = self.get_object()
+
+            if not release:
+                return Response({'error':"Release not found"},status = status.HTTP_400_BAD_REQUEST)
+            
+            release_amount  = release.amount
+            difference = release_amount - Decimal(str(new_amount))
+            if difference <= 0:
+                return Response({'error':"Amount must be greater than zero"},status = status.HTTP_400_BAD_REQUEST)
+            
+            with transaction.atomic:
+                landprecord = LandPMaterialRecord.objects.create(
+                    material = release.material,
+                    inventory = release.inventory,
+                    first_amount = difference,
+                    current_amount = difference,
+                    is_active = True,
+                    created_by = request.user
+                )
+                release.amount = Decimal(str(new_amount))
+                release.is_edited = True
+                release.l_and_p_material_records_for_eidt.add(landprecord)
+                release.save()
+
+                return Response({'status':"success","message":"Release updated successfully"},status = status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error':str(e)},status = status.HTTP_400_BAD_REQUEST)
+ this is my model view set and the endpoint is api/release/{relase id }/edit_release
+
+ and i also update the model to get the is_edited .. and landp l_and_p_material_records_for_eidt fields 
+
+ on the display of releases show if the mateiral is edited or not and .. i want you to create another file for edit called ReleaseEditOveraly and on the overaly enter amount if the amount entered is grater than the current amount disable the edit button and say you can't edit to the grater ask for addtional release .. if its the saem can't do that .. if the amount entred is less thean the current amount then send the post request .. the the action method .. 
+
+ i need the current appdeted file and another overaly file only 
+
+ handle dark and hwite mode mobile first design .. use api for api requests ...  
