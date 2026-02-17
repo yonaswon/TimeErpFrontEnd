@@ -54,6 +54,7 @@ export function useOrderForm({
       return {
         id: item.id,
         type: item.type,
+        name: item.name,
         mockup_image: item.mockup_image || null,
         design_type: item.design_type || defaultDesignType,
         price: Math.round(item.price || 0),
@@ -179,6 +180,7 @@ export function useOrderForm({
           price: price,
           note: item.note || "",
           boms_data: [], // Empty BOM data
+          // Don't include mockup_image here if it's a file, handle separately
         };
       });
 
@@ -215,6 +217,13 @@ export function useOrderForm({
 
       formData.append("orders_data", JSON.stringify(ordersData));
 
+      // Append mockup images if they are new files
+      items.forEach((item, index) => {
+        if (item.mockup_image instanceof File) {
+          formData.append(`order_${index}_mockup_image`, item.mockup_image);
+        }
+      });
+
       if (paymentMethod === "BANK" || paymentMethod === "CHECK") {
         if (paymentScreenshot) {
           formData.append("payment_screenshot", paymentScreenshot);
@@ -234,8 +243,8 @@ export function useOrderForm({
       console.error("Order creation error:", err);
       alert(
         err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Failed to create order"
+        err.response?.data?.message ||
+        "Failed to create order"
       );
     } finally {
       setSubmitting(false);

@@ -94,7 +94,7 @@ export default function PaymentSection({
   return (
     <div className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg p-4">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Payment Information</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -107,13 +107,13 @@ export default function PaymentSection({
             With Invoice
           </label>
         </div>
-        
+
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Method *</label>
           <select
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             required
           >
             <option value="">Select payment method</option>
@@ -128,7 +128,7 @@ export default function PaymentSection({
       <div className="mb-4">
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Wallet</label>
         <div className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-gray-50 dark:bg-zinc-700 text-gray-900 dark:text-white">
-          {currentWallet ? `${currentWallet.name} (Invoice: ${currentWallet.invoice_balance}, Non-Invoice: ${currentWallet.non_invoice_balance})` : 'No wallet selected'}
+          {currentWallet ? `${currentWallet.name} #${currentWallet.id}` : 'No wallet selected'}
         </div>
       </div>
 
@@ -139,7 +139,7 @@ export default function PaymentSection({
           <select
             value={selectedAccount || ''}
             onChange={(e) => setSelectedAccount(e.target.value ? parseInt(e.target.value) : null)}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             required={selectedWallet === 1} // Required only when this section is visible
           >
             <option value="">Select account</option>
@@ -200,7 +200,7 @@ export default function PaymentSection({
                 accept="image/*"
                 className="hidden"
                 onChange={handleInvoiceImageChange}
-                // 'required' attribute removed as per instructions
+              // 'required' attribute removed as per instructions
               />
             </label>
             {invoiceImage && (
@@ -228,7 +228,7 @@ export default function PaymentSection({
         <textarea
           value={paymentNote}
           onChange={(e) => setPaymentNote(e.target.value)}
-          className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+          className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
           rows={2}
           placeholder="Add any payment notes..."
         />

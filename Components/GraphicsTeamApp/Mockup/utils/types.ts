@@ -40,6 +40,8 @@ export interface Designer {
     date: string
   }>
   first_name: string
+  last_name: string
+  username: string
 }
 
 export interface Modification {
@@ -69,12 +71,15 @@ export interface Mockup {
   bom: BOMItem[]
   designer: Designer
   request_status: string
+  name: string | null
+  ordered_by: string
+  lead_name: string
   note: string | null
   price: number | null
   price_with_vat: boolean
   mockup_image: string | null
   width: string | null
-  hieght: string | null
+  height: string | null
   telegram_message_id: string | null
   requested_date: string
   first_response_date: string | null

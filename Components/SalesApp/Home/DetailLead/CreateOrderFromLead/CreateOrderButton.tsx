@@ -19,9 +19,9 @@ export default function CreateOrderButton({ leadId, leadData }: CreateOrderButto
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+        className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium shadow-sm active:scale-95 transition-all"
       >
-        Create Order
+        + Order
       </button>
 
       {isOpen && (

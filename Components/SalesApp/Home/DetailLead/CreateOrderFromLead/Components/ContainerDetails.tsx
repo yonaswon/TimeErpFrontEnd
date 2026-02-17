@@ -48,6 +48,22 @@ export default function ContainerDetails({
   const [advancePaymentDisplay, setAdvancePaymentDisplay] = useState("");
   const [remainingPaymentDisplay, setRemainingPaymentDisplay] = useState("");
 
+  const handleInstallationChange = (checked: boolean) => {
+    onInstallationServiceChange(checked);
+    // If installation is selected, delivery must be selected
+    if (checked) {
+      onDeliveryServiceChange(true);
+    }
+  };
+
+  const handleDeliveryChange = (checked: boolean) => {
+    onDeliveryServiceChange(checked);
+    // If delivery is deselected, installation must be deselected
+    if (!checked) {
+      onInstallationServiceChange(false);
+    }
+  };
+
   // Format number with commas
   const formatNumberWithCommas = (num: number): string => {
     if (num === 0) return "0";
@@ -122,7 +138,7 @@ export default function ContainerDetails({
             type="text"
             value={location}
             onChange={(e) => onLocationChange(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             placeholder="Delivery location"
             required
           />
@@ -135,7 +151,7 @@ export default function ContainerDetails({
             type="datetime-local"
             value={deliveryDate}
             onChange={(e) => onDeliveryDateChange(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             required
           />
         </div>
@@ -152,7 +168,7 @@ export default function ContainerDetails({
             value={totalPaymentDisplay}
             onChange={handleTotalPaymentChange}
             onBlur={() => handleBlur("total")}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             placeholder="0"
             required
           />
@@ -169,7 +185,7 @@ export default function ContainerDetails({
             value={advancePaymentDisplay}
             onChange={handleAdvancePaymentChange}
             onBlur={() => handleBlur("advance")}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             placeholder="0"
             required
           />
@@ -184,8 +200,9 @@ export default function ContainerDetails({
           <input
             type="text"
             value={remainingPaymentDisplay}
+            value={remainingPaymentDisplay}
             readOnly
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-gray-100 dark:bg-zinc-600"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-gray-100 dark:bg-zinc-600 text-gray-900 dark:text-white"
             placeholder="0"
           />
           <p className="text-xs text-gray-500 mt-1">Calculated automatically</p>
@@ -201,7 +218,7 @@ export default function ContainerDetails({
           <select
             value={orderDifficulty}
             onChange={(e) => onOrderDifficultyChange(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
           >
             <option value="">Select difficulty</option>
             <option value="SIMPLE">Simple</option>
@@ -217,7 +234,7 @@ export default function ContainerDetails({
             type="text"
             value={specialRequirement}
             onChange={(e) => onSpecialRequirementChange(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+            className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
             placeholder="Any special requirements..."
           />
         </div>
@@ -230,7 +247,7 @@ export default function ContainerDetails({
             type="checkbox"
             id="installationService"
             checked={installationService}
-            onChange={(e) => onInstallationServiceChange(e.target.checked)}
+            onChange={(e) => handleInstallationChange(e.target.checked)}
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
           <label
@@ -245,7 +262,7 @@ export default function ContainerDetails({
             type="checkbox"
             id="deliveryService"
             checked={deliveryService}
-            onChange={(e) => onDeliveryServiceChange(e.target.checked)}
+            onChange={(e) => handleDeliveryChange(e.target.checked)}
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
           <label
@@ -265,7 +282,7 @@ export default function ContainerDetails({
         <textarea
           value={containerNote}
           onChange={(e) => onContainerNoteChange(e.target.value)}
-          className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700"
+          className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
           rows={3}
           placeholder="Add any notes for the entire order container..."
         />

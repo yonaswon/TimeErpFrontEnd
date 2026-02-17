@@ -65,7 +65,7 @@ export interface Mockup {
   price_with_vat: boolean;
   mockup_image: string;
   width: string;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: string | null;
   requested_date: string;
   first_response_date: string;
@@ -85,7 +85,7 @@ export interface MockupModification {
   mockup_image: string;
   note: string;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: string | null;
   started_date: string | null;
   requested_date: string;

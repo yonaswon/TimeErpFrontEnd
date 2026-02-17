@@ -48,7 +48,7 @@ interface Modification {
   mockup_image: string | null;
   note: string | null;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: number | null;
   started_date: string | null;
   requested_date: string;
@@ -69,7 +69,7 @@ interface Mockup {
   price_with_vat: boolean;
   mockup_image: string | null;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: number | null;
   requested_date: string;
   first_response_date: string | null;
@@ -82,6 +82,7 @@ interface UnifiedTimelineDisplayerProps {
   canCreateModification: boolean;
   leadId: number;
   mockup: Mockup;
+  refreshKey?: number; // Added
 }
 
 // --- UTILITY COMPONENTS ---
@@ -104,9 +105,8 @@ const Badge = ({
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-        map[variant] || map.gray
-      }`}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${map[variant] || map.gray
+        }`}
     >
       {children}
     </span>
@@ -141,7 +141,7 @@ const mockupToTimelineItem = (mockup: Mockup): any => {
     mockup_image: mockup.mockup_image,
     note: mockup.note,
     width: mockup.width,
-    hieght: mockup.hieght,
+    height: mockup.height,
     telegram_message_id: mockup.telegram_message_id,
     started_date: mockup.first_response_date,
     requested_date: mockup.requested_date,
@@ -160,7 +160,7 @@ const TimelineItem = ({
   onToggle,
   isOriginalMockup = false,
   shouldShowRequestButton = false,
-  onRequestModification = () => {},
+  onRequestModification = () => { },
 }: {
   item: any;
   isLast: boolean;
@@ -190,30 +190,29 @@ const TimelineItem = ({
     <div className="relative">
       {/* Timeline Line */}
       {!isLast && (
-        <div className="absolute top-8 left-4 w-0.5 h-full bg-gray-200 dark:bg-zinc-700 transform -translate-y-4"></div>
+        <div className="absolute top-8 left-3 w-0.5 h-full bg-gray-200 dark:bg-zinc-700 transform -translate-y-4"></div>
       )}
 
       <div className="flex items-start mb-4">
         {/* Timeline Dot/Icon */}
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-white z-10 shrink-0 border-4 border-white dark:border-zinc-800 ${
-            isOriginalMockup ? "bg-purple-600" : "bg-blue-600"
-          }`}
+          className={`w-6 h-6 rounded-full flex items-center justify-center text-white z-10 shrink-0 border-2 border-white dark:border-zinc-800 ${isOriginalMockup ? "bg-purple-600" : "bg-blue-600"
+            }`}
         >
-          <span className="text-xs font-bold">
+          <span className="text-[10px] font-bold">
             {isOriginalMockup ? "M" : "R"}
             {item.id}
           </span>
         </div>
 
         {/* Content */}
-        <div className="flex-1 ml-4 -mt-1">
+        <div className="flex-1 ml-3 -mt-1 min-w-0">
           {/* Header/Toggle Button */}
           <button
             onClick={onToggle}
             className="w-full flex justify-between items-center text-left py-2 px-3 rounded-lg bg-gray-50 dark:bg-zinc-700/50 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors border border-transparent dark:border-zinc-700"
           >
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0 flex-1 mr-2">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 {isOriginalMockup
                   ? "Original Mockup"
@@ -225,8 +224,8 @@ const TimelineItem = ({
                   </span>
                 )}
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Requested on {requestedDate}
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                {requestedDate}
                 {isOriginalMockup && (
                   <span className="ml-2 font-medium text-purple-600 dark:text-purple-400">
                     (Base Design)
@@ -243,11 +242,10 @@ const TimelineItem = ({
 
           {/* Collapsible Body */}
           <div
-            className={`transition-all duration-300 ease-in-out overflow-hidden ${
-              isActive ? "max-h-[2000px] opacity-100 pt-3" : "max-h-0 opacity-0"
-            }`}
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${isActive ? "max-h-[2000px] opacity-100 pt-2" : "max-h-0 opacity-0"
+              }`}
           >
-            <div className="pl-3 pr-1 pb-1">
+            <div className="pl-1 pr-1 pb-1">
               <EachModificationDisplayer
                 modification={item}
                 isOriginalMockup={isOriginalMockup}
@@ -276,6 +274,7 @@ export default function UnifiedTimelineDisplayer({
   mockupId,
   leadId,
   mockup,
+  refreshKey,
 }: UnifiedTimelineDisplayerProps) {
   const [modifications, setModifications] = useState<Modification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -285,7 +284,7 @@ export default function UnifiedTimelineDisplayer({
 
   useEffect(() => {
     fetchModifications();
-  }, [mockupId]);
+  }, [mockupId, refreshKey]); // Added refreshKey dependency
 
   const fetchModifications = async () => {
     try {

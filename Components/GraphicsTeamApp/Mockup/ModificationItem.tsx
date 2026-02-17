@@ -1,6 +1,6 @@
 import { Modification } from './utils/types'
 import { getStatusColor } from './utils/statusUtils'
-import { Play, Upload, Image as ImageIcon, MessageSquare } from 'lucide-react'
+import { Play, Upload, Image as ImageIcon, MessageSquare, Loader2 } from 'lucide-react'
 import MessageButton from '@/Components/SalesApp/Home/DetailLead/Message/MessageButton'
 
 interface ModificationItemProps {
@@ -8,13 +8,15 @@ interface ModificationItemProps {
   isLast: boolean
   onStartModification: (modificationId: number) => void
   onShowSubmitModificationOverlay: (modification: Modification) => void
+  isStarting?: boolean
 }
 
-const ModificationItem = ({ 
-  modification, 
-  isLast, 
-  onStartModification, 
-  onShowSubmitModificationOverlay 
+const ModificationItem = ({
+  modification,
+  isLast,
+  onStartModification,
+  onShowSubmitModificationOverlay,
+  isStarting = false
 }: ModificationItemProps) => {
   return (
     <div className="flex gap-3 relative">
@@ -26,30 +28,44 @@ const ModificationItem = ({
 
       {/* Modification content */}
       <div className="flex-1 bg-orange-50 dark:bg-orange-900/10 p-2 rounded-xl border border-orange-100 dark:border-orange-800 flex flex-col gap-1">
-        
+
         {/* Header: ID + Status + Date */}
         <div className="flex justify-between items-center text-xs font-medium text-gray-700 dark:text-gray-300">
           <span>Mod #{modification.id}</span>
           <span className={`${getStatusColor(modification.request_status)} px-1.5 py-0.5 rounded-full text-[10px]`}>
             {modification.request_status}
           </span>
-          <span className="text-gray-400 dark:text-gray-500">{new Date(modification.requested_date).toLocaleDateString()}</span>
+          <span className="text-[10px] text-gray-400">{new Date(modification.requested_date).toLocaleDateString()}</span>
         </div>
 
-        {/* Icons row for note/images */}
-        <div className="flex gap-1 items-center text-xs text-gray-500 dark:text-gray-400">
-          {modification.note && <MessageSquare size={12} />}
-          {modification.reference_images.length > 0 && <ImageIcon size={12} />}
+        {/* Modification Image Preview - NEW */}
+        {modification.mockup_image && (
+          <div className="mt-1 mb-1 relative w-24 h-16 sm:w-32 sm:h-20 rounded-md overflow-hidden border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800">
+            <img
+              src={modification.mockup_image}
+              alt="Modification Result"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Note & Counts */}
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {modification.note && (
+            <span className="line-clamp-1">{modification.note}</span>
+          )}{modification.reference_images.length > 0 && <ImageIcon size={12} />}
         </div>
 
-        {/* Action buttons */}
+  /* Action buttons */
         <div className="flex gap-1 mt-1">
           {modification.request_status === 'SENT' && (
             <button
               onClick={() => onStartModification(modification.id)}
-              className="flex items-center gap-1 px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-full"
+              disabled={isStarting}
+              className="flex items-center gap-1 px-2 py-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs rounded-full"
             >
-              <Play size={12} /> Start
+              {isStarting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+              {isStarting ? "Starting..." : "Start"}
             </button>
           )}
           {modification.request_status === 'STARTED' && (
@@ -61,11 +77,11 @@ const ModificationItem = ({
             </button>
           )}
         </div>
-           {modification.id && <MessageButton
-                  mockupId={undefined}
-                  mockupModificationId={modification.id}
-                  leadId={modification.lead}
-                   />}
+        {modification.id && <MessageButton
+          mockupId={undefined}
+          mockupModificationId={modification.id}
+          leadId={modification.lead}
+        />}
       </div>
     </div>
   )

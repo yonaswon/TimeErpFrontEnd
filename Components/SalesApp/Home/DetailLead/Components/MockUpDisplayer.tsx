@@ -47,7 +47,7 @@ interface Mockup {
   price_with_vat: boolean;
   mockup_image: string | null;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: number | null;
   requested_date: string;
   first_response_date: string | null;
@@ -57,6 +57,7 @@ interface Mockup {
 
 interface MockUpDisplayerProps {
   leadId: number;
+  refreshKey?: number; // Added refreshKey prop
 }
 
 // --- UTILITY COMPONENTS & FUNCTIONS ---
@@ -79,9 +80,8 @@ const Badge = ({
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-        map[variant] || map.gray
-      }`}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${map[variant] || map.gray
+        }`}
     >
       {children}
     </span>
@@ -103,7 +103,7 @@ const getStatusVariant = (status: string) => {
   }
 };
 
-export default function MockUpDisplayer({ leadId }: MockUpDisplayerProps) {
+export default function MockUpDisplayer({ leadId, refreshKey }: MockUpDisplayerProps) {
   const [mockups, setMockups] = useState<Mockup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +112,7 @@ export default function MockUpDisplayer({ leadId }: MockUpDisplayerProps) {
 
   useEffect(() => {
     fetchMockups();
-  }, [leadId]);
+  }, [leadId, refreshKey]); // Added refreshKey dependency
 
   const fetchMockups = async () => {
     try {
@@ -145,7 +145,7 @@ export default function MockUpDisplayer({ leadId }: MockUpDisplayerProps) {
   };
 
   // --- Loading, Error, No Mockups States ---
-  if (loading) {
+  if (loading && mockups.length === 0) {
     return (
       <div className="bg-white dark:bg-zinc-800 rounded-xl p-6 border border-gray-200 dark:border-zinc-700">
         <div className="flex items-center justify-center space-x-3">
@@ -226,11 +226,10 @@ export default function MockUpDisplayer({ leadId }: MockUpDisplayerProps) {
             <button
               key={mockup.id}
               onClick={() => setActiveMockup(mockup)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 ${
-                activeMockup?.id === mockup.id
-                  ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-700 dark:text-blue-300"
-                  : "bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-600"
-              }`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all shrink-0 ${activeMockup?.id === mockup.id
+                ? "bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-700 dark:text-blue-300"
+                : "bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 hover:border-blue-400 dark:hover:border-blue-600"
+                }`}
             >
               <div className="w-2 h-2 rounded-full bg-current"></div>
               <span className="text-sm font-medium">#{mockup.id}</span>
@@ -245,14 +244,15 @@ export default function MockUpDisplayer({ leadId }: MockUpDisplayerProps) {
       {/* 2. Unified Timeline for Active Mockup */}
       {activeMockup && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 shadow-md p-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 shadow-md p-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 px-1">
               Design Timeline
             </h3>
             <UnifiedTimelineDisplayer
               mockupId={activeMockup.id}
               leadId={leadId}
               mockup={activeMockup}
+              refreshKey={refreshKey} // Passed refreshKey
               canCreateModification={activeMockup.request_status === "RETURNED"}
             />
           </div>

@@ -21,7 +21,8 @@ export interface BomItem {
 export interface FormItem {
   id: number
   type: 'mockup' | 'modification'
-  mockup_image: File | string | null
+  name?: string | null
+  mockup_image: string | File | null
   design_type: number
   price: number
   note: string

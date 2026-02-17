@@ -67,10 +67,10 @@ export default function LeadInfo({ lead }: LeadInfoProps) {
       {/* Always visible header */}
       <div className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={toggleExpand}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all duration-200 text-gray-500 dark:text-gray-400 transform hover:scale-105"
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 active:scale-95 transition-all duration-200 text-gray-500 dark:text-gray-400"
             >
               {isExpanded ? (
                 <ChevronUp className="w-4 h-4 transition-transform duration-200" />
@@ -78,11 +78,11 @@ export default function LeadInfo({ lead }: LeadInfoProps) {
                 <ChevronDown className="w-4 h-4 transition-transform duration-200" />
               )}
             </button>
-            
+
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg transition-transform duration-200 hover:scale-105">
               {lead.customer_name?.charAt(0) || lead.name?.charAt(0) || 'L'}
             </div>
-            
+
             <div className="transition-all duration-300">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-200">
@@ -98,7 +98,7 @@ export default function LeadInfo({ lead }: LeadInfoProps) {
               </div> */}
             </div>
           </div>
-          
+
           <div className="text-right transition-opacity duration-300">
             <div className="text-xs text-gray-500 dark:text-gray-400">Sales ID</div>
             <div className="text-sm font-medium text-gray-900 dark:text-white">#{lead.sales}</div>
@@ -116,7 +116,7 @@ export default function LeadInfo({ lead }: LeadInfoProps) {
           ${isExpanded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
         `}>
           {/* Contact Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-zinc-700/50 rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-zinc-600/50">
               <Phone className="w-4 h-4 text-blue-500 transition-transform duration-200 hover:scale-110" />
               <div>

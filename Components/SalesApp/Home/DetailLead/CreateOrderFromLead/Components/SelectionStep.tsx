@@ -11,6 +11,7 @@ interface SelectionStepProps {
 
 interface Mockup {
   id: number;
+  name: string | null;
   request_status: string;
   mockup_image: string | null;
   design_type: number;
@@ -18,7 +19,7 @@ interface Mockup {
   price: number | null;
   note: string;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
 }
 
 interface Modification {
@@ -31,7 +32,7 @@ interface Modification {
   mockup: number;
   note: string;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
 }
 
 export default function SelectionStep({
@@ -152,8 +153,18 @@ export default function SelectionStep({
       } else if (typeof type === "string" && type.startsWith("modification-")) {
         const modId = parseInt(type.split("-")[1]);
         const modification = modifications.find((m) => m.id === modId);
-        if (modification)
-          selectedItemsList.push({ ...modification, type: "modification" });
+        const parentMockup = mockups.find((m) => m.id === modification?.mockup);
+
+        if (modification) {
+          selectedItemsList.push({
+            ...modification,
+            type: "modification",
+            name: parentMockup
+              ? `${parentMockup.name || `Mockup MC${parentMockup.id}`} (Mod #${modification.id
+              })`
+              : `Modification #${modification.id}`,
+          });
+        }
       }
     });
 
@@ -195,11 +206,10 @@ export default function SelectionStep({
               <div key={mockup.id}>
                 {/* Mockup Row */}
                 <div
-                  className={`flex items-center gap-2 p-2 rounded ${
-                    isMockupDisabled
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-gray-50 dark:hover:bg-zinc-700"
-                  }`}
+                  className={`flex items-center gap-2 p-2 rounded ${isMockupDisabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-gray-50 dark:hover:bg-zinc-700"
+                    }`}
                 >
                   <button
                     onClick={() => {
@@ -208,13 +218,12 @@ export default function SelectionStep({
                       }
                     }}
                     disabled={isMockupDisabled}
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                      isMockupSelected
-                        ? "bg-blue-500 border-blue-500"
-                        : isMockupDisabled
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isMockupSelected
+                      ? "bg-blue-500 border-blue-500"
+                      : isMockupDisabled
                         ? "border-gray-300 dark:border-zinc-600 cursor-not-allowed"
                         : "border-gray-400 dark:border-zinc-500"
-                    }`}
+                      }`}
                   >
                     {isMockupSelected && (
                       <Check className="w-3 h-3 text-white" />
@@ -241,13 +250,12 @@ export default function SelectionStep({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm">
                       <span
-                        className={`${
-                          isMockupDisabled
-                            ? "text-gray-500 dark:text-gray-500"
-                            : "text-gray-900 dark:text-white"
-                        }`}
+                        className={`${isMockupDisabled
+                          ? "text-gray-500 dark:text-gray-500"
+                          : "text-gray-900 dark:text-white"
+                          }`}
                       >
-                        Mockup MC{mockup.id}
+                        {mockup.name || `Mockup MC${mockup.id}`}
                       </span>
                       {mockup.price && (
                         <span className="text-green-600 dark:text-green-400 text-xs">
@@ -267,11 +275,10 @@ export default function SelectionStep({
                     <button
                       onClick={() => toggleMockupExpansion(mockup.id)}
                       disabled={isMockupDisabled}
-                      className={`p-1 rounded text-xs ${
-                        isMockupDisabled
-                          ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
-                          : "hover:bg-gray-200 dark:hover:bg-zinc-600"
-                      }`}
+                      className={`p-1 rounded text-xs ${isMockupDisabled
+                        ? "text-gray-400 dark:text-gray-600 cursor-not-allowed"
+                        : "hover:bg-gray-200 dark:hover:bg-zinc-600"
+                        }`}
                     >
                       {isExpanded ? "▲" : "▼"}
                     </button>
@@ -291,11 +298,10 @@ export default function SelectionStep({
                       return (
                         <div
                           key={modification.id}
-                          className={`flex items-center gap-2 p-2 rounded ${
-                            isModDisabled
-                              ? "opacity-50 cursor-not-allowed"
-                              : "hover:bg-gray-50 dark:hover:bg-zinc-700"
-                          }`}
+                          className={`flex items-center gap-2 p-2 rounded ${isModDisabled
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-gray-50 dark:hover:bg-zinc-700"
+                            }`}
                         >
                           <button
                             onClick={() => {
@@ -308,13 +314,12 @@ export default function SelectionStep({
                               }
                             }}
                             disabled={isModDisabled}
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                              isModSelected
-                                ? "bg-blue-500 border-blue-500"
-                                : isModDisabled
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isModSelected
+                              ? "bg-blue-500 border-blue-500"
+                              : isModDisabled
                                 ? "border-gray-300 dark:border-zinc-600 cursor-not-allowed"
                                 : "border-gray-400 dark:border-zinc-500"
-                            }`}
+                              }`}
                           >
                             {isModSelected && (
                               <Check className="w-3 h-3 text-white" />
@@ -341,11 +346,10 @@ export default function SelectionStep({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 text-sm">
                               <span
-                                className={`${
-                                  isModDisabled
-                                    ? "text-gray-500 dark:text-gray-500"
-                                    : "text-gray-700 dark:text-gray-300"
-                                }`}
+                                className={`${isModDisabled
+                                  ? "text-gray-500 dark:text-gray-500"
+                                  : "text-gray-700 dark:text-gray-300"
+                                  }`}
                               >
                                 Mod #{modification.id}
                               </span>

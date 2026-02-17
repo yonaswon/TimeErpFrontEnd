@@ -43,7 +43,7 @@ interface Modification {
   mockup_image: string | null
   note: string | null
   width: string | null
-  hieght: string | null
+  height: string | null
   telegram_message_id: number | null
   started_date: string | null
   requested_date: string
@@ -56,7 +56,7 @@ interface Modification {
 interface ModificationDisplayerProps {
   mockupId: number
   canCreateModification: boolean,
-  leadId:number
+  leadId: number
 }
 
 // --- UTILITY COMPONENTS & FUNCTIONS (UNCHANGED) ---
@@ -86,81 +86,80 @@ const getStatusVariant = (status: string) => {
 }
 
 // Custom Collapsible Modification Item (NEW)
-const CollapsibleModificationItem = ({ 
-    modification, 
-    isLast, 
-    isActive, 
-    onToggle 
-}: { 
-    modification: Modification, 
-    isLast: boolean,
-    isActive: boolean,
-    onToggle: () => void 
+const CollapsibleModificationItem = ({
+  modification,
+  isLast,
+  isActive,
+  onToggle
+}: {
+  modification: Modification,
+  isLast: boolean,
+  isActive: boolean,
+  onToggle: () => void
 }) => {
-    
-    // Fallback date display for better UI
-    const requestedDate = new Date(modification.requested_date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-    });
 
-    return (
-        <div className="relative">
-            {/* Timeline Line */}
-            {!isLast && (
-                <div className="absolute top-8 left-4 w-0.5 h-full bg-gray-200 dark:bg-zinc-700 transform -translate-y-4"></div>
-            )}
+  // Fallback date display for better UI
+  const requestedDate = new Date(modification.requested_date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 
-            <div className="flex items-start mb-4">
-                {/* Timeline Dot/Icon */}
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white z-10 shrink-0 border-4 border-white dark:border-zinc-800">
-                    <span className="text-xs font-bold">M{modification.id}</span>
-                </div>
+  return (
+    <div className="relative">
+      {/* Timeline Line */}
+      {!isLast && (
+        <div className="absolute top-8 left-4 w-0.5 h-full bg-gray-200 dark:bg-zinc-700 transform -translate-y-4"></div>
+      )}
 
-                {/* Content */}
-                <div className="flex-1 ml-4 -mt-1">
-                    {/* Header/Toggle Button */}
-                    <button
-                        onClick={onToggle}
-                        className="w-full flex justify-between items-center text-left py-2 px-3 rounded-lg bg-gray-50 dark:bg-zinc-700/50 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors border border-transparent dark:border-zinc-700"
-                    >
-                        <div className="flex flex-col">
-                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                Modification #{modification.id}
-                                <Badge variant={getStatusVariant(modification.request_status)}>{modification.request_status}</Badge>
-                            </h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                Requested on {requestedDate}
-                                {modification.is_edit && <span className="ml-2 font-medium text-yellow-600 dark:text-yellow-400">(Edit)</span>}
-                            </p>
-                        </div>
-                        {isActive ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
-                    </button>
-                    
-                    {/* Collapsible Body */}
-                    <div 
-                        className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                            isActive ? 'max-h-[2000px] opacity-100 pt-3' : 'max-h-0 opacity-0'
-                        }`}
-                    >
-                        <div className="pl-3 pr-1 pb-1">
-                            {/* Renders the detail component when expanded */}
-                            <EachModificationDisplayer modification={modification} />
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div className="flex items-start mb-4">
+        {/* Timeline Dot/Icon */}
+        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white z-10 shrink-0 border-4 border-white dark:border-zinc-800">
+          <span className="text-xs font-bold">M{modification.id}</span>
         </div>
-    );
+
+        {/* Content */}
+        <div className="flex-1 ml-4 -mt-1">
+          {/* Header/Toggle Button */}
+          <button
+            onClick={onToggle}
+            className="w-full flex justify-between items-center text-left py-2 px-3 rounded-lg bg-gray-50 dark:bg-zinc-700/50 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors border border-transparent dark:border-zinc-700"
+          >
+            <div className="flex flex-col">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                Modification #{modification.id}
+                <Badge variant={getStatusVariant(modification.request_status)}>{modification.request_status}</Badge>
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Requested on {requestedDate}
+                {modification.is_edit && <span className="ml-2 font-medium text-yellow-600 dark:text-yellow-400">(Edit)</span>}
+              </p>
+            </div>
+            {isActive ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />}
+          </button>
+
+          {/* Collapsible Body */}
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden ${isActive ? 'max-h-[2000px] opacity-100 pt-3' : 'max-h-0 opacity-0'
+              }`}
+          >
+            <div className="pl-3 pr-1 pb-1">
+              {/* Renders the detail component when expanded */}
+              <EachModificationDisplayer modification={modification} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 
-export default function ModificationDisplayer({ mockupId, canCreateModification, leadId}: ModificationDisplayerProps) {
+export default function ModificationDisplayer({ mockupId, canCreateModification, leadId }: ModificationDisplayerProps) {
   const [modifications, setModifications] = useState<Modification[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // State now tracks which modification is open, using its ID
-  const [openModificationId, setOpenModificationId] = useState<number | null>(null) 
+  const [openModificationId, setOpenModificationId] = useState<number | null>(null)
   const [showCreateOverlay, setShowCreateOverlay] = useState(false)
 
   useEffect(() => {
@@ -175,11 +174,11 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
       const response = await api.get(`/lead/modifications/?mockup=${mockupId}`)
       const modificationsData = response.data.results || response.data
       setModifications(modificationsData.reverse()) // Reverse for chronological timeline display
-      
+
       // Keep the currently open modification open if it exists, otherwise open the latest one
       if (modificationsData.length > 0) {
         if (!modificationsData.find((m: Modification) => m.id === openModificationId)) {
-            setOpenModificationId(modificationsData[0].id); // Open the latest one
+          setOpenModificationId(modificationsData[0].id); // Open the latest one
         }
       } else {
         setOpenModificationId(null)
@@ -201,7 +200,7 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
   const handleToggle = (id: number) => {
     setOpenModificationId(openModificationId === id ? null : id);
   };
-  
+
   // --- Loading, Error States (Functionality Unchanged) ---
   if (loading) {
     return (
@@ -235,7 +234,7 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Total: **{modifications.length} modification{modifications.length !== 1 ? 's' : ''}**
         </p>
-        
+
         {canCreateModification && (
           <button
             onClick={() => setShowCreateOverlay(true)}
@@ -253,7 +252,7 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
           <div className="text-3xl mb-2">🔄</div>
           <h3 className="text-md font-semibold text-gray-900 dark:text-white mb-1">No Modifications Yet</h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            {canCreateModification 
+            {canCreateModification
               ? "Create the first modification for this mockup."
               : "No modifications have been requested for this mockup."
             }
@@ -261,16 +260,16 @@ export default function ModificationDisplayer({ mockupId, canCreateModification,
         </div>
       ) : (
         <div className="relative pt-2">
-            {/* The actual timeline display using the custom item */}
-            {modifications.map((modification, index) => (
-                <CollapsibleModificationItem
-                    key={modification.id}
-                    modification={modification}
-                    isLast={index === modifications.length - 1}
-                    isActive={openModificationId === modification.id}
-                    onToggle={() => handleToggle(modification.id)}
-                />
-            ))}
+          {/* The actual timeline display using the custom item */}
+          {modifications.map((modification, index) => (
+            <CollapsibleModificationItem
+              key={modification.id}
+              modification={modification}
+              isLast={index === modifications.length - 1}
+              isActive={openModificationId === modification.id}
+              onToggle={() => handleToggle(modification.id)}
+            />
+          ))}
         </div>
       )}
 

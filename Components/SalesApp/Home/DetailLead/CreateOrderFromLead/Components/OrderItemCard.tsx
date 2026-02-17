@@ -31,9 +31,16 @@ export default function OrderItemCard({
                   alt="Mockup"
                   className="w-full h-full object-cover"
                 />
+              ) : item.mockup_image instanceof File ? (
+                <img
+                  src={URL.createObjectURL(item.mockup_image)}
+                  alt="Selected"
+                  className="w-full h-full object-cover"
+                  onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                />
               ) : (
                 <div className="text-xs text-gray-500 text-center p-2">
-                  New image selected
+                  Image selected
                 </div>
               )
             ) : (
@@ -57,43 +64,50 @@ export default function OrderItemCard({
         </div>
 
         {/* Item Details */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              Design Type
-            </label>
-            <select
-              value={item.design_type}
-              onChange={(e) =>
-                onItemChange(index, "design_type", parseInt(e.target.value))
-              }
-              className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
-              required
-            >
-              <option value="">Select design type</option>
-              {designTypes.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+        <div className="flex-1 flex flex-col gap-3">
+          {/* Mockup Name (Top, Large) */}
+          <div className="text-base font-semibold text-gray-900 dark:text-white">
+            {item.name || `Item #${index + 1}`}
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              Price
-            </label>
-            <input
-              type="number"
-              value={item.price}
-              min={0}
-              step="1"
-              onChange={(e) =>
-                onItemChange(index, "price", parseFloat(e.target.value) || 0)
-              }
-              className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Design Type
+              </label>
+              <select
+                value={item.design_type}
+                onChange={(e) =>
+                  onItemChange(index, "design_type", parseInt(e.target.value))
+                }
+                className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+                required
+              >
+                <option value="">Select design type</option>
+                {designTypes.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Price
+              </label>
+              <input
+                type="number"
+                value={item.price}
+                min={0}
+                step="1"
+                onChange={(e) =>
+                  onItemChange(index, "price", parseFloat(e.target.value) || 0)
+                }
+                className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+                required
+              />
+            </div>
           </div>
         </div>
       </div>

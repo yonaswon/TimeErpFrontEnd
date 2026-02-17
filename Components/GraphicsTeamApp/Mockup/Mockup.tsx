@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import MockupCard from "./MockupCard";
 import SubmitMockupOverlay from "./SubmitMockupOverlay";
 import SubmitModificationOverlay from "./SubmitModificationOverlay";
+import MockupDetailOverlay from "./MockupDetailOverlay";
 import { Mockup, Modification } from "./utils/types";
 import api from "@/api";
 
@@ -14,8 +15,12 @@ const MockupPage = () => {
   const [loading, setLoading] = useState(true);
   const [showSubmitOverlay, setShowSubmitOverlay] = useState(false);
   const [showSubmitModificationOverlay, setShowSubmitModificationOverlay] = useState(false);
+  const [showDetailOverlay, setShowDetailOverlay] = useState(false);
   const [selectedMockup, setSelectedMockup] = useState<Mockup | null>(null);
   const [selectedModification, setSelectedModification] = useState<Modification | null>(null);
+
+  const [startingMockupId, setStartingMockupId] = useState<number | null>(null);
+  const [startingModificationId, setStartingModificationId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchMockups();
@@ -40,7 +45,7 @@ const MockupPage = () => {
         const returnedMockups = (response.data.results || response.data).filter(
           (mockup: Mockup) => mockup.request_status === "RETURNED"
         );
-        
+
         returnedMockups.forEach((mockup: Mockup) => {
           fetchModifications(mockup.id);
         });
@@ -67,19 +72,25 @@ const MockupPage = () => {
 
   const startMockup = async (mockupId: number) => {
     try {
+      setStartingMockupId(mockupId);
       await api.post(`/lead/mockups/${mockupId}/start/`);
       await fetchMockups();
     } catch (error) {
       console.error("Error starting mockup:", error);
+    } finally {
+      setStartingMockupId(null);
     }
   };
 
   const startModification = async (modificationId: number, mockupId: number) => {
     try {
+      setStartingModificationId(modificationId);
       await api.post(`/lead/modifications/${modificationId}/start/`);
       await fetchModifications(mockupId);
     } catch (error) {
       console.error("Error starting modification:", error);
+    } finally {
+      setStartingModificationId(null);
     }
   };
 
@@ -102,6 +113,8 @@ const MockupPage = () => {
               mockup={mockup}
               modifications={modifications[mockup.id] || []}
               onStartMockup={startMockup}
+              isStarting={startingMockupId === mockup.id}
+              startingModificationId={startingModificationId}
               onStartModification={(modificationId) =>
                 startModification(modificationId, mockup.id)
               }
@@ -113,6 +126,12 @@ const MockupPage = () => {
                 setSelectedModification(modification);
                 setShowSubmitModificationOverlay(true);
               }}
+              onShowDetail={(mockup) => {
+                setSelectedMockup(mockup);
+                // We need a separate state for Detail Overlay vs Submit Overlay
+                // Reusing selectedMockup is fine, but we need a boolean for the detail view
+                setShowDetailOverlay(true);
+              }}
             />
           ))}
         </div>
@@ -121,6 +140,31 @@ const MockupPage = () => {
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">
           No mockup requests found. New requests will appear here.
         </div>
+      )}
+
+      {/* Detail Overlay */}
+      {showDetailOverlay && selectedMockup && (
+        <MockupDetailOverlay
+          mockup={selectedMockup}
+          modifications={modifications[selectedMockup.id] || []}
+          onClose={() => {
+            setShowDetailOverlay(false);
+            setSelectedMockup(null);
+          }}
+          onStartMockup={startMockup}
+          startingModificationId={startingModificationId}
+          onStartModification={(id) => startModification(id, selectedMockup.id)}
+          onShowSubmitOverlay={(m) => {
+            setShowDetailOverlay(false); // Close detail first
+            setSelectedMockup(m);
+            setShowSubmitOverlay(true);
+          }}
+          onShowSubmitModificationOverlay={(m) => {
+            setShowDetailOverlay(false); // Close detail first
+            setSelectedModification(m);
+            setShowSubmitModificationOverlay(true);
+          }}
+        />
       )}
 
       {/* Submit Mockup Overlay */}

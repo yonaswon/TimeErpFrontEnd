@@ -54,21 +54,21 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
       onClick={() => onViewDetails(order)}
     >
       {/* --- HEADER: Client + Status --- */}
-      <div className="p-4 pb-2">
+      <div className="p-3 sm:p-4 pb-2">
         <div className="flex justify-between items-start mb-2">
-          <div>
+          <div className="flex-1 min-w-0 mr-2">
             <h3
-              className="font-bold text-gray-900 dark:text-white text-lg line-clamp-1"
+              className="font-bold text-gray-900 dark:text-white text-base sm:text-lg line-clamp-1 break-all"
               title={order.client}
             >
               {order.client}
             </h3>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-1 mt-0.5">
               {order.orders
                 ?.slice(0, 3)
                 .map((item: any) => (
-                  <span key={item.order_code} className="font-mono">
+                  <span key={item.order_code} className="font-mono whitespace-nowrap">
                     ORD-{item.order_code}
                   </span>
                 ))
@@ -86,7 +86,7 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
               e.stopPropagation();
               onMenuClick(order);
             }}
-            className="p-1.5 -mr-2 -mt-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors shrink-0"
           >
             <MoreHorizontal size={20} />
           </button>
@@ -95,7 +95,7 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
         <div className="flex flex-wrap gap-2 mt-2">
           {mainOrder && (
             <span
-              className={`px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-md border ${getStatusStyle(
+              className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide rounded-md border ${getStatusStyle(
                 mainOrder.order_status
               )}`}
             >
@@ -104,7 +104,7 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
           )}
 
           {order.invoice && (
-            <span className="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded-md border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 flex items-center gap-1">
+            <span className="px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide rounded-md border bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 flex items-center gap-1">
               <FileText size={10} /> Invoice
             </span>
           )}
@@ -112,21 +112,25 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
       </div>
 
       {/* --- BODY: Logistics --- */}
-      <div className="px-4 py-3 border-t border-gray-50 dark:border-zinc-800/50">
-        <div className="flex flex-col gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <div className="flex items-center gap-3">
-            <Calendar size={14} className="text-gray-400" />
-            <span>{formatDate(order.delivery_date)}</span>
+      <div className="px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-50 dark:border-zinc-800/50">
+        <div className="flex flex-col gap-1.5 sm:gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5">
+              <Calendar size={13} className="text-gray-400 shrink-0" />
+              <span className="whitespace-nowrap">{formatDate(order.delivery_date)}</span>
+            </div>
 
-            <span className="text-gray-300 dark:text-zinc-700">|</span>
+            <span className="hidden sm:inline text-gray-300 dark:text-zinc-700">|</span>
 
-            <Phone size={14} className="text-gray-400" />
-            <span>{order.contact}</span>
+            <div className="flex items-center gap-1.5">
+              <Phone size={13} className="text-gray-400 shrink-0" />
+              <span className="whitespace-nowrap">{order.contact}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <MapPin size={14} className="text-gray-400 shrink-0" />
-            <span className="truncate" title={order.location}>
+          <div className="flex items-start gap-1.5 text-xs sm:text-sm">
+            <MapPin size={13} className="text-gray-400 shrink-0 mt-0.5" />
+            <span className="line-clamp-2" title={order.location}>
               {order.location || "No location provided"}
             </span>
           </div>

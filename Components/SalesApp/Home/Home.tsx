@@ -9,7 +9,7 @@ import CreateLeadOverlay from "./CreateLeadOverlay";
 const Home = () => {
   const [activeTab, setActiveTab] = useState<
     "all" | "your" | "converted" | "allLeads"
-  >("all");
+  >("your");
   const [filters, setFilters] = useState({
     dateRange: "",
     status: "",
@@ -43,28 +43,25 @@ const Home = () => {
   };
 
   const tabs = [
-    { id: "all", label: "All" },
     { id: "your", label: "Yours" },
-    { id: "converted", label: "Done" },
-    { id: "allLeads", label: "Everyone" },
+    { id: "all", label: "Everyone" },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 pb-20 relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-24 relative">
       {/* Sticky Header Section */}
-      <div className="sticky top-0 z-10 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-gray-100 dark:border-zinc-800 shadow-sm">
+      <div className="sticky top-0 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 shadow-sm">
         {/* Navigation Tabs - Horizontal Scroll */}
         <div className="px-4 py-3">
-          <nav className="flex space-x-2 overflow-x-auto no-scrollbar scroll-smooth">
+          <nav className="flex items-center justify-center space-x-1 bg-gray-100 dark:bg-slate-800 p-1 rounded-xl w-full">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-none px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                    : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-700"
-                }`}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                  ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -73,22 +70,21 @@ const Home = () => {
         </div>
 
         {/* Filter Bar - Animated Expand */}
-        {activeTab === "all" && (
-          <div className="px-4 pb-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            <FilterBar onFilterChange={handleFilterChange} />
-          </div>
-        )}
+        {/* Filter Bar - Animated Expand */}
+        <div className="px-4 pb-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <FilterBar onFilterChange={handleFilterChange} />
+        </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="px-3 pt-3">
+      <div className="px-2 pt-2">
         {/* <StatisticsCard userId={userId} filters={filters} /> */}
 
         <LeadList
           activeTab={activeTab}
           filters={filters}
           userId={userId}
-          showCreateOverlay = {showCreateOverlay}
+          showCreateOverlay={showCreateOverlay}
           onLeadClick={handleLeadClick}
         />
       </div>

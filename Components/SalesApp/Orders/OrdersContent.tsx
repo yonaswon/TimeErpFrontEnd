@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import OrderCard from "./OrderCard";
 import OrderDetail from "./OrderDetail";
+import MaintenanceContent from "./MaintenanceContent";
+import ProductSalesContent from "./ProductSalesContent";
 import api from "@/api";
 
 type OrdersTabType = "orders" | "maintenance" | "product-sales";
@@ -42,7 +44,18 @@ const OrdersContent = () => {
       }
       setError(null);
 
-      const url = pageUrl || "/api/order-container/?ordering=-created_at";
+      let url = pageUrl || "/api/order-container/?ordering=-created_at";
+
+      // 🔍 FIX: If URL is absolute, extract relative path
+      if (url.startsWith("http")) {
+        try {
+          const urlObj = new URL(url);
+          url = urlObj.pathname + urlObj.search;
+        } catch (e) {
+          console.error("Failed to parse pagination URL:", e);
+        }
+      }
+
       const response = await api.get(url);
 
       if (isLoadMore) {
@@ -151,9 +164,9 @@ const OrdersContent = () => {
 
   return (
     <div className="w-full bg-gray-50 dark:bg-zinc-900 min-h-screen transition-colors duration-300">
-      {/* Top Navigation */}
-      <div className="bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
-        <div className="flex overflow-x-auto scrollbar-hide">
+      {/* Top Navigation - Segmented Control */}
+      <div className="sticky top-0 z-10 bg-gray-50 dark:bg-zinc-900/95 backdrop-blur-sm pt-2 pb-2 px-4 border-b border-gray-200 dark:border-zinc-800">
+        <div className="bg-gray-200/50 dark:bg-zinc-800 p-1 rounded-xl flex">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -162,16 +175,13 @@ const OrdersContent = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 min-w-max flex-1 justify-center border-b-2 transition-colors duration-200 ${
-                  isActive
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
+                className={`flex items-center justify-center gap-2 flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+                  ? "bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-zinc-700/50"
+                  }`}
               >
-                <Icon size={18} />
-                <span className="text-sm font-medium whitespace-nowrap">
-                  {tab.label}
-                </span>
+                <Icon size={16} className={isActive ? "text-blue-600 dark:text-blue-400" : ""} />
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -183,8 +193,8 @@ const OrdersContent = () => {
         {activeTab === "orders" && (
           <div className="w-full">
             {/* Header with Search and Refresh */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-3 sm:space-y-0">
-              <div className="flex items-center space-x-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+              <div className="flex items-center space-x-3 shrink-0">
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Orders
                 </h1>
@@ -198,42 +208,45 @@ const OrdersContent = () => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <div className="relative flex-1 min-w-[200px]">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto mt-3 md:mt-0">
+                <div className="relative flex-grow min-w-[140px]">
                   <Search
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    size={18}
+                    size={16}
                   />
                   <input
                     type="text"
-                    placeholder="Search orders..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={handleSearch}
                     onKeyPress={(e) =>
                       e.key === "Enter" && handleSearchSubmit()
                     }
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
-                <button
-                  onClick={handleSearchSubmit}
-                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  <Search size={18} />
-                  <span>Search</span>
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={handleSearchSubmit}
+                    className="flex items-center space-x-2 px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    <Search size={16} />
+                    <span className="hidden sm:inline text-sm">Search</span>
+                  </button>
 
-                <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className="p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw
-                    size={18}
-                    className={refreshing ? "animate-spin" : ""}
-                  />
-                </button>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                    title="Reload"
+                  >
+                    <RefreshCw
+                      size={16}
+                      className={refreshing ? "animate-spin" : ""}
+                    />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -324,27 +337,9 @@ const OrdersContent = () => {
           </div>
         )}
 
-        {activeTab === "maintenance" && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 dark:text-gray-500 mb-4">
-              <Wrench size={64} className="mx-auto opacity-50" />
-            </div>
-            <p className="text-gray-500 dark:text-gray-400">
-              Maintenance tab coming soon...
-            </p>
-          </div>
-        )}
+        {activeTab === "maintenance" && <MaintenanceContent />}
 
-        {activeTab === "product-sales" && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 dark:text-gray-500 mb-4">
-              <TrendingUp size={64} className="mx-auto opacity-50" />
-            </div>
-            <p className="text-gray-500 dark:text-gray-400">
-              Product Sales tab coming soon...
-            </p>
-          </div>
-        )}
+        {activeTab === "product-sales" && <ProductSalesContent />}
       </div>
 
       {/* Order Detail Overlay */}

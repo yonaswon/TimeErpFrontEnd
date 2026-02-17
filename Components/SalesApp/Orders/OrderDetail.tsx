@@ -220,21 +220,21 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden border border-gray-200 dark:border-zinc-800">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 z-50">
+      <div className="bg-white dark:bg-zinc-900 w-full h-[95vh] sm:h-[90vh] sm:rounded-xl shadow-2xl flex flex-col overflow-hidden border-t sm:border border-gray-200 dark:border-zinc-800 rounded-t-xl">
         {/* Header - Always Visible */}
-        <div className="shrink-0 p-6 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex justify-between items-start">
-          <div className="flex gap-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hidden sm:block">
-              <Package size={28} className="text-blue-600 dark:text-blue-400" />
+        <div className="shrink-0 p-4 sm:p-6 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex justify-between items-start gap-3">
+          <div className="flex gap-3 sm:gap-4 flex-1 min-w-0">
+            <div className="p-2 sm:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg hidden sm:block shrink-0 h-fit">
+              <Package size={24} className="text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
                   {order.client}
                 </h2>
                 <span
-                  className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${getOrderStatusColor(
+                  className={`px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full border whitespace-nowrap ${getOrderStatusColor(
                     order.orders?.[0]?.order_status
                   )}`}
                 >
@@ -243,20 +243,20 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                 </span>
                 <button
                   onClick={() => setEditingContainer(true)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                  className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all shrink-0"
                   title="Edit order container"
                 >
-                  <Pencil size={16} />
+                  <Pencil size={14} />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
-                <span className="flex items-center gap-1">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-2">
+                <span className="flex flex-wrap items-center gap-1">
                   {order.orders
                     ?.slice(0, 3)
                     .map((item: any) => (
                       <span
                         key={item.order_code}
-                        className="font-mono text-xs bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded"
+                        className="font-mono text-[10px] sm:text-xs bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded whitespace-nowrap"
                       >
                         ORD-{item.order_code}
                       </span>
@@ -267,24 +267,22 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       []
                     )}
                   {order.orders?.length > 3 && (
-                    <span className="text-xs text-blue-600 dark:text-blue-400 ml-1">
+                    <span className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 ml-1 whitespace-nowrap">
                       +{order.orders.length - 3} more
                     </span>
                   )}
                 </span>
-                <span>•</span>
-                <span>{formatDate(order.created_at)}</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="whitespace-nowrap">{formatDate(order.created_at)}</span>
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-all"
-            >
-              <X size={24} />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-all shrink-0"
+          >
+            <X size={20} />
+          </button>
         </div>
         {/* Tabs */}
         <div className="shrink-0 px-6 border-b border-gray-200 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
@@ -301,11 +299,10 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 py-4 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ${
-                  activeTab === tab.id
+                className={`flex items-center gap-2 py-4 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ${activeTab === tab.id
                     ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
                     : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                }`}
+                  }`}
               >
                 <tab.icon size={16} className="shrink-0" />
                 <span className="truncate max-w-[150px]">{tab.label}</span>
@@ -348,11 +345,10 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       {/* Installation Service */}
                       <div className="flex items-center gap-2">
                         <div
-                          className={`p-2 rounded-lg ${
-                            order.instalation_service
+                          className={`p-2 rounded-lg ${order.instalation_service
                               ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                               : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
-                          }`}
+                            }`}
                         >
                           <Wrench size={16} />
                         </div>
@@ -371,11 +367,10 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       {/* Delivery Service */}
                       <div className="flex items-center gap-2">
                         <div
-                          className={`p-2 rounded-lg ${
-                            order.delivery_service
+                          className={`p-2 rounded-lg ${order.delivery_service
                               ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
                               : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
-                          }`}
+                            }`}
                         >
                           <Truck size={16} />
                         </div>
@@ -517,8 +512,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                             {typeof item.design_type === "object"
                               ? item.design_type?.name
                               : typeof item.design_type === "string"
-                              ? item.design_type
-                              : `Design Type ID: ${item.design_type}`}
+                                ? item.design_type
+                                : `Design Type ID: ${item.design_type}`}
                           </span>
                         </div>
                       </div>
@@ -568,8 +563,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                             {typeof item.design_type === "object"
                               ? item.design_type?.name
                               : typeof item.design_type === "string"
-                              ? item.design_type
-                              : `ID: ${item.design_type}`}
+                                ? item.design_type
+                                : `ID: ${item.design_type}`}
                           </p>
                         </div>
                       </div>
@@ -597,7 +592,7 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                               onClick={() =>
                                 window.open(
                                   item.mockup_image ||
-                                    item.mockup?.mockup_image,
+                                  item.mockup?.mockup_image,
                                   "_blank"
                                 )
                               }
@@ -747,7 +742,7 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                               onClick={() =>
                                 window.open(
                                   item.mockup_image ||
-                                    item.mockup?.mockup_image,
+                                  item.mockup?.mockup_image,
                                   "_blank"
                                 )
                               }
@@ -856,13 +851,12 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                     >
                       {/* Status Indicator Line */}
                       <div
-                        className={`absolute left-0 top-0 bottom-0 w-1 ${
-                          payment.status === "C"
+                        className={`absolute left-0 top-0 bottom-0 w-1 ${payment.status === "C"
                             ? "bg-emerald-500"
                             : payment.status === "R"
-                            ? "bg-rose-500"
-                            : "bg-amber-500"
-                        }`}
+                              ? "bg-rose-500"
+                              : "bg-amber-500"
+                          }`}
                       />
 
                       <div className="flex-1">

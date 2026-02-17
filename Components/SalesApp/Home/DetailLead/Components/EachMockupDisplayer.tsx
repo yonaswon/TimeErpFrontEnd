@@ -51,7 +51,7 @@ interface Mockup {
   price_with_vat: boolean;
   mockup_image: string | null;
   width: string | null;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: number | null;
   requested_date: string;
   first_response_date: string | null;
@@ -79,9 +79,8 @@ const Badge = ({
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-        map[variant] || map.gray
-      }`}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${map[variant] || map.gray
+        }`}
     >
       {children}
     </span>
@@ -139,7 +138,7 @@ export default function EachMockupDisplayer({
             </div>
           </div>
         </div>
-        
+
         {/* The "Modify" button is kept here, but the modification logic is now housed in the ModificationDisplayer below */}
         {isReturned && (
           <button className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium">
@@ -188,7 +187,7 @@ export default function EachMockupDisplayer({
             <span className="text-xs font-medium">Size</span>
           </div>
           <div className="text-sm font-bold text-gray-900 dark:text-white">
-            {mockup.width && mockup.hieght ? `${mockup.width}×${mockup.hieght}` : "—"}
+            {mockup.width && mockup.height ? `${mockup.width}×${mockup.height}` : "—"}
           </div>
         </div>
 
@@ -208,7 +207,7 @@ export default function EachMockupDisplayer({
             <span className="text-xs font-medium">Timeline</span>
           </div>
           <div className="text-xs text-gray-900 dark:text-white">
-            {new Date(mockup.requested_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}
+            {new Date(mockup.requested_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </div>
         </div>
       </div>
@@ -277,14 +276,14 @@ export default function EachMockupDisplayer({
             <div className="flex justify-between">
               <span className="text-gray-500 dark:text-gray-400">Requested:</span>
               <span className="text-gray-900 dark:text-white">
-                {new Date(mockup.requested_date).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+                {new Date(mockup.requested_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
             {mockup.first_response_date && (
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Started:</span>
                 <span className="text-gray-900 dark:text-white">
-                  {new Date(mockup.first_response_date).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
+                  {new Date(mockup.first_response_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             )}
@@ -356,7 +355,7 @@ export default function EachMockupDisplayer({
           </div>
         </div>
       )}
-      
+
       {/* ModificationDisplayer REMOVED from here to be managed by the parent MockUpDisplayer for proper layout. */}
     </div>
   );

@@ -9,10 +9,10 @@ interface MessageButtonProps {
   leadId: number;
 }
 
-export default function MessageButton({ 
-  mockupId, 
-  mockupModificationId, 
-  leadId 
+export default function MessageButton({
+  mockupId,
+  mockupModificationId,
+  leadId
 }: MessageButtonProps) {
   const [showOverlay, setShowOverlay] = useState(false);
 
@@ -20,10 +20,10 @@ export default function MessageButton({
     <>
       <button
         onClick={() => setShowOverlay(true)}
-        className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+        className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded-full transition-colors"
+        title="Send Message"
       >
-        <MessageCircle className="w-4 h-4" />
-        Message
+        <MessageCircle className="w-5 h-5" />
       </button>
 
       {showOverlay && (

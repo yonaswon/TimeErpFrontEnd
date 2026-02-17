@@ -52,7 +52,7 @@ export interface Mockup {
   price_with_vat: boolean;
   mockup_image: string;
   width: string;
-  hieght: string | null;
+  height: string | null;
   telegram_message_id: number | null;
   requested_date: string;
   first_response_date: string;
