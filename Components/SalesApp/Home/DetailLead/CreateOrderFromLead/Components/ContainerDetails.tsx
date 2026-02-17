@@ -200,7 +200,6 @@ export default function ContainerDetails({
           <input
             type="text"
             value={remainingPaymentDisplay}
-            value={remainingPaymentDisplay}
             readOnly
             className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-gray-100 dark:bg-zinc-600 text-gray-900 dark:text-white"
             placeholder="0"
