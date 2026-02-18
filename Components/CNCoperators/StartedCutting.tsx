@@ -1,66 +1,12 @@
 // Tasks/StartedCutting.tsx
 import { useState, useEffect } from "react";
-import { Download, CheckCircle, Grid, List, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import api from "@/api";
-
-interface CuttingTask {
-  id: number;
-  orders: {
-    order_code: number;
-    boms: Array<{
-      id: number;
-      amount: string;
-      width: string;
-      height: string;
-      price_per_unit: string;
-      total_price: string;
-      estimated_price: string;
-      date: string;
-      material: number;
-    }>;
-    mockup: {
-      id: number;
-      reference_images: Array<{
-        id: number;
-        image: string;
-        date: string;
-      }>;
-      mockup_image: string;
-      width: string;
-      design_type: number;
-      request_status: string;
-    };
-    cutting_files: Array<{
-      id: number;
-      crv3d: string;
-      image: string;
-      status: string;
-      schedule_start_date: string;
-      schedule_complate_date: string;
-      start_date: string | null;
-      complate_date: string | null;
-      date: string;
-    }>;
-    order_status: string;
-    price: number;
-    design_type: number;
-  }[];
-  on: {
-    material_name: string;
-    current_width: string;
-    current_height: string;
-    code: number;
-  };
-  assigned_to: {
-    id: number;
-    telegram_user_name: string;
-  };
-}
+import { CuttingTask, TaskCard, TaskListItem } from "./TaskShared";
 
 type TaskView = "card" | "list";
 
-export const StartedCutting = () => {
-  const [viewMode, setViewMode] = useState<TaskView>("card");
+export const StartedCutting = ({ viewMode }: { viewMode: TaskView }) => {
   const [tasks, setTasks] = useState<CuttingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +45,7 @@ export const StartedCutting = () => {
     }
   };
 
-  const handleComplete = async (cuttingFileId: number) => {
+  const handleComplete = async (task: CuttingTask, cuttingFileId: number) => {
     try {
       setCompletingTask(cuttingFileId);
       setError(null);
@@ -114,11 +60,6 @@ export const StartedCutting = () => {
     } finally {
       setCompletingTask(null);
     }
-  };
-
-  const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return "Not set";
-    return new Date(dateString).toLocaleString();
   };
 
   const handlePageChange = (page: number) => {
@@ -138,36 +79,8 @@ export const StartedCutting = () => {
 
   return (
     <div className="space-y-4">
-      {/* View Toggle */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Tasks In Progress ({tasks.length})
-        </h2>
-        <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
-          <button
-            onClick={() => setViewMode("card")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "card"
-                ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-            title="Card View"
-          >
-            <Grid className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "list"
-                ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-            title="List View"
-          >
-            <List className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+
+
 
       {error && (
         <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -186,20 +99,22 @@ export const StartedCutting = () => {
         <div className={viewMode === "card" ? "space-y-4" : "space-y-2"}>
           {tasks.map((task) =>
             viewMode === "card" ? (
-              <StartedTaskCard
+              <TaskCard
                 key={task.id}
                 task={task}
-                onComplete={handleComplete}
-                isCompleting={
+                status="STARTED"
+                onAction={handleComplete}
+                isProcessing={
                   completingTask === task.orders[0].cutting_files[0].id
                 }
               />
             ) : (
-              <StartedTaskListItem
+              <TaskListItem
                 key={task.id}
                 task={task}
-                onComplete={handleComplete}
-                isCompleting={
+                status="STARTED"
+                onAction={handleComplete}
+                isProcessing={
                   completingTask === task.orders[0].cutting_files[0].id
                 }
               />
@@ -215,248 +130,16 @@ export const StartedCutting = () => {
             <button
               key={page}
               onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-lg text-sm ${
-                currentPage === page
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
-              }`}
+              className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
+                }`}
             >
               {page}
             </button>
           ))}
         </div>
       )}
-    </div>
-  );
-};
-
-// Card View Component for Started Tasks
-const StartedTaskCard = ({
-  task,
-  onComplete,
-  isCompleting,
-}: {
-  task: CuttingTask;
-  onComplete: (cuttingFileId: number) => void;
-  isCompleting: boolean;
-}) => {
-  const mainOrder = task.orders[0];
-  const cuttingFile = mainOrder.cutting_files[0];
-
-  const downloadFile = (url: string, filename: string) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return "Not set";
-    return new Date(dateString).toLocaleString();
-  };
-
-  return (
-    <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-4">
-      {/* Header with Download */}
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            CUT-{cuttingFile.id}
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Material: {task.on.material_name}-{task.on.code}
-          </p>
-          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-            Started: {formatDateTime(cuttingFile.start_date)}
-          </p>
-        </div>
-        <button
-          onClick={() =>
-            downloadFile(
-              cuttingFile.crv3d,
-              `cutting-file-${cuttingFile.id}.crv3d`
-            )
-          }
-          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-          title="Download CRV3D file"
-        >
-          <Download className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Task Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-            Schedule
-          </h4>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                Scheduled Start:
-              </span>
-              <span className="text-gray-900 dark:text-white">
-                {formatDateTime(cuttingFile.schedule_start_date)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                Scheduled Complete:
-              </span>
-              <span className="text-gray-900 dark:text-white">
-                {formatDateTime(cuttingFile.schedule_complate_date)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                Actual Start:
-              </span>
-              <span className="text-green-600 dark:text-green-400">
-                {formatDateTime(cuttingFile.start_date)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-            Material Details
-          </h4>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Size:</span>
-              <span className="text-gray-900 dark:text-white">
-                {task.on.current_width}m x {task.on.current_height}m
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Price:</span>
-              <span className="text-gray-900 dark:text-white">
-                ${mainOrder.price}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">
-                Design Type:
-              </span>
-              <span className="text-gray-900 dark:text-white">
-                {mainOrder.design_type}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Status */}
-      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-blue-700 dark:text-blue-300 font-medium">
-            Status: In Progress
-          </span>
-          <span className="text-blue-600 dark:text-blue-400">
-            Started {formatDateTime(cuttingFile.start_date)}
-          </span>
-        </div>
-      </div>
-
-      {/* Mockup Image Preview */}
-      {mainOrder?.mockup?.mockup_image && (
-        <div className="mb-4">
-          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-            Design Preview
-          </h4>
-          <img
-            src={mainOrder.mockup.mockup_image}
-            alt="Design mockup"
-            className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-zinc-600"
-          />
-        </div>
-      )}
-
-      {/* Complete Button */}
-      <button
-        onClick={() => onComplete(cuttingFile.id)}
-        disabled={isCompleting}
-        className="w-full flex items-center justify-center space-x-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-      >
-        {isCompleting ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Completing...</span>
-          </>
-        ) : (
-          <>
-            <CheckCircle className="w-4 h-4" />
-            <span>Complete Task</span>
-          </>
-        )}
-      </button>
-    </div>
-  );
-};
-
-// List View Component for Started Tasks
-const StartedTaskListItem = ({
-  task,
-  onComplete,
-  isCompleting,
-}: {
-  task: CuttingTask;
-  onComplete: (cuttingFileId: number) => void;
-  isCompleting: boolean;
-}) => {
-  const mainOrder = task.orders[0];
-  const cuttingFile = mainOrder.cutting_files[0];
-  const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return "Not set";
-    return new Date(dateString).toLocaleString();
-  };
-
-  return (
-    <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-3">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-3 mb-2">
-            <span className="font-medium text-gray-900 dark:text-white text-sm">
-              CUT-{cuttingFile.id}
-            </span>
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
-              {task.on.material_name}-{task.on.code}
-            </span>
-            <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-full text-xs">
-              In Progress
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
-            <span>Started: {formatDateTime(cuttingFile.start_date)}</span>
-            <span>
-              Schedule: {formatDateTime(cuttingFile.schedule_complate_date)}
-            </span>
-            <span>
-              Size: {task.on.current_width}m x {task.on.current_height}m
-            </span>
-            <span>Price: ${mainOrder.price}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2 ml-4">
-          <button
-            onClick={() => onComplete(cuttingFile.id)}
-            disabled={isCompleting}
-            className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-          >
-            {isCompleting ? (
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-            ) : (
-              <CheckCircle className="w-3 h-3" />
-            )}
-            <span>Complete</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 };

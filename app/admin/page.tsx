@@ -1,10 +1,7 @@
-import React from 'react'
-import { AdminUserManager } from '@/Components/Admin/AdminUserManager/AdminUserManager'
+'use client';
 
-const page = () => {
-  return (
-    <AdminUserManager />
-  )
+import AdminDashBoard from '../../Components/AdminDashBoard/AdminDashBoard';
+
+export default function AdminPage() {
+  return <AdminDashBoard />;
 }
-
-export default page

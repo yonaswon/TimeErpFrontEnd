@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 // import { CuttingTasksContent } from './Tasks/CuttingTasksContent'
 import { CuttingTasksContent } from './CuttingTasksContent'
+import { CncStats } from './CncStats'
 type TabType = 'overview' | 'cutting-tasks' | 'profile'
 
 const CncOperatorApp = ({ userData, selectedRole, onRoleSelect }: any) => {
@@ -32,18 +33,18 @@ const CncOperatorApp = ({ userData, selectedRole, onRoleSelect }: any) => {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <CncOverviewContent />
+        return <CncStats />
       case 'cutting-tasks':
         return <CuttingTasksContent />
       case 'profile':
-        return <CncProfileContent 
-          user={user} 
-          userData={userData} 
-          selectedRole={selectedRole} 
-          onRoleSelect={onRoleSelect} 
+        return <CncProfileContent
+          user={user}
+          userData={userData}
+          selectedRole={selectedRole}
+          onRoleSelect={onRoleSelect}
         />
       default:
-        return <CncOverviewContent />
+        return <CncStats />
     }
   }
 
@@ -78,16 +79,14 @@ const CncOperatorApp = ({ userData, selectedRole, onRoleSelect }: any) => {
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://telegram.org/img/t_logo.png'
                   }}
-                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-                    isActive ? 'border-blue-500 scale-110' : 'border-transparent'
-                  }`}
+                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${isActive ? 'border-blue-500 scale-110' : 'border-transparent'
+                    }`}
                 />
                 <span
-                  className={`text-xs ${
-                    isActive
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}
+                  className={`text-xs ${isActive
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-gray-500 dark:text-gray-400'
+                    }`}
                 >
                   Profile
                 </span>
@@ -100,11 +99,10 @@ const CncOperatorApp = ({ userData, selectedRole, onRoleSelect }: any) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                isActive
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 py-1 ${isActive
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 dark:text-gray-400'
+                }`}
             >
               {Icon && <Icon size={20} />}
               <span className="text-xs">{tab.label}</span>
@@ -123,7 +121,7 @@ const CncOverviewContent = () => (
     {/* CNC Operator Stats */}
     <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">My Today's Performance</h2>
-      
+
       <div className="grid grid-cols-2 gap-4 text-center">
         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">8</div>
@@ -147,7 +145,7 @@ const CncOverviewContent = () => (
     {/* Machine Status */}
     <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Machine Status</h2>
-      
+
       <div className="space-y-4">
         <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-700 rounded-lg">
           <div className="flex items-center space-x-3">
@@ -162,7 +160,7 @@ const CncOverviewContent = () => (
             <div className="text-xs text-gray-500 dark:text-gray-400">2h 15m</div>
           </div>
         </div>
-        
+
         <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-700 rounded-lg">
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
@@ -176,7 +174,7 @@ const CncOverviewContent = () => (
             <div className="text-xs text-gray-500 dark:text-gray-400">30 min</div>
           </div>
         </div>
-        
+
         <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-700 rounded-lg">
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -196,7 +194,7 @@ const CncOverviewContent = () => (
     {/* Material Inventory */}
     <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Material Inventory</h2>
-      
+
       <div className="space-y-3">
         <div>
           <div className="flex justify-between text-sm mb-1">
@@ -208,7 +206,7 @@ const CncOverviewContent = () => (
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">12 sheets remaining</div>
         </div>
-        
+
         <div>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600 dark:text-gray-400">MDF Board</span>
@@ -219,7 +217,7 @@ const CncOverviewContent = () => (
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">8 sheets remaining</div>
         </div>
-        
+
         <div>
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-600 dark:text-gray-400">Acrylic Sheet</span>
@@ -236,7 +234,7 @@ const CncOverviewContent = () => (
     {/* Quick Actions */}
     <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Quick Actions</h2>
-      
+
       <div className="grid grid-cols-2 gap-3">
         <button className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
           <div className="text-sm font-medium">Start New Job</div>
@@ -263,22 +261,22 @@ const CncProfileContent = ({ user, userData, selectedRole, onRoleSelect }: any) 
   return (
     <div className="flex flex-col items-center justify-center text-center mt-10 space-y-6">
       {/* Logout Button */}
-      <button 
+      <button
         onClick={() => {
           localStorage.removeItem('access_token')
           localStorage.removeItem('user_data')
-          
+
           if (typeof window !== 'undefined' && window?.Telegram?.WebApp?.close) {
             window.Telegram.WebApp.close()
           } else {
             window.location.reload()
           }
-        }} 
+        }}
         className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg cursor-pointer transition-colors"
       >
         LOGOUT
       </button>
-      
+
       {user ? (
         <>
           <img
@@ -307,7 +305,7 @@ const CncProfileContent = ({ user, userData, selectedRole, onRoleSelect }: any) 
           Unable to load Telegram user info.
         </p>
       )}
-      
+
       {/* Performance Stats */}
       <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 max-w-sm w-full">
         <h3 className="font-medium text-gray-900 dark:text-white mb-3">This Week's Performance</h3>
@@ -339,15 +337,13 @@ const CncProfileContent = ({ user, userData, selectedRole, onRoleSelect }: any) 
                 <button
                   key={r.id}
                   onClick={() => onRoleSelect(r.Name)}
-                  className={`w-full text-left flex items-center space-x-2 text-sm px-2 py-1 rounded transition-colors ${
-                    selectedRole === r.Name
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'
-                  }`}
+                  className={`w-full text-left flex items-center space-x-2 text-sm px-2 py-1 rounded transition-colors ${selectedRole === r.Name
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'
+                    }`}
                 >
-                  <div className={`w-2 h-2 rounded-full ${
-                    selectedRole === r.Name ? 'bg-green-500' : 'bg-gray-400'
-                  }`}></div>
+                  <div className={`w-2 h-2 rounded-full ${selectedRole === r.Name ? 'bg-green-500' : 'bg-gray-400'
+                    }`}></div>
                   <span>{r.Name}</span>
                   {selectedRole === r.Name && <span className="text-xs">⭐</span>}
                 </button>

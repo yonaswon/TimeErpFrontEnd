@@ -38,16 +38,7 @@ const ModificationItem = ({
           <span className="text-[10px] text-gray-400">{new Date(modification.requested_date).toLocaleDateString()}</span>
         </div>
 
-        {/* Modification Image Preview - NEW */}
-        {modification.mockup_image && (
-          <div className="mt-1 mb-1 relative w-24 h-16 sm:w-32 sm:h-20 rounded-md overflow-hidden border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800">
-            <img
-              src={modification.mockup_image}
-              alt="Modification Result"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+
 
         {/* Note & Counts */}
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -56,7 +47,7 @@ const ModificationItem = ({
           )}{modification.reference_images.length > 0 && <ImageIcon size={12} />}
         </div>
 
-  /* Action buttons */
+        {/* Action buttons */}
         <div className="flex gap-1 mt-1">
           {modification.request_status === 'SENT' && (
             <button

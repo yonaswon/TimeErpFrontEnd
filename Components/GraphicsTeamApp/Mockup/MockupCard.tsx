@@ -81,16 +81,7 @@ const MockupCard = ({
           </div>
         )}
 
-        {/* Mockup Image Preview - NEW */}
-        {mockup.mockup_image && (
-          <div className="mt-2 relative aspect-video w-full rounded-lg overflow-hidden border border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800">
-            <img
-              src={mockup.mockup_image}
-              alt={mockup.name || "Mockup Preview"}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+
 
         {/* Message Button - prevent card click propagation */}
         {mockup.id && (

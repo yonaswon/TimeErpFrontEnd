@@ -12,7 +12,7 @@ interface OrderCardProps {
 const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
   const [showDetailOverlay, setShowDetailOverlay] = useState(false)
   const [showBomOverlay, setShowBomOverlay] = useState(false)
-  
+
   // Get user data from localStorage
   const getUserData = () => {
     try {
@@ -21,11 +21,11 @@ const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
       return {}
     }
   }
-  
+
   const userData = getUserData()
   const currentUserTelegramId = userData.telegram_id
   const currentUserName = userData.telegram_user_name
-  
+
   const isAssignedToMe = order.mockup?.designer.telegram_id === currentUserTelegramId
   const hasBom = order.boms.length > 0
 
@@ -58,7 +58,7 @@ const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <div className="font-semibold text-gray-900 dark:text-white">
-                ORD{String(order.order_code).padStart(4, '0')}
+                #ORD-{order.order_code}
               </div>
               <span className={`text-xs px-2 py-1 rounded ${getStatusColor(order.order_status)}`}>
                 {formatStatus(order.order_status)}
@@ -69,18 +69,14 @@ const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
                 </span>
               )}
             </div>
-            
+
             {order.mockup && (
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Designer: @{order.mockup.designer.telegram_user_name}
               </div>
             )}
-            
-            {order.price && (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Price: {order.price.toLocaleString()} ETB
-              </div>
-            )}
+
+            {/* Price removed as per request */}
           </div>
         </div>
 
@@ -94,7 +90,7 @@ const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
               {hasBom ? 'Completed' : 'Pending'}
             </span>
           </div>
-          
+
           {!hasBom && isAssignedToMe && (
             <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
               You need to fill the BOM for this order
@@ -110,19 +106,18 @@ const OrderCard = ({ order, onRefresh }: OrderCardProps) => {
           >
             View Details
           </button>
-          
-          
-            <button
-              onClick={() => setShowBomOverlay(true)}
-              className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors ${
-                hasBom
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
-                  : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40'
+
+
+          <button
+            onClick={() => setShowBomOverlay(true)}
+            className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors ${hasBom
+              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
+              : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40'
               }`}
-            >
-              {hasBom ? 'Edit BOM' : 'Fill BOM'}
-            </button>
-        
+          >
+            {hasBom ? 'Edit BOM' : 'Fill BOM'}
+          </button>
+
         </div>
       </div>
 
