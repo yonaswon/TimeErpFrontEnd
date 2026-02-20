@@ -1,9 +1,10 @@
 import axios from "axios";
 
-// const base_url = "https://timeerp.duckdns.org";
+const base_url = "https://timeerp.duckdns.org";
 // const base_url = "http://127.0.0.1:8000";
 
-const base_url = "https://certified-affair-synthetic-completing.trycloudflare.com"
+// const base_url = "https://initiatives-amd-shanghai-population.trycloudflare.com"
+
 
 
 

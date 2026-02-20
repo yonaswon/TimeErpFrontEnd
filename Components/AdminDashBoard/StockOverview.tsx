@@ -1,7 +1,8 @@
 'use client';
-import React from 'react';
-import { Package, AlertTriangle, Layers, Archive } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Package, AlertTriangle, Layers, Archive, Search } from 'lucide-react';
 import { DashboardData } from './types';
+import api from '../../api';
 
 interface Props {
     data: DashboardData;
@@ -25,8 +26,37 @@ const LABEL_DISPLAY: Record<string, string> = {
     OL: 'Light', PS: 'Power Supply', OTHER: 'Other'
 };
 
+const TYPE_COLORS: Record<string, string> = {
+    L: '#3b82f6', A: '#8b5cf6', P: '#10b981'
+};
+
 export default function StockOverview({ data, onMaterialClick }: Props) {
     const { stock } = data;
+    const [materials, setMaterials] = useState<any[]>([]);
+    const [matLoading, setMatLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [typeFilter, setTypeFilter] = useState<string>('ALL');
+
+    useEffect(() => {
+        fetchMaterials();
+    }, []);
+
+    const fetchMaterials = async () => {
+        try {
+            const res = await api.get('/materials/?ordering=name');
+            setMaterials(res.data?.results || res.data || []);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setMatLoading(false);
+        }
+    };
+
+    const filtered = materials.filter((m: any) => {
+        const matchSearch = !search || m.name.toLowerCase().includes(search.toLowerCase());
+        const matchType = typeFilter === 'ALL' || m.type === typeFilter;
+        return matchSearch && matchType;
+    });
 
     return (
         <>
@@ -165,6 +195,111 @@ export default function StockOverview({ data, onMaterialClick }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* All Materials List */}
+            <div className="admin-section-card" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+                    <h3 style={{ margin: 0 }}><Package /> All Materials</h3>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            background: 'var(--admin-bg)', border: '1px solid var(--admin-border)',
+                            borderRadius: 8, padding: '6px 12px', minWidth: 180,
+                        }}>
+                            <Search size={14} color="var(--admin-text-muted)" />
+                            <input
+                                type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search materials..."
+                                style={{
+                                    border: 'none', outline: 'none', background: 'transparent', fontSize: 13,
+                                    color: 'var(--admin-text)', width: '100%',
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            {['ALL', 'L', 'A', 'P'].map(t => (
+                                <button
+                                    key={t}
+                                    onClick={() => setTypeFilter(t)}
+                                    style={{
+                                        padding: '4px 10px', fontSize: 11, fontWeight: 600, borderRadius: 6,
+                                        border: `1px solid ${typeFilter === t ? 'var(--admin-primary)' : 'var(--admin-border)'}`,
+                                        background: typeFilter === t ? 'var(--admin-primary)' : 'transparent',
+                                        color: typeFilter === t ? '#fff' : 'var(--admin-text-secondary)',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {t === 'ALL' ? 'All' : TYPE_LABELS[t]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                {matLoading ? (
+                    <div className="admin-loading"><div className="admin-spinner" /> Loading materials...</div>
+                ) : (
+                    <>
+                        <div style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginBottom: 8 }}>
+                            Showing {filtered.length} of {materials.length} materials
+                        </div>
+                        {filtered.map((mat: any) => {
+                            const isLow = Number(mat.available) < Number(mat.min_threshold);
+                            return (
+                                <div
+                                    key={mat.id}
+                                    onClick={() => onMaterialClick(mat.id)}
+                                    style={{
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        padding: '10px 12px', background: 'var(--admin-bg)', borderRadius: 8,
+                                        marginBottom: 6, border: `1px solid ${isLow ? 'rgba(239,68,68,0.3)' : 'var(--admin-border)'}`,
+                                        cursor: 'pointer', transition: 'border-color 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--admin-primary)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = isLow ? 'rgba(239,68,68,0.3)' : 'var(--admin-border)')}
+                                >
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                            <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--admin-text)' }}>{mat.name}</span>
+                                            {isLow && <AlertTriangle size={12} color="#dc2626" />}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            <span style={{
+                                                fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
+                                                background: `${TYPE_COLORS[mat.type] || '#999'}20`, color: TYPE_COLORS[mat.type] || '#999',
+                                            }}>{TYPE_LABELS[mat.type] || mat.type}</span>
+                                            <span style={{
+                                                fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 8,
+                                                background: 'var(--admin-border)', color: 'var(--admin-text-muted)',
+                                            }}>{LABEL_DISPLAY[mat.lable] || mat.lable}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                            <div style={{ fontWeight: 700, fontSize: 15, color: isLow ? '#dc2626' : 'var(--admin-text)' }}>
+                                                {Number(mat.available).toFixed(1)}
+                                            </div>
+                                            <div style={{ fontSize: 10, color: 'var(--admin-text-muted)' }}>
+                                                min: {mat.min_threshold}
+                                            </div>
+                                        </div>
+                                        {mat.type === 'A' && (
+                                            <button className="admin-button-primary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={(e) => { e.stopPropagation(); onMaterialClick(mat.id); }}>
+                                                Show Detail
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {filtered.length === 0 && (
+                            <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-text-muted)', fontSize: 13 }}>
+                                No materials match your filters
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </>
     );
 }
+

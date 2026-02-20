@@ -74,6 +74,8 @@ export default function PurchaseDetailOverlay({ purchaseId, onClose }: Props) {
         }
     };
 
+    if (!isOpen) return null;
+
     return (
         <>
             <div
