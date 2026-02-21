@@ -3,7 +3,7 @@ import StockContent from "./StockContent/StockContent";
 import { useEffect, useState } from "react";
 import { BarChart3, Package, RefreshCw, User } from "lucide-react";
 import TransfersContent from "./TransferContent/TransfersContent";
-import { ReleaseRequests } from "./TransferContent/ReleaseRequests";
+import { ReleaseManager } from "./TransferContent/ReleaseManager";
 type TabType = "overview" | "stock" | "transfers" | "profile";
 
 const StockManager = ({ userData, selectedRole, onRoleSelect }: any) => {
@@ -39,7 +39,7 @@ const StockManager = ({ userData, selectedRole, onRoleSelect }: any) => {
         return (
           <>
             <TransfersContent />
-            <ReleaseRequests />
+            <ReleaseManager />
           </>
         );
       case "profile":
@@ -86,18 +86,16 @@ const StockManager = ({ userData, selectedRole, onRoleSelect }: any) => {
                     (e.target as HTMLImageElement).src =
                       "https://telegram.org/img/t_logo.png";
                   }}
-                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-                    isActive
-                      ? "border-blue-500 scale-110"
-                      : "border-transparent"
-                  }`}
+                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${isActive
+                    ? "border-blue-500 scale-110"
+                    : "border-transparent"
+                    }`}
                 />
                 <span
-                  className={`text-xs ${
-                    isActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400"
-                  }`}
+                  className={`text-xs ${isActive
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-500 dark:text-gray-400"
+                    }`}
                 >
                   Profile
                 </span>
@@ -110,11 +108,10 @@ const StockManager = ({ userData, selectedRole, onRoleSelect }: any) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                isActive
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
+              className={`flex flex-col items-center justify-center flex-1 py-1 ${isActive
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-gray-500 dark:text-gray-400"
+                }`}
             >
               {Icon && <Icon size={20} />}
               <span className="text-xs">{tab.label}</span>
@@ -261,16 +258,14 @@ const ProfileContent = ({
                   onClick={() => {
                     onRoleSelect(r.Name);
                   }}
-                  className={`w-full text-left flex items-center space-x-2 text-sm px-2 py-1 rounded transition-colors ${
-                    selectedRole === r.Name
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
-                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700"
-                  }`}
+                  className={`w-full text-left flex items-center space-x-2 text-sm px-2 py-1 rounded transition-colors ${selectedRole === r.Name
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700"
+                    }`}
                 >
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      selectedRole === r.Name ? "bg-green-500" : "bg-gray-400"
-                    }`}
+                    className={`w-2 h-2 rounded-full ${selectedRole === r.Name ? "bg-green-500" : "bg-gray-400"
+                      }`}
                   ></div>
                   <span>{r.Name}</span>
                   {selectedRole === r.Name && (

@@ -4,8 +4,10 @@ import { Home, Package, Clock, User } from "lucide-react";
 import { CuttingFileComponent } from "./CuttingFile/CuttingFile";
 import OrderList from "./OrderSection/OrderList";
 
-type TabType = "mockups" | "orders" | "manufacturing" | "profile";
+type TabType = "mockups" | "orders" | "manufacturing" | "areal" | "profile";
 import MockupPage from "./Mockup/Mockup";
+import ArealTimelineContent from "./ArealTimelineContent/ArealTimelineContent";
+import { Layers } from "lucide-react";
 
 const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
   const [activeTab, setActiveTab] = useState<TabType>("mockups");
@@ -25,6 +27,7 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
     { id: "mockups" as TabType, label: "Mockups", icon: Home },
     { id: "orders" as TabType, label: "Orders", icon: Package },
     { id: "manufacturing" as TabType, label: "Manufacturing", icon: Clock },
+    { id: "areal" as TabType, label: "Areal", icon: Layers },
     { id: "profile" as TabType, label: "Profile", icon: null },
   ];
 
@@ -36,6 +39,8 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
         return <OrderList />;
       case "manufacturing":
         return <CuttingFileComponent />;
+      case "areal":
+        return <ArealTimelineContent />;
       case "profile":
         return (
           <ProfileContent
@@ -80,18 +85,16 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
                     (e.target as HTMLImageElement).src =
                       "https://telegram.org/img/t_logo.png";
                   }}
-                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-                    isActive
+                  className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${isActive
                       ? "border-blue-500 scale-110"
                       : "border-transparent"
-                  }`}
+                    }`}
                 />
                 <span
-                  className={`text-xs ${
-                    isActive
+                  className={`text-xs ${isActive
                       ? "text-blue-600 dark:text-blue-400"
                       : "text-gray-500 dark:text-gray-400"
-                  }`}
+                    }`}
                 >
                   Profile
                 </span>
@@ -104,11 +107,10 @@ const GraphicsTeamApp = ({ userData, selectedRole, onRoleSelect }: any) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center justify-center flex-1 py-1 ${
-                isActive
+              className={`flex flex-col items-center justify-center flex-1 py-1 ${isActive
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-gray-500 dark:text-gray-400"
-              }`}
+                }`}
             >
               {Icon && <Icon size={20} />}
               <span className="text-xs">{tab.label}</span>
@@ -413,16 +415,14 @@ const ProfileContent = ({
                 <button
                   key={r.id}
                   onClick={() => onRoleSelect(r.Name)}
-                  className={`w-full text-left flex items-center space-x-2 text-sm px-2 py-1 rounded transition-colors ${
-                    selectedRole === r.Name
+                  className={`w-full text-left flex items-center space-x-2 text-sm px-2 py-1 rounded transition-colors ${selectedRole === r.Name
                       ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
                       : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`w-2 h-2 rounded-full ${
-                      selectedRole === r.Name ? "bg-green-500" : "bg-gray-400"
-                    }`}
+                    className={`w-2 h-2 rounded-full ${selectedRole === r.Name ? "bg-green-500" : "bg-gray-400"
+                      }`}
                   ></div>
                   <span>{r.Name}</span>
                   {selectedRole === r.Name && (

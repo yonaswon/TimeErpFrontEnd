@@ -1,8 +1,8 @@
-// components/ReleaseRequests.tsx
 import { useState, useEffect } from 'react';
-import { Package, CheckCircle, AlertCircle, Clock, User, Ruler, Box } from 'lucide-react';
-import api from '@/api';
+import { Package, CheckCircle, AlertCircle, Clock, User, Ruler, Box, ChevronDown, ChevronUp, Image as ImageIcon } from 'lucide-react';
+import api, { base_url } from '@/api';
 
+// ... interface definitions ...
 interface Bom {
   id: number;
   material: number;
@@ -33,6 +33,8 @@ interface Release {
   released_by: number;
   released_by_name: string;
   confirmed: boolean;
+  confirmed_by_name?: string | null;
+  confirmed_date?: string | null;
   date: string;
 }
 
@@ -62,6 +64,7 @@ export const ReleaseRequests = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<number | null>(null);
   const [success, setSuccess] = useState<number | null>(null);
+  const [expandedReleaseId, setExpandedReleaseId] = useState<number | null>(null);
 
   const fetchReleaseRequests = async () => {
     try {
@@ -81,20 +84,20 @@ export const ReleaseRequests = () => {
     fetchReleaseRequests();
   }, []);
 
-  const handleConfirmRelease = async (orderCode: number) => {
+  const handleConfirmRelease = async (orderCode: number, releaseId: number) => {
     try {
-      setConfirming(orderCode);
+      setConfirming(releaseId);
       setError(null);
-      
-      await api.post(`/api/orders/${orderCode}/confirm_release/`);
-      
-      setSuccess(orderCode);
+
+      await api.post(`/api/orders/${orderCode}/confirm_release/`, { release_id: releaseId });
+
+      setSuccess(releaseId);
       // Refresh the list after successful confirmation
       setTimeout(() => {
         setSuccess(null);
         fetchReleaseRequests();
       }, 2000);
-      
+
     } catch (err: any) {
       console.error('Error confirming release:', err);
       setError(err.response?.data?.error || 'Failed to confirm release');
@@ -103,8 +106,12 @@ export const ReleaseRequests = () => {
     }
   };
 
+  const toggleExpandRelease = (releaseId: number) => {
+    setExpandedReleaseId(expandedReleaseId === releaseId ? null : releaseId);
+  };
+
   const getUnconfirmedReleases = (order: Order) => {
-    return order.releases.filter(release => 
+    return order.releases.filter(release =>
       release.reason === 'ADD' && !release.confirmed
     );
   };
@@ -113,8 +120,10 @@ export const ReleaseRequests = () => {
     return type === 'L' ? <Ruler className="w-4 h-4" /> : <Box className="w-4 h-4" />;
   };
 
-  const getUnit = (type: 'L' | 'P') => {
-    return type === 'L' ? 'm' : 'pcs';
+  const getUnit = (type: string) => {
+    if (type === 'L') return 'meter';
+    if (type === 'P') return 'pics';
+    return 'pcs';
   };
 
   const calculateTotalUnconfirmedLength = (order: Order) => {
@@ -123,56 +132,55 @@ export const ReleaseRequests = () => {
       .reduce((total, release) => total + parseFloat(release.amount), 0);
   };
 
+  // Helper function to resolve absolute URL for images
+  const resolveMediaUrl = (url: string | null | undefined) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const cleanBaseUrl = base_url.replace(/\/$/, '');
+    const cleanUrl = url.replace(/^\//, '');
+    return `${cleanBaseUrl}/${cleanUrl}`;
+  };
+
   if (loading) {
+    // ... loading state ...
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading release requests...</span>
-          </div>
+      <div className="w-full">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading release requests...</span>
         </div>
       </div>
     );
   }
 
   if (error && orders.length === 0) {
+    // ... error state ...
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-              <span className="text-red-700 dark:text-red-300">{error}</span>
-            </div>
-            <button
-              onClick={fetchReleaseRequests}
-              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Retry
-            </button>
+      <div className="w-full">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <span className="text-red-700 dark:text-red-300">{error}</span>
           </div>
+          <button
+            onClick={fetchReleaseRequests}
+            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-2">
-            <Package className="w-8 h-8 text-yellow-600" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Release Requests
-            </h1>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Orders with pending additional release confirmations
-          </p>
-        </div>
+  // Pre-filter orders that actually have unconfirmed CAD releases to avoid showing empty cards
+  const activeOrders = orders.filter(order => getUnconfirmedReleases(order).length > 0);
 
+  return (
+    <div className="w-full px-4 sm:px-0">
+      <div className="w-full">
         {/* Error Display */}
         {error && (
           <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -184,7 +192,7 @@ export const ReleaseRequests = () => {
         )}
 
         {/* Orders List */}
-        {orders.length === 0 ? (
+        {activeOrders.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -196,10 +204,10 @@ export const ReleaseRequests = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {orders.map((order) => {
+            {activeOrders.map((order) => {
               const unconfirmedReleases = getUnconfirmedReleases(order);
               const totalLength = calculateTotalUnconfirmedLength(order);
-              
+
               return (
                 <div
                   key={order.order_code}
@@ -243,35 +251,109 @@ export const ReleaseRequests = () => {
                       </span>
                     </h3>
 
-                    <div className="space-y-3">
-                      {unconfirmedReleases.map((release) => (
-                        <div
-                          key={release.id}
-                          className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
-                        >
-                          <div className="flex items-center space-x-3">
-                            {getMaterialIcon(release.material_type)}
-                            <div>
-                              <div className="font-medium text-gray-900 dark:text-white">
-                                {release.material_name}
+                    <div className="space-y-4">
+                      {unconfirmedReleases.map((release) => {
+                        const isExpanded = expandedReleaseId === release.id;
+                        return (
+                          <div
+                            key={release.id}
+                            className="flex flex-col bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg overflow-hidden"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="mt-1">
+                                  {getMaterialIcon(release.material_type)}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
+                                    {release.material_name}
+                                    {release.proof_image && (
+                                      <button
+                                        onClick={() => toggleExpandRelease(release.id)}
+                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center text-xs bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded transition-colors"
+                                      >
+                                        <ImageIcon className="w-3 h-3 mr-1" />
+                                        {isExpanded ? 'Hide Proof' : 'View Proof'}
+                                        {isExpanded ? <ChevronUp className="w-3 h-3 ml-1" /> : <ChevronDown className="w-3 h-3 ml-1" />}
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                    <span className="font-medium text-gray-900 dark:text-gray-300">Amount: {release.amount} {getUnit(release.material_type)}</span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span className="flex items-center space-x-1">
+                                      <User className="w-3 h-3" />
+                                      <span>Released by: <strong>{release.released_by_name}</strong></span>
+                                    </span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span>{release.inventory_name}</span>
+                                    <span className="hidden sm:inline">•</span>
+                                    <span>{new Date(release.date).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                  {release.confirmed && release.confirmed_by_name && (
+                                    <div className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 mt-1">
+                                      <CheckCircle className="w-3 h-3" />
+                                      <span>Confirmed by: <strong>{release.confirmed_by_name}</strong></span>
+                                      {release.confirmed_date && (
+                                        <span className="text-gray-500 dark:text-gray-400">({new Date(release.confirmed_date).toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                                <span>Amount: {release.amount} {getUnit(release.material_type)}</span>
-                                <span>•</span>
-                                <span className="flex items-center space-x-1">
-                                  <User className="w-3 h-3" />
-                                  <span>{release.released_by_name}</span>
-                                </span>
-                                <span>•</span>
-                                <span>{release.inventory_name}</span>
+
+                              {/* Individual Confirm Button */}
+                              <div className="flex-shrink-0 w-full sm:w-auto border-t sm:border-t-0 border-yellow-200 dark:border-yellow-800 pt-3 sm:pt-0">
+                                {success === release.id ? (
+                                  <div className="flex items-center justify-center space-x-2 text-green-600 dark:text-green-400 px-4 py-2 w-full">
+                                    <CheckCircle className="w-5 h-5" />
+                                    <span className="font-medium text-sm">Confirmed!</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleConfirmRelease(order.order_code, release.id)}
+                                    disabled={confirming === release.id}
+                                    className="w-full px-4 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center sm:min-w-[120px]"
+                                  >
+                                    {confirming === release.id ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        <span>Confirming...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="w-4 h-4 mr-1.5" />
+                                        <span>Confirm Release</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
                             </div>
+
+                            {/* Expanded Image Detail View */}
+                            {isExpanded && release.proof_image && (
+                              <div className="border-t border-yellow-200 dark:border-yellow-800 p-4 bg-white dark:bg-zinc-800/50">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 font-medium flex items-center">
+                                  Proof Image for Release
+                                </p>
+                                <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-900 flex justify-center p-2">
+                                  <img
+                                    src={resolveMediaUrl(release.proof_image)}
+                                    alt={`Proof for ${release.material_name}`}
+                                    className="w-full h-auto max-w-[800px] max-h-[600px] object-contain rounded"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                      (e.target as HTMLImageElement).parentElement!.innerHTML =
+                                        '<div class="flex items-center justify-center p-8 text-gray-500 dark:text-gray-400"><span class="flex flex-col items-center"><svg class="w-8 h-8 mb-2 opacity-50" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>Image failed to load</span></div>';
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {new Date(release.date).toLocaleDateString()}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Summary */}
@@ -287,34 +369,6 @@ export const ReleaseRequests = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Confirm Button */}
-                    <div className="mt-6 flex justify-end">
-                      {success === order.order_code ? (
-                        <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-                          <CheckCircle className="w-5 h-5" />
-                          <span className="font-medium">Confirmed Successfully!</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleConfirmRelease(order.order_code)}
-                          disabled={confirming === order.order_code}
-                          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                        >
-                          {confirming === order.order_code ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              <span>Confirming...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4" />
-                              <span>Confirm All Releases</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
                   </div>
                 </div>
               );

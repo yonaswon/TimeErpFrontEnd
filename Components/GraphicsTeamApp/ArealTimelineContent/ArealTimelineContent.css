@@ -1,0 +1,582 @@
+/* ========================
+   Areal Timeline Styles (Mobile-First)
+   ======================== */
+
+:root {
+    --admin-primary: #3b82f6;
+    --admin-primary-hover: #2563eb;
+    --admin-primary-light: rgba(59, 130, 246, 0.1);
+    --admin-bg: #f9fafb;
+    --admin-surface: #ffffff;
+    --admin-border: #e5e7eb;
+    --admin-text: #111827;
+    --admin-text-secondary: #6b7280;
+    --admin-text-muted: #9ca3af;
+    --admin-success: #10b981;
+    --admin-warning: #f59e0b;
+    --admin-info: #0ea5e9;
+    --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --admin-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --admin-radius: 12px;
+    --admin-radius-sm: 8px;
+    --admin-radius-xs: 6px;
+}
+
+:root.dark,
+.dark,
+[data-theme="dark"] {
+    --admin-bg: #18181b;
+    --admin-surface: #27272a;
+    --admin-border: #3f3f46;
+    --admin-text: #f9fafb;
+    --admin-text-secondary: #a1a1aa;
+    --admin-text-muted: #71717a;
+    --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --admin-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.6);
+    --admin-primary-light: rgba(59, 130, 246, 0.2);
+}
+
+/* ==================================
+   3-Level Areal Timeline Styles
+   ================================== */
+
+/* Core Container */
+.areal-timeline-container {
+    height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--admin-bg, #f9fafb);
+    color: var(--admin-text, #111827);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Base Level View styles for animations */
+.areal-level-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--admin-bg, #111827);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
+    z-index: 10;
+}
+
+/* Level 1: Materials */
+.areal-level-1 {
+    z-index: 1;
+}
+
+/* Level 2: Pieces */
+.areal-level-2 {
+    z-index: 2;
+    transform: translateX(100%);
+}
+
+/* Level 3: Timeline */
+.areal-level-3 {
+    z-index: 3;
+    transform: translateX(100%);
+}
+
+/* Animation States */
+.active-view {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+}
+
+.hidden-right {
+    transform: translateX(100%) !important;
+    pointer-events: none;
+}
+
+.dimmed-background {
+    transform: translateX(-20%);
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+/* Header & Typography */
+.areal-list-header {
+    margin-bottom: 8px;
+}
+
+.areal-list-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+}
+
+.areal-list-subtitle {
+    font-size: 14px;
+    color: var(--admin-text-secondary);
+    margin: 0;
+}
+
+.areal-detail-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--admin-border);
+    background: var(--admin-surface);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    box-shadow: var(--admin-shadow-sm);
+    z-index: 20;
+}
+
+.areal-back-btn {
+    background: none;
+    border: none;
+    color: var(--admin-text);
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    min-width: 44px;
+    min-height: 44px;
+    margin-left: -8px;
+}
+
+.areal-back-btn:active {
+    background: var(--admin-primary-light);
+}
+
+.areal-detail-title-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.areal-detail-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.areal-detail-available {
+    font-size: 12px;
+    color: var(--admin-text-secondary);
+}
+
+/* Common List View (Level 1 & 2) */
+.areal-list-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.areal-list-view::-webkit-scrollbar {
+    display: none;
+}
+
+/* Level 1: Material Item */
+.areal-material-item {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: var(--admin-shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.areal-material-item:active {
+    transform: translateY(2px);
+    border-color: var(--admin-primary);
+}
+
+.areal-material-info h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.areal-material-badge {
+    background: var(--admin-primary-light);
+    color: var(--admin-primary);
+    padding: 4px 8px;
+    border-radius: var(--admin-radius-xs);
+    font-weight: 600;
+    font-size: 11px;
+}
+
+/* Level 2: Pieces Overview List */
+.areal-full-sheets-metric {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    box-shadow: var(--admin-shadow-sm);
+}
+
+.metric-text h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--admin-text);
+}
+
+.metric-text p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--admin-text-muted);
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--admin-primary);
+    background: var(--admin-primary-light);
+    padding: 4px 16px;
+    border-radius: var(--admin-radius);
+}
+
+.areal-section-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--admin-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 12px 4px;
+}
+
+.areal-pieces-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Level 2: Grid View */
+.areal-pieces-grid-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.areal-piece-grid-item {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--admin-shadow-sm);
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.areal-piece-grid-item:active {
+    border-color: var(--admin-primary);
+    transform: scale(0.98);
+}
+
+.piece-grid-thumbnail {
+    width: 100%;
+    padding-top: 100%;
+    /* 1:1 Aspect Ratio */
+    background: #ffffff;
+    border-bottom: 1px solid var(--admin-border);
+    position: relative;
+}
+
+.piece-grid-thumbnail img,
+.piece-grid-thumbnail .thumbnail-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+}
+
+.piece-grid-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Level 2: Individual Piece Item */
+.areal-piece-list-item {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    display: flex;
+    overflow: hidden;
+    box-shadow: var(--admin-shadow-sm);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.areal-piece-list-item:active {
+    border-color: var(--admin-primary);
+}
+
+.piece-list-info {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.piece-code-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.piece-code {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--admin-text);
+}
+
+.piece-dims {
+    font-size: 13px;
+    color: var(--admin-text-secondary);
+}
+
+.piece-list-thumbnail {
+    width: 90px;
+    background: #ffffff;
+    border-left: 1px solid var(--admin-border);
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.piece-list-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+}
+
+.thumbnail-placeholder {
+    color: var(--admin-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    background: var(--admin-bg);
+}
+
+/* Level 3: Horizontal Timeline Detail */
+.areal-timeline-scroll-area {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 24px 0;
+    display: flex;
+    gap: 16px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.areal-timeline-scroll-area::-webkit-scrollbar {
+    display: none;
+}
+
+.areal-timeline-scroll-area::before,
+.areal-timeline-scroll-area::after {
+    content: '';
+    flex: 0 0 4px;
+}
+
+.areal-piece-column {
+    flex: 0 0 85vw;
+    max-width: 400px;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.areal-piece-status {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.areal-piece-status.started {
+    background: var(--admin-warning);
+}
+
+.areal-piece-status.completed {
+    background: var(--admin-success);
+}
+
+.areal-piece-status.available {
+    background: var(--admin-info);
+    color: white;
+}
+
+.areal-cut-card {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    overflow: hidden;
+    box-shadow: var(--admin-shadow-sm);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.areal-cut-image-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 133%;
+    /* 3:4 aspect ratio */
+    background: #ffffff;
+    /* Always White */
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.areal-cut-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+}
+
+.areal-cut-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--admin-text-muted);
+}
+
+.areal-cut-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.areal-cut-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.areal-cut-status {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--admin-text);
+    margin: 0;
+}
+
+.areal-cut-date {
+    font-size: 12px;
+    color: var(--admin-text-muted);
+}
+
+.areal-cut-orders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.areal-order-badge {
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-border);
+    padding: 4px 8px;
+    border-radius: var(--admin-radius-xs);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--admin-text-secondary);
+}
+
+.areal-download-btn {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--admin-primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: var(--admin-radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    min-height: 44px;
+    text-decoration: none;
+}
+
+.areal-download-btn:active {
+    background: var(--admin-primary-hover);
+}
+
+/* Level 3: Navigation Arrows */
+.areal-timeline-nav {
+    position: absolute;
+    bottom: 24px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    pointer-events: none;
+    z-index: 30;
+}
+
+.timeline-nav-arrow {
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    border: 1px solid var(--admin-border);
+    box-shadow: var(--admin-shadow-sm);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.2s ease;
+}
+
+.timeline-nav-arrow:active {
+    background: var(--admin-primary-light);
+    color: var(--admin-primary);
+    transform: scale(0.95);
+}
