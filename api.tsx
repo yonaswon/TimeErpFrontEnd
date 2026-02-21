@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const base_url = "https://timeerp.duckdns.org";
+export const base_url = "https://timeerp.duckdns.org";
 // const base_url = "http://127.0.0.1:8000";
 
 // export const base_url = "https://insulin-prefer-thee-matt.trycloudflare.com";
