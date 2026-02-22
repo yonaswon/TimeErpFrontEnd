@@ -28,12 +28,15 @@ body {
 }
 
 .scrollbar-hide {
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
+  /* Safari and Chrome */
 }
 
 /* Add these animations to your globals.css */
@@ -42,6 +45,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -51,6 +55,7 @@ body {
   from {
     transform: translateX(-100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -60,6 +65,7 @@ body {
   from {
     transform: translateX(0);
   }
+
   to {
     transform: translateX(-100%);
   }
@@ -75,4 +81,9 @@ body {
 
 .animate-slideOutLeft {
   animation: slideOutLeft 0.3s ease-in forwards;
+}
+
+/* Hide Sales App bottom navigation when active */
+body.hide-sales-nav .sales-bottom-nav {
+  display: none !important;
 }

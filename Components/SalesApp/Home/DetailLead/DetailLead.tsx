@@ -49,6 +49,28 @@ export default function DetailLead({ leadId, onClose }: DetailLeadProps) {
 
   useEffect(() => {
     fetchLeadDetails();
+
+    // Hide Sales Bottom Navigation forcefully via DOM when DetailLead is open
+    const hideNav = () => {
+      const navs = document.querySelectorAll('.sales-bottom-nav');
+      navs.forEach(nav => {
+        (nav as HTMLElement).style.setProperty('display', 'none', 'important');
+      });
+    };
+
+    hideNav();
+    // Sometimes React mounts/renders race the DOM, so check again shortly after
+    const intervalId = setInterval(hideNav, 100);
+    const timeoutId = setTimeout(() => clearInterval(intervalId), 1000);
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+      const navs = document.querySelectorAll('.sales-bottom-nav');
+      navs.forEach(nav => {
+        (nav as HTMLElement).style.display = '';
+      });
+    };
   }, [leadId]);
 
   const handleRefresh = () => {

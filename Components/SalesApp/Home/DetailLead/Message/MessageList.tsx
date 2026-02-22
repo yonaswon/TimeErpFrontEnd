@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import api from "@/api";
 import MessageBubble from "./MessageBubble";
+import { useChatSocket } from "./useChatSocket";
 
 interface Message {
   id: number;
@@ -93,14 +94,31 @@ export default function MessageList({
     }
   };
 
-  // Refresh messages function
-  const refreshMessages = () => {
+  // Refresh messages function (now mostly internal fallback)
+  const refreshMessages = useCallback(() => {
     fetchMessages(undefined, true);
-  };
+  }, [mockupId, mockupModificationId]); // Added dependencies
 
   useEffect(() => {
     fetchMessages();
   }, [mockupId, mockupModificationId]);
+
+  // Handle incoming WebSocket messages
+  const handleNewMessage = useCallback((newMessage: Message) => {
+    console.log("WebSocket message received:", newMessage);
+    setMessages((prev) => {
+      // Prevent duplicates
+      if (prev.some(m => m.id === newMessage.id)) return prev;
+      return [...prev, newMessage];
+    });
+  }, []);
+
+  // Connect to Django Channels WebSocket
+  const { isConnected } = useChatSocket({
+    mockupId,
+    mockupModificationId,
+    onMessageReceived: handleNewMessage
+  });
 
   useEffect(() => {
     // Scroll to bottom when new messages are added (except when loading more)
@@ -109,16 +127,11 @@ export default function MessageList({
     }
   }, [messages, loadingMore]);
 
-  // Listen for message sent event
+  // Listen for message sent event (keep as fallback for image uploads)
   useEffect(() => {
     const handleMessageSent = () => {
-      console.log("Message sent event received, refreshing...");
-      // Small delay to ensure the message is saved on the server
-      setTimeout(() => {
-        refreshMessages();
-      }, 500);
+      // We rely primarily on WebSocket now, but this is a good fallback
     };
-
     window.addEventListener("messageSent", handleMessageSent);
     return () => {
       window.removeEventListener("messageSent", handleMessageSent);
@@ -129,84 +142,96 @@ export default function MessageList({
     if (!containerRef.current || !nextPage || loadingMore) return;
 
     const { scrollTop } = containerRef.current;
-    if (scrollTop === 0) {
+    // Load more when scrolling near the top
+    if (scrollTop < 50) {
       fetchMessages(nextPage);
     }
   };
 
+  // Group messages by date
+  const groupedMessages = messages.reduce((groups, message) => {
+    const date = new Date(message.date).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric'
+    });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(message);
+    return groups;
+  }, {} as Record<string, Message[]>);
+
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading messages...</span>
+      <div className="flex-1 flex items-center justify-center bg-[#e5ddd5] dark:bg-[#0f0f0f]">
+        <div className="px-4 py-2 bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2 shadow-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Loading chat...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Refresh Button Header */}
-      <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {messages.length} message{messages.length !== 1 ? "s" : ""}
-          {mockupModificationId && ` for Modification #${mockupModificationId}`}
-          {mockupId && !mockupModificationId && ` for Mockup #${mockupId}`}
-        </div>
-        <button
-          onClick={refreshMessages}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-          />
-          {refreshing ? "Refreshing..." : "Refresh"}
-        </button>
-      </div>
-
+    <div className="h-full flex flex-col relative z-10 w-full max-w-3xl mx-auto">
       {/* Messages Container */}
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-3"
+        className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
       >
         {loadingMore && (
           <div className="flex justify-center py-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+            <div className="px-3 py-1 bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full shadow-sm">
+              <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+            </div>
           </div>
         )}
 
-        {refreshing && (
-          <div className="flex justify-center py-2">
-            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+        {!isConnected && !loading && (
+          <div className="flex justify-center mb-4">
+            <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 text-xs rounded-full backdrop-blur-sm shadow-sm inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+              Reconnecting...
+            </span>
           </div>
         )}
 
         {messages.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400 text-center h-full">
-            <div>
-              <div className="text-4xl mb-2">💬</div>
-              <p>No messages yet</p>
-              <p className="text-sm">
-                {mockupModificationId
-                  ? `Send a message about Modification #${mockupModificationId}`
-                  : `Send a message about Mockup #${mockupId}`}
+          <div className="flex-1 flex items-center justify-center h-full">
+            <div className="bg-white/50 dark:bg-[#212121]/50 backdrop-blur-sm px-6 py-8 rounded-2xl text-center shadow-sm">
+              <div className="text-4xl mb-3">💬</div>
+              <p className="text-gray-900 dark:text-white font-medium mb-1">No messages here yet...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Send a message or tap the greeting below.
               </p>
             </div>
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={message.sender === currentUserId}
-            />
+          Object.entries(groupedMessages).map(([date, dateMessages]) => (
+            <div key={date} className="space-y-4">
+              {/* Telegram Date Divider */}
+              <div className="flex justify-center sticky top-2 z-10">
+                <span className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white/80 dark:bg-[#212121]/80 backdrop-blur-md rounded-full shadow-sm">
+                  {date}
+                </span>
+              </div>
+
+              {/* Date Messages */}
+              <div className="space-y-1.5">
+                {dateMessages.map((message) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    isOwn={message.sender === currentUserId}
+                  />
+                ))}
+              </div>
+            </div>
           ))
         )}
 
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-2" />
       </div>
     </div>
   );
