@@ -8,6 +8,7 @@ interface MessageInputProps {
   mockupModificationId?: number;
   currentUserId?: number;
   leadId: number;
+  onMessageSent?: () => void;
 }
 
 interface SelectedImage {
@@ -20,6 +21,7 @@ export default function MessageInput({
   mockupModificationId,
   currentUserId,
   leadId,
+  onMessageSent,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
