@@ -23,12 +23,14 @@ interface MessageListProps {
   mockupId?: number;
   mockupModificationId?: number;
   currentUserId?: number;
+  refreshTrigger?: number;
 }
 
 export default function MessageList({
   mockupId,
   mockupModificationId,
   currentUserId,
+  refreshTrigger,
 }: MessageListProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
