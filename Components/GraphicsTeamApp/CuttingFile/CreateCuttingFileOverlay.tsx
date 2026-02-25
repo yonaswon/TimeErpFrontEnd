@@ -393,13 +393,15 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                           </div>
                           
                           {/* Mockup Image */}
-                          {(order.mockup_modification?.mockup_image || order.mockup?.mockup_image) && (
+                          {(order.mockup_image || order.mockup_modification?.mockup_image || order.mockup?.mockup_image) && (
                             <img
-                              src={order.mockup_modification?.mockup_image || order.mockup?.mockup_image || ''}
+                              src={order.mockup_image || order.mockup_modification?.mockup_image || order.mockup?.mockup_image || ''}
                               alt="Order mockup"
                               className="w-16 h-16 object-cover rounded border border-gray-300 mt-2"
                             />
                           )}
+
+                         
 
                           {/* Related Cutting Files */}
                           {order.cutting_files && order.cutting_files.length > 0 && (

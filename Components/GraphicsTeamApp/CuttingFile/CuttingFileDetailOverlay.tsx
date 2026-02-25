@@ -16,16 +16,22 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
   };
 
   const getStatusBadge = (status: string) => {
+    // Colors updated based on design guide:
+    // BG: #F9FAFB / #0F172A (Default)
+    // Warning (Started): #F59E0B / #FBBF24
+    // Success (Completed): #16A34A / #22C55E
+    // Primary (Assigned): #2563EB / #3B82F6
+
     const statusConfig = {
-      'NOT-ASSIGNED': { color: 'bg-gray-100 text-gray-800', label: 'Not Assigned' },
-      'ASSIGNED': { color: 'bg-blue-100 text-blue-800', label: 'Assigned' },
-      'STARTED': { color: 'bg-yellow-100 text-yellow-800', label: 'Started' },
-      'COMPLATED': { color: 'bg-green-100 text-green-800', label: 'Completed' }
+      'NOT-ASSIGNED': { bg: 'bg-[#F9FAFB] dark:bg-[#1E293B]', text: 'text-[#6B7280] dark:text-[#94A3B8]', border: 'border-[#E5E7EB] dark:border-[#334155]', label: 'Not Assigned' },
+      'ASSIGNED': { bg: 'bg-[#EFF6FF] dark:bg-blue-900/30', text: 'text-[#2563EB] dark:text-[#3B82F6]', border: 'border-blue-200 dark:border-blue-800/50', label: 'Assigned' },
+      'STARTED': { bg: 'bg-[#FEF3C7] dark:bg-amber-900/30', text: 'text-[#F59E0B] dark:text-[#FBBF24]', border: 'border-amber-200 dark:border-amber-800/50', label: 'Started' },
+      'COMPLATED': { bg: 'bg-[#DCFCE7] dark:bg-green-900/30', text: 'text-[#16A34A] dark:text-[#22C55E]', border: 'border-green-200 dark:border-green-800/50', label: 'Completed' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['NOT-ASSIGNED'];
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
+      <span className={`px-3 py-1 rounded-[8px] text-[14px] font-medium border ${config.bg} ${config.text} ${config.border}`}>
         {config.label}
       </span>
     );
@@ -37,52 +43,52 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-[#FFFFFF] dark:bg-[#0F172A] rounded-[12px] max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto relative flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700">
+        <div className="sticky top-0 z-10 bg-[#FFFFFF] dark:bg-[#0F172A] flex items-center justify-between p-[24px] border-b border-[#E5E7EB] dark:border-[#334155]">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-[22px] font-semibold text-[#111827] dark:text-[#F1F5F9] leading-[1.2]">
               Cutting File Details
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+            <p className="text-[#6B7280] dark:text-[#94A3B8] text-[14px] mt-1">
               {fileName}
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-[16px]">
             <button
               onClick={handleDownload}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center space-x-2 px-[16px] py-[12px] bg-[#2563EB] dark:bg-[#3B82F6] text-white rounded-[8px] hover:bg-[#1D4ED8] dark:hover:bg-[#60A5FA] transition-colors font-medium text-[16px]"
             >
-              <Download className="w-4 h-4" />
-              <span>Download CRV3D</span>
+              <Download className="w-[20px] h-[20px]" />
+              <span className="hidden sm:inline">Download CRV3D</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+              className="p-2 text-[#6B7280] dark:text-[#94A3B8] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] rounded-[8px] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-[24px] h-[24px]" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-[32px] space-y-[32px] bg-[#F9FAFB] dark:bg-[#0F172A]">
           {/* Status and Assignment Section */}
           <Section title="Production Status">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+              <div className="bg-[#FFFFFF] dark:bg-[#1E293B] p-[16px] rounded-[12px] border border-[#E5E7EB] dark:border-[#334155] space-y-[16px]">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
+                  <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8]">Status</span>
                   {getStatusBadge(file.status)}
                 </div>
-                
+
                 {file.assigned_to && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Assigned To:</span>
+                    <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8]">Assigned To</span>
                     <div className="flex items-center space-x-2">
-                      <UserCheck className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-900 dark:text-white">
+                      <UserCheck className="w-[20px] h-[20px] text-[#16A34A] dark:text-[#22C55E]" />
+                      <span className="text-[16px] font-medium text-[#111827] dark:text-[#F1F5F9]">
                         @{file.assigned_to.telegram_user_name}
                       </span>
                     </div>
@@ -90,28 +96,38 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
                 )}
               </div>
 
-              <div className="space-y-3">
+              <div className="bg-[#FFFFFF] dark:bg-[#1E293B] p-[16px] rounded-[12px] border border-[#E5E7EB] dark:border-[#334155] space-y-[16px]">
                 {file.start_date && (
-                  <div className="flex items-center space-x-2">
-                    <Play className="w-4 h-4 text-yellow-600" />
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-[#FEF3C7] dark:bg-amber-900/30 p-2 rounded-lg">
+                      <Play className="w-[20px] h-[20px] text-[#F59E0B] dark:text-[#FBBF24]" />
+                    </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Started</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8]">Started</div>
+                      <div className="text-[16px] text-[#111827] dark:text-[#F1F5F9]">
                         {formatDateTime(file.start_date)}
                       </div>
                     </div>
                   </div>
                 )}
-                
+
                 {file.complate_date && (
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-[#DCFCE7] dark:bg-green-900/30 p-2 rounded-lg">
+                      <CheckCircle className="w-[20px] h-[20px] text-[#16A34A] dark:text-[#22C55E]" />
+                    </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Completed</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8]">Completed</div>
+                      <div className="text-[16px] text-[#111827] dark:text-[#F1F5F9]">
                         {formatDateTime(file.complate_date)}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {!file.start_date && !file.complate_date && (
+                  <div className="text-[14px] text-[#6B7280] dark:text-[#94A3B8] italic">
+                    No execution dates recorded yet
                   </div>
                 )}
               </div>
@@ -119,27 +135,31 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
 
             {/* Schedule Information */}
             {(file.schedule_start_date || file.schedule_complate_date) && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Schedule</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="mt-[16px] p-[16px] bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px]">
+                <h4 className="text-[18px] font-semibold text-[#111827] dark:text-[#F1F5F9] mb-[16px] leading-[1.2]">Schedule</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
                   {file.schedule_start_date && (
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-blue-600" />
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-[#EFF6FF] dark:bg-blue-900/30 p-2 rounded-lg">
+                        <Clock className="w-[20px] h-[20px] text-[#2563EB] dark:text-[#3B82F6]" />
+                      </div>
                       <div>
-                        <div className="font-medium text-blue-800 dark:text-blue-200">Scheduled Start</div>
-                        <div className="text-blue-600 dark:text-blue-300">
+                        <div className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8]">Scheduled Start</div>
+                        <div className="text-[16px] text-[#111827] dark:text-[#F1F5F9]">
                           {formatDateTime(file.schedule_start_date)}
                         </div>
                       </div>
                     </div>
                   )}
-                  
+
                   {file.schedule_complate_date && (
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-blue-600" />
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-[#EFF6FF] dark:bg-blue-900/30 p-2 rounded-lg">
+                        <Clock className="w-[20px] h-[20px] text-[#2563EB] dark:text-[#3B82F6]" />
+                      </div>
                       <div>
-                        <div className="font-medium text-blue-800 dark:text-blue-200">Scheduled Completion</div>
-                        <div className="text-blue-600 dark:text-blue-300">
+                        <div className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8]">Scheduled Completion</div>
+                        <div className="text-[16px] text-[#111827] dark:text-[#F1F5F9]">
                           {formatDateTime(file.schedule_complate_date)}
                         </div>
                       </div>
@@ -152,43 +172,45 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
 
           {/* Preview Image */}
           <Section title="Design Preview">
-            <div className="bg-gray-50 dark:bg-zinc-700 rounded-lg p-4">
+            <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
               <img
                 src={file.image}
                 alt="Cutting preview"
-                className="w-full max-w-2xl h-64 object-contain mx-auto"
+                className="w-full h-auto max-h-64 object-contain mx-auto rounded-[8px]"
               />
             </div>
           </Section>
 
           {/* Material Information */}
           <Section title="Material Information">
-            <InfoRow label="Material" value={file.on.material_name} />
-            <InfoRow label="Code" value={file.on.code.toString()} />
-            <InfoRow label="Inventory" value={file.on.inventory_name} />
-            <InfoRow 
-              label="Size" 
-              value={`${file.on.current_width} x ${file.on.current_height}`} 
-            />
-            <InfoRow 
-              label="Status" 
-              value={
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  file.on.finished 
-                    ? 'bg-red-100 text-red-800'
+            <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
+              <InfoRow label="Material" value={file.on.material_name} />
+              <InfoRow label="Code" value={file.on.code.toString()} />
+              <InfoRow label="Inventory" value={file.on.inventory_name} />
+              <InfoRow
+                label="Size"
+                value={`${file.on.current_width} x ${file.on.current_height}`}
+              />
+              <InfoRow
+                label="Status"
+                value={
+                  <span className={`px-2 py-1 rounded-[8px] text-[14px] font-medium ${file.on.finished
+                    ? 'bg-[#FEF2F2] dark:bg-red-900/30 text-[#DC2626] dark:text-[#EF4444]'
                     : file.on.started
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {file.on.finished ? 'Finished' : file.on.started ? 'In Progress' : 'Available'}
-                </span>
-              } 
-            />
+                      ? 'bg-[#FEF3C7] dark:bg-amber-900/30 text-[#F59E0B] dark:text-[#FBBF24]'
+                      : 'bg-[#DCFCE7] dark:bg-green-900/30 text-[#16A34A] dark:text-[#22C55E]'
+                    }`}>
+                    {file.on.finished ? 'Finished' : file.on.started ? 'In Progress' : 'Available'}
+                  </span>
+                }
+                isLast={true}
+              />
+            </div>
           </Section>
 
           {/* Connected Orders */}
           <Section title={`Connected Orders (${file.orders.length})`}>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
               {file.orders.map((order) => (
                 <OrderCard key={order.order_code} order={order} />
               ))}
@@ -197,11 +219,11 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
 
           {/* File Information */}
           <Section title="File Information">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
               <InfoRow label="File Name" value={fileName} />
               <InfoRow label="Created Date" value={new Date(file.date).toLocaleDateString()} />
               <InfoRow label="Total Orders" value={file.orders.length.toString()} />
-              <InfoRow label="File Status" value={getStatusBadge(file.status)} />
+              <InfoRow label="File Status" value={getStatusBadge(file.status)} isLast={true} />
             </div>
           </Section>
         </div>
@@ -212,68 +234,93 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
 
 // Helper Components
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div>
-    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{title}</h3>
+  <div className="w-full">
+    <h3 className="text-[18px] font-semibold text-[#111827] dark:text-[#F1F5F9] mb-[16px] leading-[1.2]">{title}</h3>
     {children}
   </div>
 );
 
-const InfoRow = ({ label, value }: { label: string; value: any }) => (
-  <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-zinc-700 last:border-b-0">
-    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
-    <span className="text-sm text-gray-900 dark:text-white">{value}</span>
+const InfoRow = ({ label, value, isLast = false }: { label: string; value: React.ReactNode; isLast?: boolean }) => (
+  <div className={`flex items-center justify-between py-[16px] ${!isLast ? 'border-b border-[#E5E7EB] dark:border-[#334155]' : ''}`}>
+    <span className="text-[14px] text-[#6B7280] dark:text-[#94A3B8]">{label}</span>
+    <span className="text-[16px] font-medium text-[#111827] dark:text-[#F1F5F9]">{value}</span>
   </div>
 );
 
 const OrderCard = ({ order }: { order: any }) => {
-  const bom = order.boms[0];
-  
+  const bom = order.boms && order.boms.length > 0 ? order.boms[0] : null;
+
+  // Custom display name according to the priority instruction logic
+  // 1: order.order_name
+  // 2: order.mockup?.name 
+  // 3: mockup_modification.name (or nested appropriately)
+  const displayOrderName = order.order_name
+    || order.mockup?.name
+    || order.mockup_modification?.name
+    || order.mockup_modification?.mockup?.name
+    || `Order #${order.order_code}`;
+
   return (
-    <div className="bg-gray-50 dark:bg-zinc-700 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <Package className="w-4 h-4 text-blue-600" />
-          <span className="font-semibold text-gray-900 dark:text-white">
-            ORD-{order.order_code}
-          </span>
-        </div>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          order.order_status === 'PRE-ACCEPTED' 
-            ? 'bg-yellow-100 text-yellow-800'
-            : order.order_status === 'PRE-CONFIRMED'
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-gray-100 text-gray-800'
-        }`}>
-          {order.order_status.replace('-', ' ')}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div className="flex items-center space-x-2">
-          <Ruler className="w-4 h-4 text-gray-500" />
-          <span className="text-gray-600 dark:text-gray-400">Size:</span>
-          <span className="text-gray-900 dark:text-white">
-            {bom.width} x {bom.height}
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <DollarSign className="w-4 h-4 text-gray-500" />
-          <span className="text-gray-600 dark:text-gray-400">Price:</span>
-          <span className="text-gray-900 dark:text-white">
-            ${order.price || '0'}
-          </span>
-        </div>
-      </div>
-
-      {order.mockup?.mockup_image && (
-        <div className="mt-3">
+    <div className="bg-[#FFFFFF] dark:bg-[#1E293B] rounded-[12px] p-[16px] border border-[#E5E7EB] dark:border-[#334155] flex flex-col h-full">
+      {/* 1. Display Image */}
+      {order?.mockup_image ? (
+        <div className="w-full aspect-video rounded-[8px] overflow-hidden bg-[#F9FAFB] dark:bg-[#0F172A] mb-[16px] border border-[#E5E7EB] dark:border-[#334155]">
           <img
-            src={order.mockup.mockup_image}
+            src={order.mockup_image}
             alt="Order mockup"
-            className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+            className="w-full h-full object-cover"
           />
         </div>
+      ) : (
+        <div className="w-full aspect-video rounded-[8px] overflow-hidden bg-[#F9FAFB] dark:bg-[#0F172A] mb-[16px] border border-[#E5E7EB] dark:border-[#334155] flex items-center justify-center">
+          <Package className="w-[32px] h-[32px] text-[#6B7280] dark:text-[#94A3B8] opacity-50" />
+        </div>
       )}
+
+      <div className="flex-grow flex flex-col">
+        {/* Order Name and Selection */}
+        <div className="flex items-start justify-between mb-[16px] gap-[8px]">
+          <div className="flex flex-col">
+            <span className="text-[16px] font-semibold text-[#111827] dark:text-[#F1F5F9] line-clamp-2 leading-[1.2]">
+              {displayOrderName}
+            </span>
+            <span className="text-[14px] text-[#6B7280] dark:text-[#94A3B8] mt-1">
+              ORD-{order.order_code}
+            </span>
+          </div>
+          <span className={`shrink-0 px-2 py-1 rounded-[8px] text-[12px] font-medium border ${order.order_status === 'PRE-ACCEPTED'
+            ? 'bg-[#FEF3C7] dark:bg-amber-900/30 text-[#F59E0B] dark:text-[#FBBF24] border-amber-200 dark:border-amber-800/50'
+            : order.order_status === 'PRE-CONFIRMED'
+              ? 'bg-[#EFF6FF] dark:bg-blue-900/30 text-[#2563EB] dark:text-[#3B82F6] border-blue-200 dark:border-blue-800/50'
+              : 'bg-[#F9FAFB] dark:bg-slate-800 text-[#6B7280] dark:text-[#94A3B8] border-gray-200 dark:border-slate-700'
+            }`}>
+            {order.order_status?.replace(/-/g, ' ')}
+          </span>
+        </div>
+
+        {/* Details Bottom */}
+        <div className="grid grid-cols-2 gap-[16px] text-[14px] mt-auto pt-[16px] border-t border-[#E5E7EB] dark:border-[#334155]">
+          <div className="flex flex-col">
+            <div className="flex items-center space-x-2 text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">
+              <Ruler className="w-[16px] h-[16px]" />
+              <span>Size</span>
+            </div>
+            <span className="text-[#111827] dark:text-[#F1F5F9] font-medium">
+              {bom ? `${bom.width} x ${bom.height}` : 'N/A'}
+            </span>
+          </div>
+
+          <div className="flex flex-col">
+            <div className="flex items-center space-x-2 text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">
+              <DollarSign className="w-[16px] h-[16px]" />
+              <span>Price</span>
+            </div>
+            <span className="text-[#111827] dark:text-[#F1F5F9] font-medium">
+              ${order.price?.toLocaleString() || '0'}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -267,12 +267,7 @@ const StartTaskOverlay = ({
 
       const response = await api.post(
         `/api/cuttingfiles/${cuttingFileId}/start/`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        formData
       );
 
       onSuccess();
@@ -295,12 +290,7 @@ const StartTaskOverlay = ({
 
       const response = await api.post(
         `/api/cuttingfiles/${cuttingFileId}/start/`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        formData
       );
 
       onSuccess();
