@@ -5,7 +5,7 @@ import { LoadingScreen } from '@/Components/AuthComponents/LoadingScreen'
 import { ErrorScreen } from '@/Components/AuthComponents/ErrorScreen'
 import { Navigation } from '@/Components/Navigation/Navigation'
 import { useState,useEffect } from 'react'
-
+ 
 export default function Home() {
   const { userData, loading, error, retryAuth } = useTelegramAuth()
   const [selectedRole, setSelectedRole] = useState<string | null>(null)

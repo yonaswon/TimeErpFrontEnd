@@ -262,12 +262,10 @@ const StartTaskOverlay = ({
       setLoading(true);
       setError(null);
 
-      const formData = new FormData();
-      // Send empty form data to trigger start without file updates
-
+      // Send plain JSON body (not empty FormData) to avoid multipart parsing issues
       const response = await api.post(
         `/api/cuttingfiles/${cuttingFileId}/start/`,
-        formData
+        {}
       );
 
       onSuccess();
