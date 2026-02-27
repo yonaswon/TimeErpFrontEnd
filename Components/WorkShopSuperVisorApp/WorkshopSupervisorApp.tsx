@@ -17,6 +17,7 @@ import {
 import { TasksContent } from './Tasks/TaskContent'
 import { ReleaseHistory } from '../StockManager/TransferContent/ReleaseHistory'
 import api from '@/api'
+import { GlobalProfile } from '../GlobalComponents/GlobalProfile/GlobalProfile'
 
 type TabType = 'overview' | 'tasks' | 'releases' | 'profile'
 
@@ -61,7 +62,7 @@ const WorkshopSupervisorApp = ({ userData, selectedRole, onRoleSelect }: any) =>
       case 'releases':
         return <div className="pt-2"><ReleaseHistory /></div>
       case 'profile':
-        return <ProfileContent
+        return <GlobalProfile
           user={user}
           userData={userData}
           selectedRole={selectedRole}
@@ -394,86 +395,4 @@ const OverviewContent = () => {
 }
 
 
-const ProfileContent = ({ user, userData, selectedRole, onRoleSelect }: any) => {
-  return (
-    <div className="flex flex-col items-center justify-center text-center mt-8 space-y-6">
-      {/* Logout Button */}
-      <button
-        onClick={() => {
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('user_data')
-
-          if (typeof window !== 'undefined' && window?.Telegram?.WebApp?.close) {
-            window.Telegram.WebApp.close()
-          } else {
-            window.location.reload()
-          }
-        }}
-        className="px-6 py-3 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-xl font-medium transition-all"
-      >
-        LOGOUT
-      </button>
-
-      {user ? (
-        <>
-          <img
-            src={`https://t.me/i/userpic/320/${user.username}.jpg`}
-            alt="Profile"
-            className="w-24 h-24 rounded-full border-2 border-blue-500"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://telegram.org/img/t_logo.png'
-            }}
-          />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {user.first_name} {user.last_name || ''}
-          </h2>
-          {user.username && (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">@{user.username}</p>
-          )}
-          <div className="p-4 bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 max-w-sm w-full">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Workshop Supervisor</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Manage workshop operations, assign tasks, and monitor production progress.
-            </p>
-          </div>
-        </>
-      ) : (
-        <p className="text-gray-500 dark:text-gray-400">
-          Unable to load Telegram user info.
-        </p>
-      )}
-
-      {/* Role Selection */}
-      <div className="border-t border-gray-200 dark:border-zinc-700 w-full max-w-sm pt-4">
-        <div className="px-4 py-2">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-            Select Role
-          </p>
-          {userData?.role && userData.role.length > 0 ? (
-            <div className="space-y-2">
-              {userData.role.map((r: any) => (
-                <button
-                  key={r.id}
-                  onClick={() => onRoleSelect(r.Name)}
-                  className={`w-full text-left flex items-center space-x-3 text-sm px-3 py-2.5 rounded-xl transition-colors ${selectedRole === r.Name
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800'
-                    : 'bg-gray-50 dark:bg-zinc-900 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-zinc-700'
-                    }`}
-                >
-                  <div className={`w-2.5 h-2.5 rounded-full ${selectedRole === r.Name ? 'bg-green-500' : 'bg-gray-400'
-                    }`}></div>
-                  <span className="font-medium">{r.Name}</span>
-                  {selectedRole === r.Name && <span className="text-xs ml-auto">✓</span>}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-              No roles assigned
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+// Removed local ProfileContent in favor of GlobalProfile
