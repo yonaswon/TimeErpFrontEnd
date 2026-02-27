@@ -1,13 +1,17 @@
 // CuttingFile.tsx
 import { useState, useEffect } from 'react';
-import { Download, Plus, FileText, Package, Calendar, Ruler, Edit,User,Play,CheckCircle } from 'lucide-react';
+import { Download, Plus, FileText, Package, Calendar, Ruler, Edit, User, Play, CheckCircle, Scissors, FileUp } from 'lucide-react';
 import { CuttingFile, CuttingFileResponse } from '@/types/cutting';
 import api from '@/api';
 import { CuttingFileDetailOverlay } from './CuttingFileDetailOverlay';
 import { CreateCuttingFileOverlay } from './CreateCuttingFileOverlay';
 import { EditCuttingFileOverlay } from './EditCuttingFileOverlay';
+import { DxfOrdersList } from './DxfOrdersList';
+
+type TopTab = 'cutting_files' | 'dxf_orders'
 
 export const CuttingFileComponent = () => {
+  const [activeTab, setActiveTab] = useState<TopTab>('cutting_files')
   const [cuttingFiles, setCuttingFiles] = useState<CuttingFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +42,8 @@ export const CuttingFileComponent = () => {
   }, []);
 
   const handleDownload = (fileUrl: string, fileName: string) => {
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.openLink(fileUrl);
+    if ((window as any).Telegram?.WebApp) {
+      (window as any).Telegram.WebApp.openLink(fileUrl);
     } else {
       const link = document.createElement('a');
       link.href = fileUrl;
@@ -55,130 +59,135 @@ export const CuttingFileComponent = () => {
     fetchCuttingFiles(page);
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-red-600 mb-4">
-          <FileText className="w-12 h-12 mx-auto mb-2" />
-          <p>{error}</p>
-        </div>
-        <button 
-          onClick={() => fetchCuttingFiles()} 
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Cutting Files</h2>
-          <p className="text-gray-600 dark:text-gray-400">Manage and view cutting files</p>
-        </div>
-        <button
-          onClick={() => setShowCreateOverlay(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Cutting File</span>
-        </button>
-      </div>
-
-      {cuttingFiles.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            No Cutting Files
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
-            Get started by creating your first cutting file
-          </p>
+    <div className="space-y-4">
+      {/* Top Navigation Tabs */}
+      <div className="sticky top-0 z-10 bg-gray-50 dark:bg-zinc-900 pb-2 -mx-4 px-4 pt-1">
+        <div className="flex bg-gray-100 dark:bg-zinc-800 rounded-xl p-1">
           <button
-            onClick={() => setShowCreateOverlay(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            onClick={() => setActiveTab('cutting_files')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'cutting_files'
+              ? 'bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
-            Create Cutting File
+            <Scissors className="w-4 h-4" />
+            Cutting Files
+          </button>
+          <button
+            onClick={() => setActiveTab('dxf_orders')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'dxf_orders'
+              ? 'bg-white dark:bg-zinc-700 text-purple-600 dark:text-purple-400 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
+          >
+            <FileUp className="w-4 h-4" />
+            DXF Orders
           </button>
         </div>
-      ) : (
+      </div>
+
+      {/* DXF Orders Tab */}
+      {activeTab === 'dxf_orders' && <DxfOrdersList />}
+
+      {/* Cutting Files Tab */}
+      {activeTab === 'cutting_files' && (
         <>
-          {/* Cutting Files Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cuttingFiles.map((file) => (
-              <CuttingFileCard
-                key={file.id}
-                file={file}
-                onViewDetails={() => setSelectedFile(file)}
-                onEdit={() => setEditingFile(file)}
-                onDownload={handleDownload}
-              />
-            ))}
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Cutting Files</h2>
+            <button
+              onClick={() => setShowCreateOverlay(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New
+            </button>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center space-x-2 mt-8">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 rounded-lg ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+          {cuttingFiles.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Cutting Files
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                Get started by creating your first cutting file
+              </p>
+              <button
+                onClick={() => setShowCreateOverlay(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Create Cutting File
+              </button>
             </div>
+          ) : (
+            <>
+              {/* Cutting Files Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cuttingFiles.map((file) => (
+                  <CuttingFileCard
+                    key={file.id}
+                    file={file}
+                    onViewDetails={() => setSelectedFile(file)}
+                    onEdit={() => setEditingFile(file)}
+                    onDownload={handleDownload}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center space-x-2 mt-8">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 rounded-lg ${currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Detail Overlay */}
+          {selectedFile && (
+            <CuttingFileDetailOverlay
+              file={selectedFile}
+              onClose={() => setSelectedFile(null)}
+              onDownload={handleDownload}
+            />
+          )}
+
+          {/* Create Overlay */}
+          {showCreateOverlay && (
+            <CreateCuttingFileOverlay
+              onClose={() => setShowCreateOverlay(false)}
+              onSuccess={() => {
+                setShowCreateOverlay(false);
+                fetchCuttingFiles();
+              }}
+            />
+          )}
+
+          {/* Edit Overlay */}
+          {editingFile && (
+            <EditCuttingFileOverlay
+              file={editingFile}
+              onClose={() => setEditingFile(null)}
+              onSuccess={() => {
+                setEditingFile(null);
+                fetchCuttingFiles();
+              }}
+            />
           )}
         </>
-      )}
-
-      {/* Detail Overlay */}
-      {selectedFile && (
-        <CuttingFileDetailOverlay
-          file={selectedFile}
-          onClose={() => setSelectedFile(null)}
-          onDownload={handleDownload}
-        />
-      )}
-
-      {/* Create Overlay */}
-      {showCreateOverlay && (
-        <CreateCuttingFileOverlay
-          onClose={() => setShowCreateOverlay(false)}
-          onSuccess={() => {
-            setShowCreateOverlay(false);
-            fetchCuttingFiles();
-          }}
-        />
-      )}
-
-      {/* Edit Overlay */}
-      {editingFile && (
-        <EditCuttingFileOverlay
-          file={editingFile}
-          onClose={() => setEditingFile(null)}
-          onSuccess={() => {
-            setEditingFile(null);
-            fetchCuttingFiles();
-          }}
-        />
       )}
     </div>
   );
@@ -192,7 +201,7 @@ interface CuttingFileCardProps {
 
 const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFileCardProps) => {
   const fileName = file.crv3d.split('/').pop() || 'file.crv3d';
-  
+
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDownload(file.crv3d, fileName);
@@ -210,7 +219,7 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
       'STARTED': { color: 'bg-yellow-100 text-yellow-800', label: 'Started' },
       'COMPLATED': { color: 'bg-green-100 text-green-800', label: 'Completed' }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['NOT-ASSIGNED'];
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
@@ -247,7 +256,7 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
             </button>
           </div>
         </div>
-        
+
         {/* Status and Assignment */}
         <div className="flex items-center justify-between mt-2">
           <div>
@@ -260,15 +269,32 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
             </div>
           )}
         </div>
-        
+
         {/* Material Info */}
-        <div className="mt-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {file.on.material_name} - {file.on.code}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-            Size: {file.on.current_width} x {file.on.current_height}
-          </p>
+        <div className="mt-2 text-left">
+          {file.on ? (
+            <>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {file.on.material_name} - {file.on.code}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Size: {file.on.current_width} x {file.on.current_height}
+              </p>
+            </>
+          ) : file.old_material && file.old_material_number ? (
+            <>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {file.old_material.name} - {file.old_material_number}
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                Unregistered Sheet
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Unknown Material
+            </p>
+          )}
         </div>
       </div>
 
@@ -296,13 +322,12 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
               <span className="text-gray-700 dark:text-gray-300 font-medium">
                 ORD-{order.order_code}
               </span>
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                order.order_status === 'PRE-ACCEPTED' 
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : order.order_status === 'PRE-CONFIRMED'
+              <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'PRE-ACCEPTED'
+                ? 'bg-yellow-100 text-yellow-800'
+                : order.order_status === 'PRE-CONFIRMED'
                   ? 'bg-blue-100 text-blue-800'
                   : 'bg-gray-100 text-gray-800'
-              }`}>
+                }`}>
                 {order.order_status.replace('-', ' ')}
               </span>
             </div>

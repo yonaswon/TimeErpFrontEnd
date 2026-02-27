@@ -76,6 +76,19 @@ export interface CuttingFile {
   orders: number[];
 }
 
+export interface DxfFile {
+  id: number;
+  dxf: string;
+  date: string;
+}
+
+export interface OrderDxfFile {
+  id: number;
+  order: number;
+  dxf_file: DxfFile[];
+  date: string;
+}
+
 export interface Order {
   order_code: number;
   boms: BomItem[];
@@ -96,6 +109,8 @@ export interface Order {
   rem_confirmed_date: string | null;
   created_at: string;
   design_type: number;
+  dxf_files?: OrderDxfFile[];
+  dxf_file_ready?: boolean;
 }
 
 export interface OrdersResponse {

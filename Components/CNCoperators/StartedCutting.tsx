@@ -105,7 +105,7 @@ export const StartedCutting = ({ viewMode }: { viewMode: TaskView }) => {
                 status="STARTED"
                 onAction={handleComplete}
                 isProcessing={
-                  completingTask === task.orders[0].cutting_files[0].id
+                  completingTask === task.id
                 }
               />
             ) : (
@@ -115,7 +115,7 @@ export const StartedCutting = ({ viewMode }: { viewMode: TaskView }) => {
                 status="STARTED"
                 onAction={handleComplete}
                 isProcessing={
-                  completingTask === task.orders[0].cutting_files[0].id
+                  completingTask === task.id
                 }
               />
             )

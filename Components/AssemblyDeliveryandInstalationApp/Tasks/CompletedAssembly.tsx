@@ -361,7 +361,7 @@ const CompletedAssemblyCard = ({
       </div>
 
       {/* Mockup Image Preview */}
-      {task.order.mockup.mockup_image && (
+      {task?.order?.mockup?.mockup_image && (
         <div className="mb-4">
           <h4 className="font-medium text-gray-900 dark:text-white mb-2">Design Preview</h4>
           <img

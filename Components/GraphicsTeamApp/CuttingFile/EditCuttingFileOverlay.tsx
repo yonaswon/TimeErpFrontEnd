@@ -17,7 +17,8 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
   const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [eachArealMaterials, setEachArealMaterials] = useState<EachArealMaterial[]>([]);
-  const [selectedEachArealMaterial, setSelectedEachArealMaterial] = useState<EachArealMaterial>(file.on);
+  const [selectedEachArealMaterial, setSelectedEachArealMaterial] = useState<EachArealMaterial | null>(file.on);
+  const [oldMaterialNumber, setOldMaterialNumber] = useState<string>(file.old_material_number || '');
   const [newCrv3dFile, setNewCrv3dFile] = useState<File | null>(null);
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,10 +36,11 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
         setLoadingStates(prev => ({ ...prev, materials: true }));
         const response = await api.get('/materials/?type=A');
         setMaterials(response.data.results);
-        
+
         // Set the current material based on the file's eachArealMaterial
+        const currentMaterialId = file.on?.material || file.old_material?.id;
         const currentMaterial = response.data.results.find(
-          (m: Material) => m.id === file.on.material
+          (m: Material) => m.id === currentMaterialId
         );
         setSelectedMaterial(currentMaterial || null);
       } catch (err) {
@@ -49,7 +51,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
     };
 
     fetchMaterials();
-  }, [file.on.material]);
+  }, [file.on, file.old_material]);
 
   // Fetch each areal materials when material is selected or changes
   useEffect(() => {
@@ -61,12 +63,12 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
             `/each-areal-materials/?finished=false&material=${selectedMaterial.id}&ordering=-date`
           );
           setEachArealMaterials(response.data);
-          
+
           // Try to maintain the current selection or select the first available
           const currentEam = response.data.find(
-            (eam: EachArealMaterial) => eam.id === file.on.id
+            (eam: EachArealMaterial) => eam.id === file.on?.id
           );
-          setSelectedEachArealMaterial(currentEam || response.data[0] || null);
+          setSelectedEachArealMaterial(currentEam || (!file.old_material_number && response.data.length > 0 ? response.data[0] : null));
         } catch (err) {
           setError('Failed to fetch material sheets');
         } finally {
@@ -75,7 +77,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
       };
       fetchEachArealMaterials();
     }
-  }, [selectedMaterial, file.on.id]);
+  }, [selectedMaterial, file.on, file.old_material_number]);
 
   // Fetch orders when material changes
   useEffect(() => {
@@ -136,8 +138,8 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
   };
 
   const handleSubmit = async () => {
-    if (!selectedEachArealMaterial || selectedOrders.length === 0) {
-      setError('Please select a material sheet and at least one order');
+    if ((!selectedEachArealMaterial && oldMaterialNumber.trim() === '') || selectedOrders.length === 0) {
+      setError('Please select a material sheet or provide an old material number, and at least one order');
       return;
     }
 
@@ -146,7 +148,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
       setError(null);
 
       const formData = new FormData();
-      
+
       // Add files if they were changed
       if (newCrv3dFile) {
         formData.append('crv3d', newCrv3dFile);
@@ -154,9 +156,21 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
       if (newImageFile) {
         formData.append('image', newImageFile);
       }
-      
+
       // Add other data
-      formData.append('on', selectedEachArealMaterial.id.toString());
+      if (selectedEachArealMaterial) {
+        formData.append('on', selectedEachArealMaterial.id.toString());
+      } else {
+        formData.append('on', '');
+      }
+
+      if (oldMaterialNumber.trim() !== '' && selectedMaterial) {
+        formData.append('old_material_number', oldMaterialNumber.trim());
+        formData.append('old_material', selectedMaterial.id.toString());
+      } else {
+        formData.append('old_material_number', '');
+      }
+
       selectedOrders.forEach(orderCode => {
         formData.append('orders', orderCode.toString());
       });
@@ -183,7 +197,8 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
     return (
       newCrv3dFile !== null ||
       newImageFile !== null ||
-      selectedEachArealMaterial.id !== file.on.id ||
+      selectedEachArealMaterial?.id !== file.on?.id ||
+      oldMaterialNumber !== (file.old_material_number || '') ||
       JSON.stringify(selectedOrders.sort()) !== JSON.stringify(file.orders.map(o => o.order_code).sort())
     );
   };
@@ -297,11 +312,10 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
                   <button
                     key={material.id}
                     onClick={() => handleMaterialChange(material)}
-                    className={`p-4 text-left rounded-lg border transition-colors ${
-                      selectedMaterial?.id === material.id
-                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-zinc-700 hover:border-blue-600'
-                    }`}
+                    className={`p-4 text-left rounded-lg border transition-colors ${selectedMaterial?.id === material.id
+                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-zinc-700 hover:border-blue-600'
+                      }`}
                   >
                     <div className="font-medium text-gray-900 dark:text-white">
                       {material.name}
@@ -309,7 +323,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
                     <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                       Available: {material.available} | Size: {material.width}x{material.height}
                     </div>
-                    {material.id === file.on.material && (
+                    {material.id === (file.on?.material || file.old_material?.id) && (
                       <div className="text-xs text-blue-600 mt-1">Current Material</div>
                     )}
                   </button>
@@ -319,56 +333,90 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
           </div>
 
           {/* Material Sheet Selection */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Material Sheet
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Old Material Number
               </h3>
-              {loadingStates.eachArealMaterials && (
-                <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
-              )}
+              <input
+                type="text"
+                placeholder="Enter Old Material Number"
+                value={oldMaterialNumber}
+                onChange={(e) => {
+                  setOldMaterialNumber(e.target.value);
+                  if (e.target.value.trim() !== '') {
+                    setSelectedEachArealMaterial(null);
+                  }
+                }}
+                className="w-full h-[44px] px-4 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
+              />
             </div>
-            {loadingStates.eachArealMaterials ? (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-gray-200 dark:border-zinc-700"></div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {eachArealMaterials && eachArealMaterials.map((eam) => (
-                  <label
-                    key={eam.id}
-                    className="flex items-start space-x-3 p-4 rounded-lg border border-gray-200 dark:border-zinc-700 hover:border-blue-600 cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="eachArealMaterial"
-                      checked={selectedEachArealMaterial?.id === eam.id}
-                      onChange={() => setSelectedEachArealMaterial(eam)}
-                      className="mt-1 text-blue-600"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {eam.code} - {eam.material_name}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Size: {eam.current_width}x{eam.current_height} | 
-                        Status: {eam.finished ? 'Finished' : eam.started ? 'In Progress' : 'Available'}
-                        {eam.id === file.on.id && (
-                          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                            Current
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </label>
-                ))}
-                {eachArealMaterials && eachArealMaterials.length === 0 && selectedMaterial && (
-                  <div className="col-span-2 text-center py-8 text-gray-500">
-                    No available material sheets found for {selectedMaterial.name}
-                  </div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  OR
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Material Sheet
+                </h3>
+                {loadingStates.eachArealMaterials && (
+                  <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
                 )}
               </div>
-            )}
+              {loadingStates.eachArealMaterials ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {eachArealMaterials && eachArealMaterials.map((eam) => (
+                    <label
+                      key={eam.id}
+                      className="flex items-start space-x-3 p-4 rounded-lg border border-gray-200 dark:border-zinc-700 hover:border-blue-600 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="radio"
+                        name="eachArealMaterial"
+                        checked={selectedEachArealMaterial?.id === eam.id}
+                        onChange={() => {
+                          setSelectedEachArealMaterial(eam);
+                          setOldMaterialNumber('');
+                        }}
+                        className="mt-1 text-blue-600"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {eam.code} - {eam.material_name}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          Size: {eam.current_width}x{eam.current_height} |
+                          Status: {eam.finished ? 'Finished' : eam.started ? 'In Progress' : 'Available'}
+                          {eam.id === file.on?.id && (
+                            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                  {eachArealMaterials && eachArealMaterials.length === 0 && selectedMaterial && (
+                    <div className="col-span-2 text-center py-8 text-gray-500">
+                      No available material sheets found for {selectedMaterial.name}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Order Selection */}
@@ -401,7 +449,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
                 {availableOrders.map((order) => {
                   const bom = order.boms[0];
                   const isCurrent = isOrderCurrentlyConnected(order.order_code);
-                  
+
                   return (
                     <label
                       key={order.order_code}
@@ -426,16 +474,15 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
                               </span>
                             )}
                           </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            order.order_status === 'PRE-ACCEPTED' 
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${order.order_status === 'PRE-ACCEPTED'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-blue-100 text-blue-800'
+                            }`}>
                             {order.order_status.replace('-', ' ')}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          Size: {bom.width} x {bom.height} | 
+                          Size: {bom.width} x {bom.height} |
                           Price: ${order.price || '0'}
                         </div>
                         {order.mockup?.mockup_image && (
@@ -471,7 +518,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
                 <span className="font-medium">Created:</span> {new Date(file.date).toLocaleDateString()}
               </div>
               <div>
-                <span className="font-medium">Original Material:</span> {file.on.material_name} - {file.on.code}
+                <span className="font-medium">Original Material:</span> {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
               </div>
               <div>
                 <span className="font-medium">Original Orders:</span> {file.orders.length}
@@ -490,7 +537,7 @@ export const EditCuttingFileOverlay = ({ file, onClose, onSuccess }: EditCutting
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !hasChanges() || selectedOrders.length === 0 || !selectedEachArealMaterial}
+            disabled={loading || !hasChanges() || selectedOrders.length === 0 || (!selectedEachArealMaterial && oldMaterialNumber.trim() === '')}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (

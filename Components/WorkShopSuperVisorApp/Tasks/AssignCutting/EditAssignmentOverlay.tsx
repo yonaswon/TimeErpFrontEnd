@@ -107,7 +107,7 @@ export const EditAssignmentOverlay = ({ file, onClose, onSuccess }: EditAssignme
                 {file.crv3d.split('/').pop()}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {file.orders.length} order(s) • {file.on.material_name}
+                {file.orders.length} order(s) • {file.on ? file.on.material_name : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
               </p>
             </div>
 

@@ -17,6 +17,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [eachArealMaterials, setEachArealMaterials] = useState<EachArealMaterial[]>([]);
   const [selectedEachArealMaterial, setSelectedEachArealMaterial] = useState<EachArealMaterial | null>(null);
+  const [oldMaterialNumber, setOldMaterialNumber] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,9 +63,9 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
     }
   }, [selectedMaterial]);
 
-  // Fetch orders when each areal material is selected
+  // Fetch orders when each areal material or old material number is selected
   useEffect(() => {
-    if (selectedEachArealMaterial && selectedMaterial) {
+    if ((selectedEachArealMaterial || oldMaterialNumber.trim() !== '') && selectedMaterial) {
       const fetchOrders = async () => {
         try {
           setLoadingStates(prev => ({ ...prev, orders: true }));
@@ -79,7 +80,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
       };
       fetchOrders();
     }
-  }, [selectedEachArealMaterial, selectedMaterial]);
+  }, [selectedEachArealMaterial, oldMaterialNumber, selectedMaterial]);
 
   const handleCrv3dFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -115,7 +116,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
   };
 
   const handleSubmit = async () => {
-    if (!crv3dFile || !imageFile || !selectedEachArealMaterial || selectedOrders.length === 0) {
+    if (!crv3dFile || !imageFile || (!selectedEachArealMaterial && oldMaterialNumber.trim() === '') || selectedOrders.length === 0) {
       setError('Please fill all required fields');
       return;
     }
@@ -127,7 +128,16 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
       const formData = new FormData();
       formData.append('crv3d', crv3dFile);
       formData.append('image', imageFile);
-      formData.append('on', selectedEachArealMaterial.id.toString());
+
+      if (selectedEachArealMaterial) {
+        formData.append('on', selectedEachArealMaterial.id.toString());
+      }
+
+      if (oldMaterialNumber.trim() !== '' && selectedMaterial) {
+        formData.append('old_material_number', oldMaterialNumber.trim());
+        formData.append('old_material', selectedMaterial.id.toString());
+      }
+
       selectedOrders.forEach(orderCode => {
         formData.append('orders', orderCode.toString());
       });
@@ -150,7 +160,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
     switch (step) {
       case 1: return crv3dFile !== null && imageFile !== null;
       case 2: return selectedMaterial !== null;
-      case 3: return selectedEachArealMaterial !== null;
+      case 3: return selectedEachArealMaterial !== null || oldMaterialNumber.trim() !== '';
       case 4: return selectedOrders.length > 0;
       default: return false;
     }
@@ -177,17 +187,15 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
           <div className="flex items-center justify-between">
             {[1, 2, 3, 4].map((stepNum) => (
               <div key={stepNum} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step >= stepNum
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-600 dark:bg-zinc-700 dark:text-gray-400'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNum
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-600 dark:bg-zinc-700 dark:text-gray-400'
+                  }`}>
                   {stepNum}
                 </div>
                 {stepNum < 4 && (
-                  <div className={`w-12 h-1 mx-2 ${
-                    step > stepNum ? 'bg-blue-600' : 'bg-gray-200 dark:bg-zinc-700'
-                  }`} />
+                  <div className={`w-12 h-1 mx-2 ${step > stepNum ? 'bg-blue-600' : 'bg-gray-200 dark:bg-zinc-700'
+                    }`} />
                 )}
               </div>
             ))}
@@ -288,11 +296,10 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                     <button
                       key={material.id}
                       onClick={() => setSelectedMaterial(material)}
-                      className={`p-4 text-left rounded-lg border transition-colors ${
-                        selectedMaterial?.id === material.id
-                          ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-zinc-700 hover:border-blue-600'
-                      }`}
+                      className={`p-4 text-left rounded-lg border transition-colors ${selectedMaterial?.id === material.id
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-zinc-700 hover:border-blue-600'
+                        }`}
                     >
                       <div className="font-medium text-gray-900 dark:text-white">
                         {material.name}
@@ -308,45 +315,85 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
           )}
           {/* Step 3: Each Areal Material Selection */}
           {step === 3 && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                Select Material Sheet
-              </h3>
-              {loadingStates.eachArealMaterials ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Old Material
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Enter an old material ID if the material is not registered in the system.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Enter Old Material Number"
+                  value={oldMaterialNumber}
+                  onChange={(e) => {
+                    setOldMaterialNumber(e.target.value);
+                    if (e.target.value.trim() !== '') {
+                      setSelectedEachArealMaterial(null);
+                    }
+                  }}
+                  className="w-full h-[44px] px-4 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-200 dark:border-zinc-700"></div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {eachArealMaterials && eachArealMaterials.map((eam) => (
-                    <button
-                      key={eam.id}
-                      onClick={() => setSelectedEachArealMaterial(eam)}
-                      className={`p-4 text-left rounded-lg border transition-colors ${
-                        selectedEachArealMaterial?.id === eam.id
+                <div className="relative flex justify-center">
+                  <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    OR
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Select Registered Material Sheet
+                </h3>
+                {loadingStates.eachArealMaterials ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {eachArealMaterials && eachArealMaterials.length > 0 ? eachArealMaterials.map((eam) => (
+                      <button
+                        key={eam.id}
+                        onClick={() => {
+                          setSelectedEachArealMaterial(eam);
+                          setOldMaterialNumber('');
+                        }}
+                        className={`p-4 text-left rounded-lg border transition-colors ${selectedEachArealMaterial?.id === eam.id
                           ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
                           : 'border-gray-200 dark:border-zinc-700 hover:border-blue-600'
-                      }`}
-                    >
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {eam.code} - {eam.material_name}
+                          }`}
+                      >
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {eam.code} - {eam.material_name}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          Current Size: {eam.current_width}x{eam.current_height} |
+                          Status: <span className={
+                            eam.finished
+                              ? 'text-green-600 font-medium'
+                              : eam.started
+                                ? 'text-amber-600 font-medium'
+                                : 'text-blue-600 font-medium'
+                          }>
+                            {eam.finished ? 'Finished' : eam.started ? 'Started' : 'Available'}
+                          </span>
+                        </div>
+                      </button>
+                    )) : (
+                      <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400 border border-dashed border-gray-200 dark:border-zinc-700 rounded-lg">
+                        No material sheets available for the selected material.
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Current Size: {eam.current_width}x{eam.current_height} | 
-                        Status: <span className={
-                          eam.finished 
-                            ? 'text-green-600 font-medium' 
-                            : eam.started 
-                              ? 'text-amber-600 font-medium' 
-                              : 'text-blue-600 font-medium'
-                        }>
-                          {eam.finished ? 'Finished' : eam.started ? 'Started' : 'Available'}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -380,18 +427,17 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                             <span className="font-medium text-gray-900 dark:text-white">
                               ORD-{order.order_code}
                             </span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              order.order_status === 'PRE-ACCEPTED' 
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'PRE-ACCEPTED'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-blue-100 text-blue-800'
+                              }`}>
                               {order.order_status.replace('-', ' ')}
                             </span>
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                             Size: {bom.width} x {bom.height}
                           </div>
-                          
+
                           {/* Mockup Image */}
                           {(order.mockup_image || order.mockup_modification?.mockup_image || order.mockup?.mockup_image) && (
                             <img
@@ -401,7 +447,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                             />
                           )}
 
-                         
+
 
                           {/* Related Cutting Files */}
                           {order.cutting_files && order.cutting_files.length > 0 && (
@@ -411,11 +457,11 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                               </div>
                               <div className="space-y-1">
                                 {order.cutting_files.map(cf => (
-                                  <div 
-                                    key={cf.id} 
+                                  <div
+                                    key={cf.id}
                                     className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800 p-1.5 rounded border border-gray-100 dark:border-zinc-700"
                                   >
-                                    {cf.on.material_name} - Code: {cf.on.code}
+                                    {cf.on ? `${cf.on.material_name} - Code: ${cf.on.code}` : cf.old_material ? `${cf.old_material.name} - ${cf.old_material_number}` : 'Unknown Material'}
                                   </div>
                                 ))}
                               </div>

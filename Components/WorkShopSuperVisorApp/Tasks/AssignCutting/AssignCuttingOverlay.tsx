@@ -15,7 +15,9 @@ import api from "@/api";
 interface CuttingFile {
   id: number;
   orders: Order[];
-  on: EachArealMaterial;
+  on: EachArealMaterial | null;
+  old_material_number: string | null;
+  old_material: { id: number; name: string } | null;
   crv3d: string;
   image: string;
   status: string;
@@ -126,12 +128,12 @@ export const AssignCuttingOverlay = ({
     }
   };
 
-  // Check if all orders in a cutting file are pre-confirmed
-  const areAllOrdersPreConfirmed = (file: CuttingFile) => {
-    return file.orders.every((order) => order.order_status === "PRE-CONFIRMED");
+  // Check if all orders in a cutting file have payment confirmed (any status beyond PRE-ACCEPTED)
+  const areAllOrdersPaymentConfirmed = (file: CuttingFile) => {
+    return file.orders.every((order) => order.order_status !== "PRE-ACCEPTED");
   };
 
-  // Check if any order is still pre-accepted
+  // Check if any order is still pre-accepted (payment pending)
   const hasPreAcceptedOrders = (file: CuttingFile) => {
     return file.orders.some((order) => order.order_status === "PRE-ACCEPTED");
   };
@@ -194,10 +196,6 @@ export const AssignCuttingOverlay = ({
     return now.toISOString().slice(0, 16);
   };
 
-  // Filter files that are ready for assignment (all orders pre-confirmed)
-  const readyForAssignmentFiles = cuttingFiles.filter(areAllOrdersPreConfirmed);
-  const pendingPaymentFiles = cuttingFiles.filter(hasPreAcceptedOrders);
-
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -223,7 +221,7 @@ export const AssignCuttingOverlay = ({
                 Assign Cutting Tasks
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Assign CNC cutting tasks to operators
+                {cuttingFiles.length} unassigned cutting file(s)
               </p>
             </div>
           </div>
@@ -251,232 +249,202 @@ export const AssignCuttingOverlay = ({
             </div>
           )}
 
-          {/* Pending Payment Warning */}
-          {pendingPaymentFiles.length > 0 && (
-            <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-6">
-              <Lock className="w-5 h-5 text-yellow-600 mt-0.5 shrink-0" />
-              <div>
-                <h4 className="font-medium text-yellow-800 mb-1">
-                  Awaiting Payment Confirmation
-                </h4>
-                <p className="text-yellow-700 text-sm">
-                  {pendingPaymentFiles.length} cutting file(s) cannot be
-                  assigned yet. Please come back when the admin approves payment
-                  for all orders. All orders must be{" "}
-                  <span className="font-semibold">PRE-CONFIRMED</span> before
-                  assignment.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {readyForAssignmentFiles.length === 0 ? (
+          {cuttingFiles.length === 0 ? (
             <div className="text-center py-8">
-              {cuttingFiles.length === 0 ? (
-                <>
-                  <Scissors className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    No Unassigned Cutting Files
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    All cutting files have been assigned to operators.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Lock className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Awaiting Payment Confirmation
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    All available cutting files have orders pending payment
-                    approval.
-                  </p>
-                  <button
-                    onClick={onClose}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Come Back Later
-                  </button>
-                </>
-              )}
+              <Scissors className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Unassigned Cutting Files
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                All cutting files have been assigned to operators.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {readyForAssignmentFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="bg-gray-50 dark:bg-zinc-700 rounded-lg p-4 border border-gray-200 dark:border-zinc-600"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    {/* File Preview */}
-                    <div className="shrink-0">
-                      <img
-                        src={file.image}
-                        alt="Cutting preview"
-                        className="w-24 h-24 object-cover rounded-lg border border-gray-300"
-                      />
-                    </div>
-
-                    {/* File Information */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">
-                            {file.crv3d.split("/").pop()}
-                          </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {file.on.material_name} - {file.on.code}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end space-y-1">
-                          <span className="px-2 py-1 bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-full text-xs">
-                            {file.orders.length} order(s)
-                          </span>
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                            Ready to Assign
-                          </span>
-                        </div>
+              {cuttingFiles.map((file) => {
+                const paymentPending = hasPreAcceptedOrders(file);
+                const canAssign = areAllOrdersPaymentConfirmed(file);
+                return (
+                  <div
+                    key={file.id}
+                    className={`bg-gray-50 dark:bg-zinc-700 rounded-lg p-4 border ${paymentPending ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-zinc-600'}`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start gap-4">
+                      {/* File Preview */}
+                      <div className="shrink-0">
+                        <img
+                          src={file.image}
+                          alt="Cutting preview"
+                          className="w-24 h-24 object-cover rounded-lg border border-gray-300"
+                        />
                       </div>
 
-                      {/* Orders List */}
-                      <div className="space-y-2 mb-3">
-                        {file.orders.map((order) => (
-                          <div
-                            key={order.order_code}
-                            className="flex items-center justify-between text-sm"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <Package className="w-3 h-3 text-blue-600" />
-                              <span className="text-gray-700 dark:text-gray-300">
-                                ORD-{order.order_code}
+                      {/* File Information */}
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">
+                              {file.crv3d.split("/").pop()}
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end space-y-1">
+                            <span className="px-2 py-1 bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-full text-xs">
+                              {file.orders.length} order(s)
+                            </span>
+                            {paymentPending ? (
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs flex items-center space-x-1">
+                                <Lock className="w-3 h-3" />
+                                <span>Payment Pending</span>
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                Ready to Assign
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Orders List */}
+                        <div className="space-y-2 mb-3">
+                          {file.orders.map((order) => (
+                            <div
+                              key={order.order_code}
+                              className="flex items-center justify-between text-sm"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <Package className="w-3 h-3 text-blue-600" />
+                                <span className="text-gray-700 dark:text-gray-300">
+                                  ORD-{order.order_code}
+                                </span>
+                              </div>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${order.order_status === "PRE-ACCEPTED"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-green-100 text-green-800"
+                                  }`}
+                              >
+                                {order.order_status.replace(/-/g, " ")}
                               </span>
                             </div>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                order.order_status === "PRE-CONFIRMED"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {order.order_status.replace("-", " ")}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Assignment Form */}
-                      {selectedFile?.id === file.id ? (
-                        <div className="space-y-3 p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-600">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {/* Team Member Selection */}
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Assign To *
-                              </label>
-                              <select
-                                value={selectedMember}
-                                onChange={(e) =>
-                                  setSelectedMember(e.target.value)
-                                }
-                                className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                              >
-                                <option value="">Select Operator</option>
-                                {teamMembers.map((member) => (
-                                  <option key={member.id} value={member.id}>
-                                    @{member.telegram_user_name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Schedule Start Date */}
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Schedule Start Date *
-                              </label>
-                              <input
-                                type="datetime-local"
-                                value={scheduleStartDate}
-                                onChange={(e) =>
-                                  setScheduleStartDate(e.target.value)
-                                }
-                                min={getMinDate()}
-                                className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                              />
-                              {scheduleStartDate && (
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                  {getRelativeDate(scheduleStartDate)}
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Schedule Complete Date */}
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Schedule Complete Date *
-                              </label>
-                              <input
-                                type="datetime-local"
-                                value={scheduleCompleteDate}
-                                onChange={(e) =>
-                                  setScheduleCompleteDate(e.target.value)
-                                }
-                                min={scheduleStartDate || getMinDate()}
-                                className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                              />
-                              {scheduleCompleteDate && (
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                  {getRelativeDate(scheduleCompleteDate)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex justify-end space-x-2">
-                            <button
-                              onClick={() => {
-                                setSelectedFile(null);
-                                setSelectedMember("");
-                                setScheduleStartDate("");
-                                setScheduleCompleteDate("");
-                              }}
-                              className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-600 rounded-lg transition-colors text-sm"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => handleAssign(file.id)}
-                              disabled={assigning}
-                              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                            >
-                              {assigning ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                                  <span>Assigning...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <User className="w-3 h-3" />
-                                  <span>Assign Task</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
+                          ))}
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => setSelectedFile(file)}
-                          className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          <User className="w-3 h-3" />
-                          <span>Assign Task</span>
-                        </button>
-                      )}
+
+                        {/* Assignment Form */}
+                        {selectedFile?.id === file.id ? (
+                          <div className="space-y-3 p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-600">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Team Member Selection */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Assign To *
+                                </label>
+                                <select
+                                  value={selectedMember}
+                                  onChange={(e) =>
+                                    setSelectedMember(e.target.value)
+                                  }
+                                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                                >
+                                  <option value="">Select Operator</option>
+                                  {teamMembers.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      @{member.telegram_user_name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* Schedule Start Date */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Schedule Start Date *
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={scheduleStartDate}
+                                  onChange={(e) =>
+                                    setScheduleStartDate(e.target.value)
+                                  }
+                                  min={getMinDate()}
+                                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                                />
+                                {scheduleStartDate && (
+                                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    {getRelativeDate(scheduleStartDate)}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Schedule Complete Date */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Schedule Complete Date *
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={scheduleCompleteDate}
+                                  onChange={(e) =>
+                                    setScheduleCompleteDate(e.target.value)
+                                  }
+                                  min={scheduleStartDate || getMinDate()}
+                                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                                />
+                                {scheduleCompleteDate && (
+                                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                    {getRelativeDate(scheduleCompleteDate)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedFile(null);
+                                  setSelectedMember("");
+                                  setScheduleStartDate("");
+                                  setScheduleCompleteDate("");
+                                }}
+                                className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-600 rounded-lg transition-colors text-sm"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleAssign(file.id)}
+                                disabled={assigning}
+                                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                              >
+                                {assigning ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                    <span>Assigning...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <User className="w-3 h-3" />
+                                    <span>Assign Task</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedFile(file)}
+                            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            <User className="w-3 h-3" />
+                            <span>Assign Task</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

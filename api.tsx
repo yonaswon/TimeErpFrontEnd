@@ -3,7 +3,8 @@ import axios from "axios";
 export const base_url = "https://timeerp.duckdns.org";
 // const base_url = "http://127.0.0.1:8000";
 
-// export const base_url = "https://explains-analysis-opponents-coated.trycloudflare.com";
+// export const base_url = "https://pipe-dishes-watches-switches.trycloudflare.com";
+
 
 
 const api = axios.create({

@@ -3,7 +3,9 @@
 export interface CuttingFile {
   id: number;
   orders: Order[];
-  on: EachArealMaterial;
+  on: EachArealMaterial | null;
+  old_material_number: string | null;
+  old_material: Material | null;
   crv3d: string;
   image: string;
   status: 'NOT-ASSIGNED' | 'ASSIGNED' | 'STARTED' | 'COMPLATED';
@@ -40,6 +42,8 @@ export interface Order {
   created_at: string;
   design_type: number;
   cutting_files: CuttingFile[];
+  dxf_files?: any[];
+  dxf_file_ready?: boolean;
 }
 
 export interface Bom {

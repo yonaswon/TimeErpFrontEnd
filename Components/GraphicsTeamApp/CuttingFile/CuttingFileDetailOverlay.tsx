@@ -184,27 +184,43 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
           {/* Material Information */}
           <Section title="Material Information">
             <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
-              <InfoRow label="Material" value={file.on.material_name} />
-              <InfoRow label="Code" value={file.on.code.toString()} />
-              <InfoRow label="Inventory" value={file.on.inventory_name} />
-              <InfoRow
-                label="Size"
-                value={`${file.on.current_width} x ${file.on.current_height}`}
-              />
-              <InfoRow
-                label="Status"
-                value={
-                  <span className={`px-2 py-1 rounded-[8px] text-[14px] font-medium ${file.on.finished
-                    ? 'bg-[#FEF2F2] dark:bg-red-900/30 text-[#DC2626] dark:text-[#EF4444]'
-                    : file.on.started
-                      ? 'bg-[#FEF3C7] dark:bg-amber-900/30 text-[#F59E0B] dark:text-[#FBBF24]'
-                      : 'bg-[#DCFCE7] dark:bg-green-900/30 text-[#16A34A] dark:text-[#22C55E]'
-                    }`}>
-                    {file.on.finished ? 'Finished' : file.on.started ? 'In Progress' : 'Available'}
-                  </span>
-                }
-                isLast={true}
-              />
+              {file.on ? (
+                <>
+                  <InfoRow label="Material" value={file.on.material_name} />
+                  <InfoRow label="Code" value={file.on.code.toString()} />
+                  <InfoRow label="Inventory" value={file.on.inventory_name} />
+                  <InfoRow
+                    label="Size"
+                    value={`${file.on.current_width} x ${file.on.current_height}`}
+                  />
+                  <InfoRow
+                    label="Status"
+                    value={
+                      <span className={`px-2 py-1 rounded-[8px] text-[14px] font-medium ${file.on.finished
+                        ? 'bg-[#FEF2F2] dark:bg-red-900/30 text-[#DC2626] dark:text-[#EF4444]'
+                        : file.on.started
+                          ? 'bg-[#FEF3C7] dark:bg-amber-900/30 text-[#F59E0B] dark:text-[#FBBF24]'
+                          : 'bg-[#DCFCE7] dark:bg-green-900/30 text-[#16A34A] dark:text-[#22C55E]'
+                        }`}>
+                        {file.on.finished ? 'Finished' : file.on.started ? 'In Progress' : 'Available'}
+                      </span>
+                    }
+                    isLast={true}
+                  />
+                </>
+              ) : file.old_material && file.old_material_number ? (
+                <>
+                  <InfoRow label="Material" value={file.old_material.name} />
+                  <InfoRow label="Number" value={file.old_material_number} />
+                  <InfoRow label="Status" value={
+                    <span className="px-2 py-1 rounded-[8px] text-[14px] font-medium bg-[#FEF3C7] dark:bg-amber-900/30 text-[#F59E0B] dark:text-[#FBBF24]">
+                      Unregistered Sheet
+                    </span>
+                  } isLast={true} />
+                </>
+              ) : (
+                <InfoRow label="Material" value="Unknown Material" isLast={true} />
+              )}
             </div>
           </Section>
 

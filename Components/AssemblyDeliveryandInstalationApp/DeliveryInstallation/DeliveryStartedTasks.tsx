@@ -131,16 +131,16 @@ export const DeliveryStartedTasks = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data from localStorage
       const userData = localStorage.getItem('user_data');
       if (!userData) {
         throw new Error('User data not found');
       }
-      
+
       const user = JSON.parse(userData);
       const userId = user.id;
-      
+
       const response = await api.get(`/api/dandi/?assigned_to=${userId}&status=STARTED`);
       setAssignments(response.data.results || []);
     } catch (err: any) {
@@ -186,14 +186,14 @@ export const DeliveryStartedTasks = () => {
 
   const calculateDuration = (startDate: string | null) => {
     if (!startDate) return 'N/A';
-    
+
     const start = new Date(startDate);
     const now = new Date();
     const diffMs = now.getTime() - start.getTime();
-    
+
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -247,22 +247,20 @@ export const DeliveryStartedTasks = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode('card')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'card'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'card'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'list'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="List View"
           >
             <List className="w-4 h-4" />
@@ -281,18 +279,18 @@ export const DeliveryStartedTasks = () => {
       <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
         {assignments.map((assignment) =>
           viewMode === 'card' ? (
-            <StartedTaskCard 
-              key={assignment.id} 
-              assignment={assignment} 
+            <StartedTaskCard
+              key={assignment.id}
+              assignment={assignment}
               onComplete={openCompleteOverlay}
               onViewDetails={openDetailOverlay}
               formatDateTime={formatDateTime}
               calculateDuration={calculateDuration}
             />
           ) : (
-            <StartedTaskListItem 
-              key={assignment.id} 
-              assignment={assignment} 
+            <StartedTaskListItem
+              key={assignment.id}
+              assignment={assignment}
               onComplete={openCompleteOverlay}
               onViewDetails={openDetailOverlay}
               formatDateTime={formatDateTime}
@@ -336,9 +334,9 @@ interface StartedTaskCardProps {
   calculateDuration: (startDate: string | null) => string;
 }
 
-const StartedTaskCard = ({ 
-  assignment, 
-  onComplete, 
+const StartedTaskCard = ({
+  assignment,
+  onComplete,
   onViewDetails,
   formatDateTime,
   calculateDuration
@@ -351,7 +349,7 @@ const StartedTaskCard = ({
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h4 
+          <h4
             className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
             onClick={() => onViewDetails(assignment)}
           >
@@ -471,9 +469,9 @@ const StartedTaskCard = ({
 };
 
 // List View Component
-const StartedTaskListItem = ({ 
-  assignment, 
-  onComplete, 
+const StartedTaskListItem = ({
+  assignment,
+  onComplete,
   onViewDetails,
   formatDateTime,
   calculateDuration
@@ -488,10 +486,10 @@ const StartedTaskListItem = ({
           <div className="shrink-0">
             <Truck className="w-8 h-8 text-yellow-600" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3 mb-2">
-              <span 
+              <span
                 className="font-medium text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={() => onViewDetails(assignment)}
               >
@@ -501,7 +499,7 @@ const StartedTaskListItem = ({
                 IN PROGRESS
               </span>
             </div>
-            
+
             <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
               <div className="flex items-center space-x-1 shrink-0">
                 <MapPin className="w-3 h-3" />
@@ -525,7 +523,7 @@ const StartedTaskListItem = ({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4 shrink-0">
           <button
             onClick={() => onComplete(assignment)}
@@ -633,11 +631,11 @@ const CompleteOverlay = ({
     try {
       setFetchingAccounts(true);
       setError(null);
-      
-      const endpoint = container.invoice 
+
+      const endpoint = container.invoice
         ? '/finance/account/?account_type=C&deleted=false'
         : '/finance/account/?account_type=P&deleted=false';
-      
+
       const response = await api.get(endpoint);
       setBankAccounts(response.data || []);
     } catch (err: any) {
@@ -649,8 +647,8 @@ const CompleteOverlay = ({
   };
 
   const handleComplete = async () => {
-    if (!paymentScreenshot) {
-      setError('Payment screenshot is required');
+    if (paymentMethod !== 'CASH' && !paymentScreenshot) {
+      setError('Payment screenshot is required for Bank/Check payments');
       return;
     }
 
@@ -665,12 +663,14 @@ const CompleteOverlay = ({
 
       const formData = new FormData();
       formData.append('method', paymentMethod);
-      formData.append('payment_screenshot', paymentScreenshot);
-      
+      if (paymentScreenshot) {
+        formData.append('payment_screenshot', paymentScreenshot);
+      }
+
       if (paymentMethod !== 'CASH') {
         formData.append('account', selectedAccount);
       }
-      
+
       if (paymentNote) {
         formData.append('payment_note', paymentNote);
       }
@@ -682,7 +682,7 @@ const CompleteOverlay = ({
       });
 
       onSuccess();
-      
+
     } catch (err: any) {
       console.error('Error completing task:', err);
       setError('Failed to complete task. Please try again.');
@@ -754,11 +754,10 @@ const CompleteOverlay = ({
                     key={method}
                     type="button"
                     onClick={() => setPaymentMethod(method)}
-                    className={`p-3 text-center rounded-lg border transition-colors ${
-                      paymentMethod === method
+                    className={`p-3 text-center rounded-lg border transition-colors ${paymentMethod === method
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-600 hover:border-blue-500'
-                    }`}
+                      }`}
                   >
                     <div className="text-sm font-medium">{method}</div>
                   </button>
@@ -799,29 +798,31 @@ const CompleteOverlay = ({
             )}
 
             {/* Payment Screenshot */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Payment Screenshot *
-              </label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg p-4 text-center">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="payment-screenshot"
-                />
-                <label
-                  htmlFor="payment-screenshot"
-                  className="cursor-pointer text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  {paymentScreenshot ? paymentScreenshot.name : 'Choose payment screenshot'}
+            {paymentMethod !== 'CASH' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Payment Screenshot *
                 </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  PNG, JPG, JPEG files
-                </p>
+                <div className="border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="payment-screenshot"
+                  />
+                  <label
+                    htmlFor="payment-screenshot"
+                    className="cursor-pointer text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    {paymentScreenshot ? paymentScreenshot.name : 'Choose payment screenshot'}
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    PNG, JPG, JPEG files
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Payment Note */}
             <div>
@@ -848,7 +849,7 @@ const CompleteOverlay = ({
             </button>
             <button
               onClick={handleComplete}
-              disabled={loading || !paymentScreenshot || (paymentMethod !== 'CASH' && !selectedAccount)}
+              disabled={loading || (paymentMethod !== 'CASH' && !paymentScreenshot) || (paymentMethod !== 'CASH' && !selectedAccount)}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (

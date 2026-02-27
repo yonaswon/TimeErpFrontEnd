@@ -2,6 +2,14 @@ import { Download, Play, CheckCircle, Clock } from "lucide-react";
 
 export interface CuttingTask {
     id: number;
+    crv3d: string;
+    image: string;
+    status: string;
+    schedule_start_date: string | null;
+    schedule_complate_date: string | null;
+    start_date: string | null;
+    complate_date: string | null;
+    date: string;
     orders: {
         order_code: number;
         boms: Array<{
@@ -47,7 +55,12 @@ export interface CuttingTask {
         current_width: string;
         current_height: string;
         code: number;
-    };
+    } | null;
+    old_material_number: string | null;
+    old_material: {
+        id: number;
+        name: string;
+    } | null;
     assigned_to: {
         id: number;
         telegram_user_name: string;
@@ -84,8 +97,8 @@ export const calculateOffsetTime = (startDate: string | null, completeDate: stri
     return `${minutes}m`;
 };
 
-export const calculateScheduleOffset = (scheduledDate: string, actualDate: string | null) => {
-    if (!actualDate) return 'N/A';
+export const calculateScheduleOffset = (scheduledDate: string | null, actualDate: string | null) => {
+    if (!scheduledDate || !actualDate) return 'N/A';
 
     const scheduled = new Date(scheduledDate);
     const actual = new Date(actualDate);
@@ -113,10 +126,9 @@ interface TaskCardProps {
 
 export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskCardProps) => {
     const mainOrder = task.orders[0];
-    const cuttingFile = mainOrder.cutting_files[0];
 
-    const actualDuration = status === 'COMPLATED' ? calculateOffsetTime(cuttingFile.start_date, cuttingFile.complate_date) : null;
-    const scheduleOffset = status === 'COMPLATED' ? calculateScheduleOffset(cuttingFile.schedule_complate_date, cuttingFile.complate_date) : null;
+    const actualDuration = status === 'COMPLATED' ? calculateOffsetTime(task.start_date, task.complate_date) : null;
+    const scheduleOffset = status === 'COMPLATED' ? calculateScheduleOffset(task.schedule_complate_date, task.complate_date) : null;
 
 
     return (
@@ -125,27 +137,27 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        CUT-{cuttingFile.id}
+                        CUT-{task.id}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Material: {task.on ? `${task.on.material_name}-${task.on.code}` : 'Unknown'}
+                        Material: {task.on ? `${task.on.material_name}-${task.on.code}` : task.old_material ? `${task.old_material.name} (${task.old_material_number})` : 'Unknown'}
                     </p>
                     {status === 'STARTED' && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Started: {formatDateTime(cuttingFile.start_date)}
+                            Started: {formatDateTime(task.start_date)}
                         </p>
                     )}
                     {status === 'COMPLATED' && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Completed: {formatDateTime(cuttingFile.complate_date)}
+                            Completed: {formatDateTime(task.complate_date)}
                         </p>
                     )}
                 </div>
                 <button
                     onClick={() =>
                         downloadFile(
-                            cuttingFile.crv3d,
-                            `cutting-file-${cuttingFile.id}.crv3d`
+                            task.crv3d,
+                            `cutting-file-${task.id}.crv3d`
                         )
                     }
                     className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -165,7 +177,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                         <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-gray-400">Start:</span>
                             <span className="text-gray-900 dark:text-white">
-                                {formatDateTime(cuttingFile.schedule_start_date)}
+                                {formatDateTime(task.schedule_start_date)}
                             </span>
                         </div>
                         <div className="flex justify-between">
@@ -173,7 +185,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                                 Complete:
                             </span>
                             <span className="text-gray-900 dark:text-white">
-                                {formatDateTime(cuttingFile.schedule_complate_date)}
+                                {formatDateTime(task.schedule_complate_date)}
                             </span>
                         </div>
                         {status !== 'ASSIGNED' && (
@@ -182,7 +194,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                                     Actual Start:
                                 </span>
                                 <span className="text-blue-600 dark:text-blue-400">
-                                    {formatDateTime(cuttingFile.start_date)}
+                                    {formatDateTime(task.start_date)}
                                 </span>
                             </div>
                         )}
@@ -192,7 +204,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                                     Actual Complete:
                                 </span>
                                 <span className="text-green-600 dark:text-green-400">
-                                    {formatDateTime(cuttingFile.complate_date)}
+                                    {formatDateTime(task.complate_date)}
                                 </span>
                             </div>
                         )}
@@ -216,10 +228,10 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600 dark:text-gray-400">Schedule Offset:</span>
                                     <span className={`font-medium ${scheduleOffset?.startsWith('-')
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : scheduleOffset?.startsWith('+')
-                                                ? 'text-yellow-600 dark:text-yellow-400'
-                                                : 'text-gray-600 dark:text-gray-400'
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : scheduleOffset?.startsWith('+')
+                                            ? 'text-yellow-600 dark:text-yellow-400'
+                                            : 'text-gray-600 dark:text-gray-400'
                                         }`}>
                                         {scheduleOffset}
                                     </span>
@@ -251,7 +263,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                             Status: In Progress
                         </span>
                         <span className="text-blue-600 dark:text-blue-400">
-                            Started {formatDateTime(cuttingFile.start_date)}
+                            Started {formatDateTime(task.start_date)}
                         </span>
                     </div>
                 </div>
@@ -264,7 +276,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
                             <span className="text-green-700 dark:text-green-300 font-medium">Completed</span>
                         </div>
                         <span className="text-green-600 dark:text-green-400">
-                            {formatDateTime(cuttingFile.complate_date)}
+                            {formatDateTime(task.complate_date)}
                         </span>
                     </div>
                 </div>
@@ -288,7 +300,7 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
             {/* Action Button */}
             {onAction && (
                 <button
-                    onClick={() => onAction(task, cuttingFile.id)}
+                    onClick={() => onAction(task, task.id)}
                     disabled={isProcessing}
                     className={`w-full flex items-center justify-center space-x-2 py-2 text-white rounded-lg transition-colors ${status === 'ASSIGNED' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'
                         } disabled:bg-gray-400 disabled:cursor-not-allowed`}
@@ -319,10 +331,9 @@ interface TaskListItemProps {
 
 export const TaskListItem = ({ task, status, onAction, isProcessing = false }: TaskListItemProps) => {
     const mainOrder = task.orders[0];
-    const cuttingFile = mainOrder.cutting_files[0];
 
-    const actualDuration = status === 'COMPLATED' ? calculateOffsetTime(cuttingFile.start_date, cuttingFile.complate_date) : null;
-    const scheduleOffset = status === 'COMPLATED' ? calculateScheduleOffset(cuttingFile.schedule_complate_date, cuttingFile.complate_date) : null;
+    const actualDuration = status === 'COMPLATED' ? calculateOffsetTime(task.start_date, task.complate_date) : null;
+    const scheduleOffset = status === 'COMPLATED' ? calculateScheduleOffset(task.schedule_complate_date, task.complate_date) : null;
 
     return (
         <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-3 shadow-sm">
@@ -330,10 +341,10 @@ export const TaskListItem = ({ task, status, onAction, isProcessing = false }: T
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-3 mb-2">
                         <span className="font-medium text-gray-900 dark:text-white text-sm">
-                            CUT-{cuttingFile.id}
+                            CUT-{task.id}
                         </span>
                         <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
-                            {task.on ? `${task.on.material_name}-${task.on.code}` : 'Unknown'}
+                            {task.on ? `${task.on.material_name}-${task.on.code}` : task.old_material ? `${task.old_material.name} (${task.old_material_number})` : 'Unknown'}
                         </span>
                         {status === 'STARTED' && (
                             <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-full text-xs">
@@ -356,10 +367,10 @@ export const TaskListItem = ({ task, status, onAction, isProcessing = false }: T
                                     <span>Duration: {actualDuration}</span>
                                 </div>
                                 <span className={`shrink-0 ${scheduleOffset?.startsWith('-')
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : scheduleOffset?.startsWith('+')
-                                            ? 'text-yellow-600 dark:text-yellow-400'
-                                            : 'text-gray-600 dark:text-gray-400'
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : scheduleOffset?.startsWith('+')
+                                        ? 'text-yellow-600 dark:text-yellow-400'
+                                        : 'text-gray-600 dark:text-gray-400'
                                     }`}>
                                     Offset: {scheduleOffset}
                                 </span>
@@ -368,11 +379,11 @@ export const TaskListItem = ({ task, status, onAction, isProcessing = false }: T
                             <>
                                 <span>
                                     Start:{" "}
-                                    {formatDateTime(cuttingFile.schedule_start_date)}
+                                    {formatDateTime(task.schedule_start_date)}
                                 </span>
                                 <span>
                                     Complete:{" "}
-                                    {formatDateTime(cuttingFile.schedule_complate_date)}
+                                    {formatDateTime(task.schedule_complate_date)}
                                 </span>
                             </>
                         )}
@@ -387,7 +398,7 @@ export const TaskListItem = ({ task, status, onAction, isProcessing = false }: T
                 <div className="flex items-center space-x-2 ml-4">
                     {onAction && (
                         <button
-                            onClick={() => onAction(task, cuttingFile.id)}
+                            onClick={() => onAction(task, task.id)}
                             disabled={isProcessing}
                             className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                         >
@@ -401,7 +412,7 @@ export const TaskListItem = ({ task, status, onAction, isProcessing = false }: T
                     )}
                     {!onAction && status === 'COMPLATED' && (
                         <button
-                            onClick={() => downloadFile(cuttingFile.crv3d, `cutting-file-${cuttingFile.id}.crv3d`)}
+                            onClick={() => downloadFile(task.crv3d, `cutting-file-${task.id}.crv3d`)}
                             className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                             title="Download CRV3D file"
                         >

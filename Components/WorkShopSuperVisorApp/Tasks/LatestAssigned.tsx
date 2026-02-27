@@ -9,7 +9,9 @@ type TaskType = "cutting" | "assembly" | "delivery" | "maintenance";
 interface CuttingFile {
   id: number;
   orders: Order[];
-  on: EachArealMaterial;
+  on: EachArealMaterial | null;
+  old_material_number: string | null;
+  old_material: { id: number; name: string } | null;
   crv3d: string;
   image: string;
   status: string;
@@ -148,11 +150,10 @@ export const LatestAssigned = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-medium transition-colors ${
-                  isActive
+                className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-medium transition-colors ${isActive
                     ? "bg-blue-600 text-white"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700"
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
@@ -246,21 +247,19 @@ const CuttingTasks = ({
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode("card")}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              viewMode === "card"
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === "card"
                 ? "bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm"
                 : "text-gray-600 dark:text-gray-400"
-            }`}
+              }`}
           >
             Card View
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              viewMode === "list"
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === "list"
                 ? "bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm"
                 : "text-gray-600 dark:text-gray-400"
-            }`}
+              }`}
           >
             List View
           </button>
@@ -326,7 +325,7 @@ const CuttingTaskCard = ({ file, onEdit }: CuttingTaskCardProps) => {
                 {file.crv3d.split("/").pop()}
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {file.on.material_name} - {file.on.code}
+                {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -392,11 +391,10 @@ const CuttingTaskCard = ({ file, onEdit }: CuttingTaskCardProps) => {
                       ORD-{order.order_code}
                     </span>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        order.order_status === "PRE-ACCEPTED"
+                      className={`px-2 py-1 rounded-full text-xs ${order.order_status === "PRE-ACCEPTED"
                           ? "bg-yellow-100 text-yellow-800"
                           : "bg-blue-100 text-blue-800"
-                      }`}
+                        }`}
                     >
                       {order.order_status.replace("-", " ")}
                     </span>

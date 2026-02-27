@@ -420,13 +420,13 @@ const StartedAssemblyCard = ({
       </div>
 
       {/* Mockup Image Preview */}
-      {task.order.mockup.mockup_image && (
+      {task.order?.mockup?.mockup_image && (
         <div className="mb-4">
           <h4 className="font-medium text-gray-900 dark:text-white mb-2">
             Design Preview
           </h4>
           <img
-            src={task.order.mockup.mockup_image}
+            src={task.order?.mockup?.mockup_image}
             alt="Design mockup"
             className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-zinc-600"
           />
