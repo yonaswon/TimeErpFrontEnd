@@ -3,13 +3,16 @@
 import { useState } from 'react'
 import { DollarSign, Upload, Search, Settings, Plus } from 'lucide-react'
 import { AdminInWalletTransfer } from './Actions/AdminInWalletTransfer/AdminInWalletTransfer'
+import { AdminReleaseToPityWallet } from './Actions/AdminReleaseToPityWallet/AdminReleaseToPityWallet'
 
 const ActionsContent = () => {
   const [showTransfer, setShowTransfer] = useState(false)
+  const [showReleasePity, setShowReleasePity] = useState(false)
 
   const actions = [
     { key: 'create-purchase', label: 'Create Purchase', icon: DollarSign },
     { key: 'wallet-transfer', label: 'Wallet Transfer', icon: Upload },
+    { key: 'release-pity-wallet', label: 'Release to Pity Wallet', icon: Upload },
     { key: 'pity-purchase', label: 'Pity Purchase', icon: Search },
     { key: 'pity-cost', label: 'Pity Cost', icon: Settings },
   ]
@@ -27,6 +30,7 @@ const ActionsContent = () => {
                 key={a.key}
                 onClick={() => {
                   if (a.key === 'wallet-transfer') setShowTransfer(true)
+                  if (a.key === 'release-pity-wallet') setShowReleasePity(true)
                 }}
                 className="w-full text-left py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-zinc-700 px-2 rounded-md transition"
                 type="button"
@@ -46,6 +50,9 @@ const ActionsContent = () => {
 
       {/* Admin Wallet Transfer Overlay */}
       <AdminInWalletTransfer open={showTransfer} onClose={() => setShowTransfer(false)} />
+
+      {/* Admin Release to Pity Wallet Overlay */}
+      <AdminReleaseToPityWallet open={showReleasePity} onClose={() => setShowReleasePity(false)} />
     </div>
   )
 }
