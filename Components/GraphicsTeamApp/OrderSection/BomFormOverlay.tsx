@@ -24,7 +24,11 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
     if (order.boms.length > 0) {
       setBomItems(
         order.boms.map((bom) => ({
-          material: bom.material,
+          material: typeof bom.material === 'object' && bom.material !== null
+            ? bom.material.id
+            : typeof bom.material === 'number'
+              ? bom.material
+              : 0,
           amount: bom.amount || "",
           width: bom.width || "",
           height: bom.height || "",
@@ -149,7 +153,7 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
         height: "",
       };
 
-  
+
     } else {
       newBomItems[index] = { ...newBomItems[index], [field]: value };
     }
@@ -262,13 +266,12 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
                     <div className="flex items-center gap-2">
                       {material && (
                         <span
-                          className={`px-2 py-0.5 text-xs font-medium rounded ${
-                            isAreal
+                          className={`px-2 py-0.5 text-xs font-medium rounded ${isAreal
                               ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
                               : type === "L"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                              : "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
-                          }`}
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                : "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+                            }`}
                         >
                           {getMaterialTypeLabel(type)}
                         </span>
@@ -347,7 +350,7 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                              Height (m) 
+                              Height (m)
                             </label>
                             <input
                               type="number"
@@ -426,8 +429,8 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
               {loading
                 ? "Submitting..."
                 : isEditMode
-                ? "Update BOM"
-                : "Submit BOM"}
+                  ? "Update BOM"
+                  : "Submit BOM"}
             </button>
           </div>
         </form>

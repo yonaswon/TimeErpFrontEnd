@@ -12,8 +12,10 @@ import {
   PlusCircle,
   Edit,
   History,
+  List,
 } from "lucide-react";
 import ReleaseEditOverlay from "./ReleaseEditOverlay";
+import AddBomOverlay from "./AddBomOverlay";
 
 interface Release {
   id: number;
@@ -31,13 +33,13 @@ interface Release {
     stats: any;
   };
   reason:
-    | "ORDER"
-    | "ADD"
-    | "MAINTENANCE"
-    | "SALES"
-    | "TRANSFER"
-    | "WASTE"
-    | "DAMAGED";
+  | "ORDER"
+  | "ADD"
+  | "MAINTENANCE"
+  | "SALES"
+  | "TRANSFER"
+  | "WASTE"
+  | "DAMAGED";
   amount: string;
   proof_image: string | null;
   confirmed: boolean;
@@ -52,6 +54,24 @@ interface Release {
   l_and_p_material_records_for_eidt: any[];
 }
 
+interface Bom {
+  id: number;
+  material: {
+    id: number;
+    name: string;
+    code_name: string;
+    type: string;
+  };
+  amount: string | null;
+  width: string | null;
+  height: string | null;
+  released: boolean;
+}
+
+interface OrderDetailResponse {
+  boms: Bom[];
+}
+
 interface ReleasesResponse {
   count: number;
   next: string | null;
@@ -60,16 +80,24 @@ interface ReleasesResponse {
 }
 
 const ReleaseContent = ({ id }: { id: number }) => {
+  const [activeTab, setActiveTab] = useState<"releases" | "boms">("releases");
+
   const [releases, setReleases] = useState<Release[]>([]);
+  const [boms, setBoms] = useState<Bom[]>([]);
+  const [selectedBomIds, setSelectedBomIds] = useState<number[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [releasingBoms, setReleasingBoms] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  
-  // Edit overlay state
+
+  // Overlays
   const [editOverlayOpen, setEditOverlayOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
+  const [addBomOverlayOpen, setAddBomOverlayOpen] = useState(false);
 
   // Filter states
   const [reasonFilter, setReasonFilter] = useState<string>("ALL");
@@ -77,12 +105,16 @@ const ReleaseContent = ({ id }: { id: number }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [availableInventories, setAvailableInventories] = useState<number[]>([]);
 
+  const fetchData = async () => {
+    setLoading(true);
+    await Promise.all([fetchReleases(), fetchBoms()]);
+    setLoading(false);
+  };
+
   const fetchReleases = async (url?: string, append: boolean = false) => {
     try {
       if (url) {
         setLoadingMore(true);
-      } else {
-        setLoading(true);
       }
       setError(null);
 
@@ -105,13 +137,21 @@ const ReleaseContent = ({ id }: { id: number }) => {
       setError(err.response?.data?.message || "Failed to fetch releases");
       console.error("Error fetching releases:", err);
     } finally {
-      setLoading(false);
       setLoadingMore(false);
     }
   };
 
+  const fetchBoms = async () => {
+    try {
+      const resp = await api.get<OrderDetailResponse>(`/api/orders/${id}/`);
+      setBoms(resp.data.boms || []);
+    } catch (err) {
+      console.error("Failed to fetch BOMs", err);
+    }
+  };
+
   useEffect(() => {
-    fetchReleases();
+    fetchData();
   }, [id]);
 
   const handleEditRelease = (release: Release) => {
@@ -119,27 +159,33 @@ const ReleaseContent = ({ id }: { id: number }) => {
     setEditOverlayOpen(true);
   };
 
-  const handleUpdateRelease = async (newAmount: any): Promise<{ success: boolean; message: string }> => {
-    if (!selectedRelease) return { success: false, message: "No release selected" };
+  const handleUpdateRelease = async (
+    newAmount: any
+  ): Promise<{ success: boolean; message: string }> => {
+    if (!selectedRelease)
+      return { success: false, message: "No release selected" };
 
     try {
       const response = await api.post(
         `/api/release/${selectedRelease.id}/edit_release/`,
         { amount: newAmount }
       );
-      
+
       // Update the release in the list
-      setReleases(prev => prev.map(release => 
-        release.id === selectedRelease.id 
-          ? { 
-              ...release, 
+      setReleases((prev) =>
+        prev.map((release) =>
+          release.id === selectedRelease.id
+            ? {
+              ...release,
               amount: newAmount,
               is_edited: true,
-              l_and_p_material_records_for_eidt: response.data.landp_record || []
+              l_and_p_material_records_for_eidt:
+                response.data.landp_record || [],
             }
-          : release
-      ));
-      
+            : release
+        )
+      );
+
       setEditOverlayOpen(false);
       return { success: true, message: "Release updated successfully" };
     } catch (error: any) {
@@ -152,6 +198,31 @@ const ReleaseContent = ({ id }: { id: number }) => {
         message: msg,
       };
     }
+  };
+
+  const handleReleaseSelectedBoms = async () => {
+    if (selectedBomIds.length === 0) return;
+    try {
+      setReleasingBoms(true);
+      await api.post(`/api/orders/${id}/release_boms/`, {
+        bom_ids: selectedBomIds,
+      });
+      setSelectedBomIds([]);
+      // Refresh
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to release BOMs");
+    } finally {
+      setReleasingBoms(false);
+    }
+  };
+
+  const toggleBomSelection = (bomId: number) => {
+    setSelectedBomIds((prev) =>
+      prev.includes(bomId)
+        ? prev.filter((i) => i !== bomId)
+        : [...prev, bomId]
+    );
   };
 
   const handleLoadMore = () => {
@@ -226,84 +297,76 @@ const ReleaseContent = ({ id }: { id: number }) => {
     return `${amount} ${type === "A" ? "m²" : "m"}`;
   };
 
-  // Loading state
-  if (loading && releases.length === 0) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="bg-white dark:bg-zinc-800 rounded-xl p-4 animate-pulse"
-          >
-            <div className="h-5 bg-gray-200 dark:bg-zinc-700 rounded mb-3 w-1/2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded mb-2 w-2/3"></div>
-            <div className="h-8 bg-gray-200 dark:bg-zinc-700 rounded"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // Error state
-  if (error && releases.length === 0) {
-    return (
-      <div className="text-center py-8 px-4">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
-          <Package className="w-6 h-6 text-red-600 dark:text-red-400" />
-        </div>
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-          Error Loading Releases
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-        <button
-          onClick={() => fetchReleases()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
-  // Empty state
-  if (releases.length === 0) {
-    return (
-      <div className="text-center py-8 px-4">
-        <Package
-          size={40}
-          className="mx-auto text-gray-400 dark:text-gray-600 mb-3"
-        />
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-          No Releases Found
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          No releases have been recorded for this order yet.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl p-4 border border-blue-200 dark:border-blue-800/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-blue-900 dark:text-blue-300">
-                ORD-{id}
-              </h2>
-              <p className="text-sm text-blue-700 dark:text-blue-400">
-                Order Releases: {releases.length} total releases
-              </p>
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+  const renderReleasesList = () => {
+    if (loading && releases.length === 0) {
+      return (
+        <div className="space-y-3 p-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-zinc-800 rounded-xl p-4 animate-pulse"
             >
-              <Filter className="w-5 h-5" />
-            </button>
+              <div className="h-5 bg-gray-200 dark:bg-zinc-700 rounded mb-3 w-1/2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded mb-2 w-2/3"></div>
+              <div className="h-8 bg-gray-200 dark:bg-zinc-700 rounded"></div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (error && releases.length === 0) {
+      return (
+        <div className="text-center py-8 px-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+            <Package className="w-6 h-6 text-red-600 dark:text-red-400" />
           </div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+            Error Loading Releases
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={() => fetchReleases()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    if (releases.length === 0) {
+      return (
+        <div className="text-center py-8 px-4">
+          <Package className="mx-auto text-gray-400 dark:text-gray-600 w-10 h-10 mb-3" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+            No Releases Found
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No releases have been recorded for this order yet.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4 p-4">
+        {/* Header */}
+        <div className="bg-linear-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl p-4 border border-blue-200 dark:border-blue-800/50 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-blue-900 dark:text-blue-300">
+              ORD-{id}
+            </h2>
+            <p className="text-sm text-blue-700 dark:text-blue-400">
+              Order Releases: {releases.length} total releases
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Filter className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Filters Panel */}
@@ -331,13 +394,12 @@ const ReleaseContent = ({ id }: { id: number }) => {
                   <button
                     key={reason}
                     onClick={() => setReasonFilter(reason)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      reasonFilter === reason
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${reasonFilter === reason
                         ? reason === "ALL"
                           ? "bg-gray-800 text-white dark:bg-gray-700"
                           : getReasonColor(reason)
                         : "bg-gray-100 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
-                    }`}
+                      }`}
                   >
                     {reason === "ALL" ? "All" : getReasonLabel(reason)}
                   </button>
@@ -528,10 +590,7 @@ const ReleaseContent = ({ id }: { id: number }) => {
         {/* No results after filtering */}
         {filteredReleases.length === 0 && releases.length > 0 && (
           <div className="text-center py-8 px-4">
-            <Filter
-              size={40}
-              className="mx-auto text-gray-400 dark:text-gray-600 mb-3"
-            />
+            <Filter className="mx-auto text-gray-400 dark:text-gray-600 w-10 h-10 mb-3" />
             <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
               No matching releases
             </h3>
@@ -546,14 +605,155 @@ const ReleaseContent = ({ id }: { id: number }) => {
             </button>
           </div>
         )}
+      </div>
+    );
+  };
 
-        {/* Stats Footer */}
-        <div className="text-center text-xs text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-zinc-700">
-          Showing {filteredReleases.length} releases • Order #{id}
+  const renderBomsList = () => {
+    if (loading) {
+      return (
+        <div className="space-y-3 p-4">
+          <div className="h-20 bg-gray-200 dark:bg-zinc-700 animate-pulse rounded-xl" />
+          <div className="h-20 bg-gray-200 dark:bg-zinc-700 animate-pulse rounded-xl" />
         </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4 p-4 relative h-full flex flex-col">
+        <div className="bg-linear-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/10 rounded-xl p-4 border border-green-200 dark:border-green-800/50 flex flex-col gap-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-green-900 dark:text-green-300">
+                Order BOMs
+              </h2>
+              <p className="text-sm text-green-700 dark:text-green-400">
+                {boms.filter((b) => !b.released).length} Unreleased / {boms.length} Total
+              </p>
+            </div>
+            <button
+              onClick={() => setAddBomOverlayOpen(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-medium"
+            >
+              <PlusCircle className="w-5 h-5" />
+              Add BOM
+            </button>
+          </div>
+        </div>
+
+        {boms.length === 0 ? (
+          <div className="text-center py-8 px-4 flex-1">
+            <List className="mx-auto text-gray-400 w-10 h-10 mb-3" />
+            <p className="text-sm text-gray-500">No BOMs found for this order.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 flex-1 overflow-y-auto pb-20">
+            {boms.map((bom) => (
+              <div
+                key={bom.id}
+                onClick={() => {
+                  if (!bom.released) toggleBomSelection(bom.id);
+                }}
+                className={`flex items-center p-4 rounded-xl border transition-colors ${bom.released
+                    ? "bg-gray-50 border-gray-200 dark:bg-zinc-800/50 dark:border-zinc-700 opacity-70"
+                    : selectedBomIds.includes(bom.id)
+                      ? "bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-700 cursor-pointer"
+                      : "bg-white border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 hover:border-blue-300 cursor-pointer"
+                  }`}
+              >
+                {!bom.released && (
+                  <div className="mr-3">
+                    <div
+                      className={`w-5 h-5 rounded border flex items-center justify-center ${selectedBomIds.includes(bom.id)
+                          ? "bg-blue-600 border-blue-600"
+                          : "border-gray-300 dark:border-zinc-600"
+                        }`}
+                    >
+                      {selectedBomIds.includes(bom.id) && (
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {bom.material.name}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 block sm:inline">
+                      ({bom.material.code_name})
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    {bom.material.type === "A" ? (
+                      <span>
+                        {bom.width}m × {bom.height}m
+                      </span>
+                    ) : (
+                      <span>
+                        {bom.amount} {bom.material.type === "L" ? "m" : "pcs"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  {bom.released ? (
+                    <span className="text-xs font-medium px-2 py-1 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                      Released
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium px-2 py-1 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                      Unreleased
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {selectedBomIds.length > 0 && (
+          <div className="absolute bottom-4 left-4 right-4 max-w-sm mx-auto z-10">
+            <button
+              onClick={handleReleaseSelectedBoms}
+              disabled={releasingBoms}
+              className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl shadow-xl hover:bg-blue-700 transition font-bold disabled:opacity-75 flex items-center justify-center gap-2"
+            >
+              {releasingBoms ? "Releasing..." : `Release Selected (${selectedBomIds.length})`}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gray-50/50 dark:bg-zinc-900">
+      <div className="flex border-b border-gray-200 dark:border-zinc-800 shrink-0">
+        <button
+          onClick={() => setActiveTab("releases")}
+          className={`flex-1 flex justify-center py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "releases"
+              ? "border-blue-600 text-blue-600 dark:text-blue-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            }`}
+        >
+          Releases History
+        </button>
+        <button
+          onClick={() => setActiveTab("boms")}
+          className={`flex-1 flex justify-center py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "boms"
+              ? "border-blue-600 text-blue-600 dark:text-blue-400"
+              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            }`}
+        >
+          Order BOMs
+        </button>
       </div>
 
-      {/* Edit Overlay */}
+      <div className="flex-1 overflow-y-auto w-full max-w-full">
+        {activeTab === "releases" ? renderReleasesList() : renderBomsList()}
+      </div>
+
       {editOverlayOpen && selectedRelease && (
         <ReleaseEditOverlay
           release={selectedRelease}
@@ -562,7 +762,16 @@ const ReleaseContent = ({ id }: { id: number }) => {
           onUpdate={handleUpdateRelease}
         />
       )}
-    </>
+
+      {addBomOverlayOpen && (
+        <AddBomOverlay
+          orderId={id}
+          isOpen={addBomOverlayOpen}
+          onClose={() => setAddBomOverlayOpen(false)}
+          onSuccess={() => fetchData()}
+        />
+      )}
+    </div>
   );
 };
 

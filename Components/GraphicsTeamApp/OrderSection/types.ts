@@ -21,7 +21,7 @@ export interface BomItem {
   total_price: string;
   estimated_price: string;
   date: string;
-  material: number;
+  material: number | any;
 }
 
 export interface Designer {
