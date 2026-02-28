@@ -57,7 +57,7 @@ export default function PaymentSection({
     // 2. Fetch accounts when payment method or invoice selection changes
     const fetchAccounts = async () => {
       try {
-        const accountType = withInvoice ? 'P' : 'C';
+        const accountType = withInvoice ? 'C' : 'P';
         const response = await api.get(`/finance/account/?account_type=${accountType}&deleted=false`);
         const accountsData = response.data.results || response.data;
         setAccounts(accountsData);
