@@ -9,6 +9,7 @@ interface DeliveryAssignment {
     id: number;
     orders: Array<{
       order_code: number;
+      order_name?: string;
       boms: Array<{
         id: number;
         amount: string;
@@ -227,8 +228,8 @@ export const DeliveryTasks = () => {
           <button
             onClick={() => setViewMode('card')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === 'card'
-                ? 'bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
+              ? 'bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400'
               }`}
           >
             Card View
@@ -236,8 +237,8 @@ export const DeliveryTasks = () => {
           <button
             onClick={() => setViewMode('list')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === 'list'
-                ? 'bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-600 dark:text-gray-400'
+              ? 'bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400'
               }`}
           >
             List View
@@ -701,8 +702,8 @@ const DetailOverlay = ({
                       <p className="text-sm text-gray-600 dark:text-gray-400">${order.price}</p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'ASSEMBLY-COMPLETED'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                       }`}>
                       {order.order_status.replace('-', ' ')}
                     </span>
@@ -717,8 +718,8 @@ const DetailOverlay = ({
                           <div key={file.id} className="flex items-center justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">File #{file.id}</span>
                             <span className={`px-2 py-1 rounded-full text-xs ${file.status === 'COMPLATED'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
                               }`}>
                               {file.status}
                             </span>
