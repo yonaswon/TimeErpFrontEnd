@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import ReleaseEditOverlay from "./ReleaseEditOverlay";
 import AddBomOverlay from "./AddBomOverlay";
+import { ArealMaterialPromptOverlay } from "../ArealMaterialPromptOverlay";
 
 interface Release {
   id: number;
@@ -98,6 +99,9 @@ const ReleaseContent = ({ id }: { id: number }) => {
   const [editOverlayOpen, setEditOverlayOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [addBomOverlayOpen, setAddBomOverlayOpen] = useState(false);
+
+  // Areal material prompt state
+  const [arealPromptData, setArealPromptData] = useState<any[] | null>(null);
 
   // Filter states
   const [reasonFilter, setReasonFilter] = useState<string>("ALL");
@@ -204,10 +208,16 @@ const ReleaseContent = ({ id }: { id: number }) => {
     if (selectedBomIds.length === 0) return;
     try {
       setReleasingBoms(true);
-      await api.post(`/api/orders/${id}/release_boms/`, {
+      const response = await api.post(`/api/orders/${id}/release_boms/`, {
         bom_ids: selectedBomIds,
       });
       setSelectedBomIds([]);
+
+      // Check if the backend returned an areal prompt
+      if (response.data.areal_prompt_needed) {
+        setArealPromptData(response.data.areal_prompt_data);
+      }
+
       // Refresh
       await fetchData();
     } catch (err: any) {
@@ -395,10 +405,10 @@ const ReleaseContent = ({ id }: { id: number }) => {
                     key={reason}
                     onClick={() => setReasonFilter(reason)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${reasonFilter === reason
-                        ? reason === "ALL"
-                          ? "bg-gray-800 text-white dark:bg-gray-700"
-                          : getReasonColor(reason)
-                        : "bg-gray-100 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
+                      ? reason === "ALL"
+                        ? "bg-gray-800 text-white dark:bg-gray-700"
+                        : getReasonColor(reason)
+                      : "bg-gray-100 text-gray-700 dark:bg-zinc-700 dark:text-gray-300"
                       }`}
                   >
                     {reason === "ALL" ? "All" : getReasonLabel(reason)}
@@ -655,18 +665,18 @@ const ReleaseContent = ({ id }: { id: number }) => {
                   if (!bom.released) toggleBomSelection(bom.id);
                 }}
                 className={`flex items-center p-4 rounded-xl border transition-colors ${bom.released
-                    ? "bg-gray-50 border-gray-200 dark:bg-zinc-800/50 dark:border-zinc-700 opacity-70"
-                    : selectedBomIds.includes(bom.id)
-                      ? "bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-700 cursor-pointer"
-                      : "bg-white border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 hover:border-blue-300 cursor-pointer"
+                  ? "bg-gray-50 border-gray-200 dark:bg-zinc-800/50 dark:border-zinc-700 opacity-70"
+                  : selectedBomIds.includes(bom.id)
+                    ? "bg-blue-50 border-blue-500 dark:bg-blue-900/20 dark:border-blue-700 cursor-pointer"
+                    : "bg-white border-gray-200 dark:bg-zinc-800 dark:border-zinc-700 hover:border-blue-300 cursor-pointer"
                   }`}
               >
                 {!bom.released && (
                   <div className="mr-3">
                     <div
                       className={`w-5 h-5 rounded border flex items-center justify-center ${selectedBomIds.includes(bom.id)
-                          ? "bg-blue-600 border-blue-600"
-                          : "border-gray-300 dark:border-zinc-600"
+                        ? "bg-blue-600 border-blue-600"
+                        : "border-gray-300 dark:border-zinc-600"
                         }`}
                     >
                       {selectedBomIds.includes(bom.id) && (
@@ -733,8 +743,8 @@ const ReleaseContent = ({ id }: { id: number }) => {
         <button
           onClick={() => setActiveTab("releases")}
           className={`flex-1 flex justify-center py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "releases"
-              ? "border-blue-600 text-blue-600 dark:text-blue-400"
-              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            ? "border-blue-600 text-blue-600 dark:text-blue-400"
+            : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             }`}
         >
           Releases History
@@ -742,8 +752,8 @@ const ReleaseContent = ({ id }: { id: number }) => {
         <button
           onClick={() => setActiveTab("boms")}
           className={`flex-1 flex justify-center py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "boms"
-              ? "border-blue-600 text-blue-600 dark:text-blue-400"
-              : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            ? "border-blue-600 text-blue-600 dark:text-blue-400"
+            : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             }`}
         >
           Order BOMs
@@ -769,6 +779,19 @@ const ReleaseContent = ({ id }: { id: number }) => {
           isOpen={addBomOverlayOpen}
           onClose={() => setAddBomOverlayOpen(false)}
           onSuccess={() => fetchData()}
+        />
+      )}
+
+      {/* Areal Material Prompt Overlay */}
+      {arealPromptData && (
+        <ArealMaterialPromptOverlay
+          arealPromptData={arealPromptData}
+          submitEndpoint={`/api/orders/${id}/release_areal_boms/`}
+          onClose={() => setArealPromptData(null)}
+          onSuccess={() => {
+            setArealPromptData(null);
+            fetchData();
+          }}
         />
       )}
     </div>

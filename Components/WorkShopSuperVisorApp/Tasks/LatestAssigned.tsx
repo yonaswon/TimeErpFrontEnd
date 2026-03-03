@@ -151,8 +151,8 @@ export const LatestAssigned = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-medium transition-colors ${isActive
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700"
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -248,8 +248,8 @@ const CuttingTasks = ({
           <button
             onClick={() => setViewMode("card")}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === "card"
-                ? "bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-400"
+              ? "bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm"
+              : "text-gray-600 dark:text-gray-400"
               }`}
           >
             Card View
@@ -257,8 +257,8 @@ const CuttingTasks = ({
           <button
             onClick={() => setViewMode("list")}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === "list"
-                ? "bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-400"
+              ? "bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm"
+              : "text-gray-600 dark:text-gray-400"
               }`}
           >
             List View
@@ -389,11 +389,12 @@ const CuttingTaskCard = ({ file, onEdit }: CuttingTaskCardProps) => {
                   >
                     <span className="text-gray-700 dark:text-gray-300">
                       ORD-{order.order_code}
+                      {(order as any).order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}
                     </span>
                     <span
                       className={`px-2 py-1 rounded-full text-xs ${order.order_status === "PRE-ACCEPTED"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-blue-100 text-blue-800"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-blue-100 text-blue-800"
                         }`}
                     >
                       {order.order_status.replace("-", " ")}

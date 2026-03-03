@@ -65,9 +65,20 @@ export default function OrderItemCard({
 
         {/* Item Details */}
         <div className="flex-1 flex flex-col gap-3">
-          {/* Mockup Name (Top, Large) */}
-          <div className="text-base font-semibold text-gray-900 dark:text-white">
-            {item.name || `Item #${index + 1}`}
+          {/* Order Name (Editable) */}
+          <div>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Order Name
+            </label>
+            <input
+              type="text"
+              value={item.order_name}
+              onChange={(e) =>
+                onItemChange(index, "order_name", e.target.value)
+              }
+              className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+              placeholder="Enter order name..."
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

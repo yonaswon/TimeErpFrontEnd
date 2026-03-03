@@ -399,6 +399,15 @@ export default function ArealTimelineContent() {
                                                         <span style={{ fontSize: 12 }}>No Image</span>
                                                     </div>
                                                 )}
+                                                {cut.crv3d && (
+                                                    <button
+                                                        className="areal-download-btn"
+                                                        title="Download CRV3D"
+                                                        onClick={(e) => { e.stopPropagation(); window.open(resolveMediaUrl(cut.crv3d), '_blank'); }}
+                                                    >
+                                                        <Download size={16} />
+                                                    </button>
+                                                )}
                                             </div>
 
                                             <div className="areal-cut-content">
@@ -417,7 +426,9 @@ export default function ArealTimelineContent() {
                                                             </div>
                                                             <div className="areal-cut-orders">
                                                                 {cut.orders.map(o => (
-                                                                    <span key={o} className="areal-order-badge">{o}</span>
+                                                                    <span key={o} className="areal-order-badge">
+                                                                        {o.startsWith('ORD-') ? o : `ORD-${o}`}
+                                                                    </span>
                                                                 ))}
                                                             </div>
                                                         </div>
@@ -425,12 +436,6 @@ export default function ArealTimelineContent() {
                                                         <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--admin-text-muted)', marginTop: 8 }}>No explicit orders.</div>
                                                     )}
                                                 </div>
-
-                                                {cut.crv3d && (
-                                                    <a href={resolveMediaUrl(cut.crv3d)} download target="_blank" rel="noopener noreferrer" className="areal-download-btn">
-                                                        <Download size={18} /> CRV3D File
-                                                    </a>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -453,7 +458,8 @@ export default function ArealTimelineContent() {
                         <Activity size={48} className="mb-4 text-gray-300 dark:text-gray-700" />
                         <p>No cutting files recorded for this piece yet.</p>
                     </div>
-                )}
+                )
+                }
             </div>
 
         </div>

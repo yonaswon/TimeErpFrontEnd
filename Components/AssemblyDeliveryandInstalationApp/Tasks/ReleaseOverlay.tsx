@@ -194,8 +194,8 @@ export const ReleaseOverlay = ({
       console.error("Release error:", err);
       setError(
         err.response?.data?.error ||
-          err.message ||
-          "Failed to submit release request"
+        err.message ||
+        "Failed to submit release request"
       );
     } finally {
       setLoading(false);
@@ -231,6 +231,7 @@ export const ReleaseOverlay = ({
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
                 ORD-{task.order.order_code}
+                {(task.order as any).order_name && <span> — {(task.order as any).order_name}</span>}
               </p>
             </div>
           </div>

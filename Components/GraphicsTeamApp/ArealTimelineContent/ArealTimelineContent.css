@@ -453,10 +453,9 @@
 .areal-cut-image-wrapper {
     position: relative;
     width: 100%;
-    padding-top: 133%;
-    /* 3:4 aspect ratio */
+    padding-top: 75%;
+    /* ~4:3 aspect ratio — shorter so content stays visible on mobile */
     background: #ffffff;
-    /* Always White */
     border-bottom: 1px solid var(--admin-border);
 }
 
@@ -526,24 +525,28 @@
 }
 
 .areal-download-btn {
-    margin-top: auto;
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
     background: var(--admin-primary);
     color: white;
     border: none;
-    padding: 12px;
-    border-radius: var(--admin-radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    min-height: 44px;
-    text-decoration: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    z-index: 5;
+    transition: transform 0.15s, background 0.15s;
 }
 
 .areal-download-btn:active {
     background: var(--admin-primary-hover);
+    transform: scale(1.1);
 }
 
 /* Level 3: Navigation Arrows */

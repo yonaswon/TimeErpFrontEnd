@@ -198,22 +198,20 @@ export const StartedAssembly = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode("card")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "card"
+            className={`p-2 rounded-md transition-colors ${viewMode === "card"
                 ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
+              }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "list"
+            className={`p-2 rounded-md transition-colors ${viewMode === "list"
                 ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
+              }`}
             title="List View"
           >
             <List className="w-4 h-4" />
@@ -266,11 +264,10 @@ export const StartedAssembly = () => {
             <button
               key={page}
               onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-lg text-sm ${
-                currentPage === page
+              className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
                   ? "bg-blue-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
-              }`}
+                }`}
             >
               {page}
             </button>
@@ -319,6 +316,7 @@ const StartedAssemblyCard = ({
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             ORD-{task.order.order_code}
+            {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Design Type: {task.order.design_type}
@@ -502,6 +500,7 @@ const StartedAssemblyListItem = ({
           <div className="flex items-center space-x-3 mb-2">
             <span className="font-medium text-gray-900 dark:text-white text-sm">
               ORD-{task.order.order_code}
+              {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
             </span>
             <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
               ${task.order.price}

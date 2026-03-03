@@ -22,6 +22,7 @@ export interface FormItem {
   id: number
   type: 'mockup' | 'modification'
   name?: string | null
+  order_name: string
   mockup_image: string | File | null
   design_type: number
   price: number

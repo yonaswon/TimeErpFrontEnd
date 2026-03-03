@@ -8,6 +8,7 @@ interface DirectOrderItemProps {
         design_type: number
         price: number
         note: string
+        order_name: string
     }
     designTypes: any[]
     onItemChange: (index: number, field: string, value: any) => void
@@ -79,6 +80,20 @@ export default function DirectOrderItem({
 
                 {/* Item Details */}
                 <div className="flex-1 space-y-3">
+                    {/* Order Name */}
+                    <div>
+                        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Order Name
+                        </label>
+                        <input
+                            type="text"
+                            value={item.order_name}
+                            onChange={(e) => onItemChange(index, 'order_name', e.target.value)}
+                            className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+                            placeholder="Enter order name..."
+                        />
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label className="text-xs font-medium text-gray-700 dark:text-gray-300">

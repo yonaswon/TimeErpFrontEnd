@@ -376,6 +376,7 @@ const OverviewContent = () => {
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
                       ORD-{order.order_code}
+                      {order.order_name && <span className="ml-1 font-medium text-gray-500 dark:text-gray-400">— {order.order_name}</span>}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       ETB {order.price?.toLocaleString()}

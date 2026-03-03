@@ -1,8 +1,8 @@
-// Tasks/AssemblyTasksContent.tsx
 import { useState, useEffect } from 'react';
-import { Play, Grid, List, AlertCircle, CheckCircle } from 'lucide-react';
+import { Play, Grid, List, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 import api from '@/api';
+import { ArealMaterialPromptOverlay } from './ArealMaterialPromptOverlay';
 
 interface AssemblyAssignment {
   id: number;
@@ -83,11 +83,10 @@ export const AssemblyTasksContent = () => {
             <button
               key={filter.id}
               onClick={() => setActiveFilter(filter.id)}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                activeFilter === filter.id
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${activeFilter === filter.id
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
             >
               {filter.label}
             </button>
@@ -105,22 +104,20 @@ export const AssemblyTasksContent = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode('card')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'card'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            className={`p-2 rounded-md transition-colors ${viewMode === 'card'
+              ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            className={`p-2 rounded-md transition-colors ${viewMode === 'list'
+              ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
             title="List View"
           >
             <List className="w-4 h-4" />
@@ -132,9 +129,9 @@ export const AssemblyTasksContent = () => {
       {activeFilter === 'assigned' && (
         <AssemblyAssignedToYou viewMode={viewMode} />
       )}
-      
+
       {activeFilter === 'started' && <StartedAssembly />}
-      
+
       {activeFilter === 'completed' && <CompletedAssembly />}
     </div>
   );
@@ -147,6 +144,9 @@ const AssemblyAssignedToYou = ({ viewMode }: { viewMode: TaskView }) => {
   const [error, setError] = useState<string | null>(null);
   const [startingTask, setStartingTask] = useState<number | null>(null);
 
+  const [arealPromptData, setArealPromptData] = useState<any[] | null>(null);
+  const [activeAssemblyId, setActiveAssemblyId] = useState<number | null>(null);
+
   useEffect(() => {
     fetchAssignedTasks();
   }, []);
@@ -155,16 +155,16 @@ const AssemblyAssignedToYou = ({ viewMode }: { viewMode: TaskView }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data from localStorage
       const userData = localStorage.getItem('user_data');
       if (!userData) {
         throw new Error('User data not found');
       }
-      
+
       const user = JSON.parse(userData);
       const userId = user.id;
-      
+
       const response = await api.get(`/api/assembly-assign/?status=ASSIGNED&assigned_to=${userId}`);
       setTasks(response.data.results || []);
     } catch (err: any) {
@@ -180,17 +180,31 @@ const AssemblyAssignedToYou = ({ viewMode }: { viewMode: TaskView }) => {
       setStartingTask(assemblyId);
       setError(null);
 
-      await api.post(`/api/assembly-assign/${assemblyId}/start/`);
-      
-      // Refresh the task list
-      fetchAssignedTasks();
-      
+      const response = await api.post(`/api/assembly-assign/${assemblyId}/start/`);
+
+      // Check if the backend returned an areal prompt (assembly NOT started yet)
+      if (response.data.areal_prompt_needed) {
+        setArealPromptData(response.data.areal_prompt_data);
+        setActiveAssemblyId(assemblyId);
+        // Don't refresh — assembly hasn't started yet, just showing the prompt
+      } else {
+        // All materials released and assembly started, refresh the list
+        fetchAssignedTasks();
+      }
+
     } catch (err: any) {
       console.error('Error starting task:', err);
-      setError('Failed to start task. Please try again.');
+      const errorText = err.response?.data?.error || 'Failed to start task. Please try again.';
+      setError(errorText);
     } finally {
       setStartingTask(null);
     }
+  };
+
+  const handleArealPromptSuccess = () => {
+    setArealPromptData(null);
+    setActiveAssemblyId(null);
+    fetchAssignedTasks();
   };
 
   const formatDateTime = (dateString: string | null) => {
@@ -214,9 +228,18 @@ const AssemblyAssignedToYou = ({ viewMode }: { viewMode: TaskView }) => {
 
   if (error) {
     return (
-      <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-        <AlertCircle className="w-4 h-4 text-red-600" />
-        <p className="text-red-700 text-sm">{error}</p>
+      <div className="flex items-start space-x-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-red-700 dark:text-red-300 text-sm font-medium">Assembly Start Failed</p>
+          <p className="text-red-600 dark:text-red-400 text-sm mt-1">{error}</p>
+        </div>
+        <button
+          onClick={() => { setError(null); fetchAssignedTasks(); }}
+          className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+        >
+          <X className="w-4 h-4 text-red-500" />
+        </button>
       </div>
     );
   }
@@ -230,40 +253,52 @@ const AssemblyAssignedToYou = ({ viewMode }: { viewMode: TaskView }) => {
   }
 
   return (
-    <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
-      {tasks.map((task) =>
-        viewMode === 'card' ? (
-          <AssemblyTaskCard 
-            key={task.id} 
-            task={task} 
-            onStart={handleStart}
-            isStarting={startingTask === task.id}
-            canStart={canStartAssembly(task)}
-            formatDateTime={formatDateTime}
-          />
-        ) : (
-          <AssemblyTaskListItem 
-            key={task.id} 
-            task={task} 
-            onStart={handleStart}
-            isStarting={startingTask === task.id}
-            canStart={canStartAssembly(task)}
-            formatDateTime={formatDateTime}
-          />
-        )
+    <>
+      <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
+        {tasks.map((task) =>
+          viewMode === 'card' ? (
+            <AssemblyTaskCard
+              key={task.id}
+              task={task}
+              onStart={handleStart}
+              isStarting={startingTask === task.id}
+              canStart={canStartAssembly(task)}
+              formatDateTime={formatDateTime}
+            />
+          ) : (
+            <AssemblyTaskListItem
+              key={task.id}
+              task={task}
+              onStart={handleStart}
+              isStarting={startingTask === task.id}
+              canStart={canStartAssembly(task)}
+              formatDateTime={formatDateTime}
+            />
+          )
+        )}
+      </div>
+
+      {/* Areal Material Prompt Overlay */}
+      {arealPromptData && activeAssemblyId && (
+        <ArealMaterialPromptOverlay
+          arealPromptData={arealPromptData}
+          submitEndpoint={`/api/assembly-assign/${activeAssemblyId}/release_areal_materials/`}
+          onClose={() => { setArealPromptData(null); setActiveAssemblyId(null); }}
+          onSuccess={handleArealPromptSuccess}
+        />
       )}
-    </div>
+    </>
   );
 };
 
 // Card View Component
-const AssemblyTaskCard = ({ 
-  task, 
-  onStart, 
+const AssemblyTaskCard = ({
+  task,
+  onStart,
   isStarting,
   canStart,
   formatDateTime
-}: { 
+}: {
   task: AssemblyAssignment;
   onStart: (assemblyId: number) => void;
   isStarting: boolean;
@@ -280,6 +315,7 @@ const AssemblyTaskCard = ({
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             ORD-{task.order.order_code}
+            {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Design Type: {task.order.design_type}
@@ -317,19 +353,17 @@ const AssemblyTaskCard = ({
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Completed:</span>
-              <span className={`font-medium ${
-                canStart ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
-              }`}>
+              <span className={`font-medium ${canStart ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
+                }`}>
                 {completedCuttingFiles}/{totalCuttingFiles}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Status:</span>
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                canStart 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-              }`}>
+              <span className={`px-2 py-1 rounded-full text-xs ${canStart
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                }`}>
                 {canStart ? 'Ready to Start' : 'Waiting for Cutting'}
               </span>
             </div>
@@ -381,13 +415,13 @@ const AssemblyTaskCard = ({
 };
 
 // List View Component
-const AssemblyTaskListItem = ({ 
-  task, 
-  onStart, 
+const AssemblyTaskListItem = ({
+  task,
+  onStart,
   isStarting,
   canStart,
   formatDateTime
-}: { 
+}: {
   task: AssemblyAssignment;
   onStart: (assemblyId: number) => void;
   isStarting: boolean;
@@ -404,19 +438,19 @@ const AssemblyTaskListItem = ({
           <div className="flex items-center space-x-3 mb-2">
             <span className="font-medium text-gray-900 dark:text-white text-sm">
               ORD-{task.order.order_code}
+              {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
             </span>
             <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
               ${task.order.price}
             </span>
-            <span className={`px-2 py-1 rounded-full text-xs ${
-              canStart 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-            }`}>
+            <span className={`px-2 py-1 rounded-full text-xs ${canStart
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+              }`}>
               {canStart ? 'Ready' : 'Waiting'}
             </span>
           </div>
-          
+
           <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
             <span>Start: {formatDateTime(task.schedule_start_date)}</span>
             <span>Complete: {formatDateTime(task.schedule_complate_date)}</span>
@@ -424,7 +458,7 @@ const AssemblyTaskListItem = ({
             <span>Design: {task.order.design_type}</span>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4">
           {canStart ? (
             <button

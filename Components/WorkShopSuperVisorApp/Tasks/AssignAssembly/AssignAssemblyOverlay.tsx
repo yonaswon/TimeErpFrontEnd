@@ -374,6 +374,7 @@ export const AssignAssemblyOverlay = ({
                           <div>
                             <h4 className="font-medium text-gray-900 dark:text-white">
                               ORD-{order.order_code}
+                              {(order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}
                             </h4>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
                               Created:{" "}
@@ -386,15 +387,14 @@ export const AssignAssemblyOverlay = ({
                             )}
                           </div>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              order.order_status === "PRE-ACCEPTED"
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${order.order_status === "PRE-ACCEPTED"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : order.order_status === "PRE-CONFIRMED"
-                                ? "bg-blue-100 text-blue-800"
-                                : order.order_status === "CNC-STARTED"
-                                ? "bg-orange-100 text-orange-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
+                                  ? "bg-blue-100 text-blue-800"
+                                  : order.order_status === "CNC-STARTED"
+                                    ? "bg-orange-100 text-orange-800"
+                                    : "bg-green-100 text-green-800"
+                              }`}
                           >
                             {order.order_status.replace("-", " ")}
                           </span>
@@ -459,11 +459,10 @@ export const AssignAssemblyOverlay = ({
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 rounded-lg text-sm ${
-                      currentPage === page
+                    className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
                         ? "bg-green-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -488,6 +487,7 @@ export const AssignAssemblyOverlay = ({
                   </h2>
                   <p className="text-gray-600 dark:text-gray-400 text-sm">
                     ORD-{selectedOrder.order_code}
+                    {(selectedOrder as any).order_name && <span> — {(selectedOrder as any).order_name}</span>}
                   </p>
                 </div>
               </div>

@@ -67,6 +67,7 @@ const OrderList = () => {
 
   // Reset and fetch when filter changes
   useEffect(() => {
+    setOrders([]); // Clear old orders to show the loading spinner
     setPage(1);
     fetchOrders(1, false);
   }, [activeFilter]);
@@ -119,8 +120,8 @@ const OrderList = () => {
             key={tab.id}
             onClick={() => setActiveFilter(tab.id)}
             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeFilter === tab.id
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700"
               }`}
           >
             {tab.label}

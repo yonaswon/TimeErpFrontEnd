@@ -237,22 +237,20 @@ export const DandIOverlay = ({ onClose, onSuccess }: DandIOverlayProps) => {
             <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
               <button
                 onClick={() => setViewMode("card")}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "card"
+                className={`p-2 rounded-md transition-colors ${viewMode === "card"
                     ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
+                  }`}
                 title="Card View"
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "list"
+                className={`p-2 rounded-md transition-colors ${viewMode === "list"
                     ? "bg-white dark:bg-zinc-600 text-blue-600 shadow-sm"
                     : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                }`}
+                  }`}
                 title="List View"
               >
                 <List className="w-4 h-4" />
@@ -309,11 +307,10 @@ export const DandIOverlay = ({ onClose, onSuccess }: DandIOverlayProps) => {
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 rounded-lg text-sm ${
-                      currentPage === page
+                    className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
                         ? "bg-blue-600 text-white"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -377,11 +374,10 @@ const OrderContainerCard = ({
         </div>
         <div className="text-right">
           <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              allOrdersAssemblyCompleted
+            className={`px-2 py-1 rounded-full text-xs font-medium ${allOrdersAssemblyCompleted
                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                 : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-            }`}
+              }`}
           >
             {allOrdersAssemblyCompleted
               ? "Ready"
@@ -476,13 +472,12 @@ const OrderContainerCard = ({
             </span>
           )}
           <span
-            className={`px-2 py-1 rounded-full text-xs ${
-              container.order_difficulty === "HIGH"
+            className={`px-2 py-1 rounded-full text-xs ${container.order_difficulty === "HIGH"
                 ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
                 : container.order_difficulty === "MEDIUM"
-                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-            }`}
+                  ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                  : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+              }`}
           >
             {container.order_difficulty}
           </span>
@@ -498,11 +493,10 @@ const OrderContainerCard = ({
           {container.orders.map((order) => (
             <div
               key={order.order_code}
-              className={`flex justify-between items-center text-sm p-2 rounded ${
-                order.order_status === "ASSEMBLY-COMPLETED"
+              className={`flex justify-between items-center text-sm p-2 rounded ${order.order_status === "ASSEMBLY-COMPLETED"
                   ? "bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800"
                   : "bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800"
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2">
                 {order.order_status === "ASSEMBLY-COMPLETED" ? (
@@ -512,15 +506,15 @@ const OrderContainerCard = ({
                 )}
                 <span className="text-gray-900 dark:text-white">
                   ORD-{order.order_code}
+                  {order.order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {order.order_name}</span>}
                 </span>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs ${
-                    order.order_status === "ASSEMBLY-COMPLETED"
+                  className={`px-2 py-1 rounded-full text-xs ${order.order_status === "ASSEMBLY-COMPLETED"
                       ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-300"
                       : order.order_status === "ASSEMBLY-STARTED"
-                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-300"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                  }`}
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-300"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                    }`}
                 >
                   {order.order_status.replace("-", " ")}
                 </span>
@@ -550,11 +544,10 @@ const OrderContainerCard = ({
       <button
         onClick={() => onAssign(container)}
         disabled={!allOrdersAssemblyCompleted}
-        className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg transition-colors ${
-          allOrdersAssemblyCompleted
+        className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg transition-colors ${allOrdersAssemblyCompleted
             ? "bg-blue-600 text-white hover:bg-blue-700"
             : "bg-gray-400 text-white cursor-not-allowed"
-        }`}
+          }`}
       >
         <Truck className="w-4 h-4" />
         <span>
@@ -601,11 +594,10 @@ const OrderContainerListItem = ({
               {container.client}
             </span>
             <span
-              className={`px-2 py-1 rounded-full text-xs ${
-                allOrdersAssemblyCompleted
+              className={`px-2 py-1 rounded-full text-xs ${allOrdersAssemblyCompleted
                   ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                   : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-              }`}
+                }`}
             >
               {allOrdersAssemblyCompleted
                 ? "Ready"
@@ -643,11 +635,10 @@ const OrderContainerListItem = ({
           <button
             onClick={() => onAssign(container)}
             disabled={!allOrdersAssemblyCompleted}
-            className={`flex items-center space-x-1 px-3 py-1 rounded-lg transition-colors text-sm ${
-              allOrdersAssemblyCompleted
+            className={`flex items-center space-x-1 px-3 py-1 rounded-lg transition-colors text-sm ${allOrdersAssemblyCompleted
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-400 text-white cursor-not-allowed"
-            }`}
+              }`}
           >
             <Truck className="w-3 h-3" />
             <span>Assign</span>

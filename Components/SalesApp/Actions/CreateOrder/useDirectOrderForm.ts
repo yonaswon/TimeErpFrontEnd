@@ -6,6 +6,7 @@ interface DirectOrderItem {
     design_type: number
     price: number
     note: string
+    order_name: string
 }
 
 interface Account {
@@ -28,7 +29,7 @@ interface UseDirectOrderFormParams {
 export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirectOrderFormParams) {
     // Order items
     const [items, setItems] = useState<DirectOrderItem[]>([
-        { mockup_image: null, design_type: 0, price: 0, note: '' }
+        { mockup_image: null, design_type: 0, price: 0, note: '', order_name: '' }
     ])
 
     // Container details
@@ -57,7 +58,7 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
     // Add new order item
     const addItem = () => {
         const defaultDesignType = designTypes.length > 0 ? designTypes[0].id : 0
-        setItems(prev => [...prev, { mockup_image: null, design_type: defaultDesignType, price: 0, note: '' }])
+        setItems(prev => [...prev, { mockup_image: null, design_type: defaultDesignType, price: 0, note: '', order_name: '' }])
     }
 
     // Remove order item
@@ -143,6 +144,7 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
                 return {
                     design_type: designType,
                     order_status: 'PRE-ACCEPTED',
+                    order_name: item.order_name || '',
                     mockup: null,
                     mockup_modification: null,
                     price: item.price || 0,

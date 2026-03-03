@@ -114,16 +114,16 @@ export const DeliveryAssignedToYou = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data from localStorage
       const userData = localStorage.getItem('user_data');
       if (!userData) {
         throw new Error('User data not found');
       }
-      
+
       const user = JSON.parse(userData);
       const userId = user.id;
-      
+
       const response = await api.get(`/api/dandi/?assigned_to=${userId}&status=ASSIGNED`);
       setAssignments(response.data.results || []);
     } catch (err: any) {
@@ -140,10 +140,10 @@ export const DeliveryAssignedToYou = () => {
       setError(null);
 
       await api.post(`/api/dandi/${assignmentId}/start/`);
-      
+
       // Refresh the task list
       fetchAssignedTasks();
-      
+
     } catch (err: any) {
       console.error('Error starting task:', err);
       setError('Failed to start task. Please try again.');
@@ -230,22 +230,20 @@ export const DeliveryAssignedToYou = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode('card')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'card'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'card'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'list'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="List View"
           >
             <List className="w-4 h-4" />
@@ -264,9 +262,9 @@ export const DeliveryAssignedToYou = () => {
       <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
         {assignments.map((assignment) =>
           viewMode === 'card' ? (
-            <DeliveryTaskCard 
-              key={assignment.id} 
-              assignment={assignment} 
+            <DeliveryTaskCard
+              key={assignment.id}
+              assignment={assignment}
               onStart={handleStart}
               onViewDetails={openDetailOverlay}
               isStarting={startingTask === assignment.id}
@@ -274,9 +272,9 @@ export const DeliveryAssignedToYou = () => {
               getRelativeDate={getRelativeDate}
             />
           ) : (
-            <DeliveryTaskListItem 
-              key={assignment.id} 
-              assignment={assignment} 
+            <DeliveryTaskListItem
+              key={assignment.id}
+              assignment={assignment}
               onStart={handleStart}
               onViewDetails={openDetailOverlay}
               isStarting={startingTask === assignment.id}
@@ -310,9 +308,9 @@ interface DeliveryTaskCardProps {
   getRelativeDate: (dateString: string) => string;
 }
 
-const DeliveryTaskCard = ({ 
-  assignment, 
-  onStart, 
+const DeliveryTaskCard = ({
+  assignment,
+  onStart,
   onViewDetails,
   isStarting,
   formatDateTime,
@@ -325,7 +323,7 @@ const DeliveryTaskCard = ({
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h4 
+          <h4
             className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
             onClick={() => onViewDetails(assignment)}
           >
@@ -420,13 +418,12 @@ const DeliveryTaskCard = ({
               Installation
             </span>
           )}
-          <span className={`px-2 py-1 rounded-full text-xs ${
-            container.order_difficulty === 'HIGH' 
+          <span className={`px-2 py-1 rounded-full text-xs ${container.order_difficulty === 'HIGH'
               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
               : container.order_difficulty === 'MEDIUM'
-              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-          }`}>
+                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+            }`}>
             {container.order_difficulty}
           </span>
         </div>
@@ -438,7 +435,7 @@ const DeliveryTaskCard = ({
         <div className="space-y-1">
           {container.orders.map((order) => (
             <div key={order.order_code} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-zinc-700 rounded">
-              <span className="text-gray-900 dark:text-white">ORD-{order.order_code}</span>
+              <span className="text-gray-900 dark:text-white">ORD-{order.order_code}{(order as any).order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}</span>
               <span className="text-gray-600 dark:text-gray-400">${order.price}</span>
             </div>
           ))}
@@ -468,9 +465,9 @@ const DeliveryTaskCard = ({
 };
 
 // List View Component
-const DeliveryTaskListItem = ({ 
-  assignment, 
-  onStart, 
+const DeliveryTaskListItem = ({
+  assignment,
+  onStart,
   onViewDetails,
   isStarting,
   formatDateTime,
@@ -485,10 +482,10 @@ const DeliveryTaskListItem = ({
           <div className="shrink-0">
             <Truck className="w-8 h-8 text-blue-600" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3 mb-2">
-              <span 
+              <span
                 className="font-medium text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={() => onViewDetails(assignment)}
               >
@@ -498,7 +495,7 @@ const DeliveryTaskListItem = ({
                 ASSIGNED
               </span>
             </div>
-            
+
             <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
               <div className="flex items-center space-x-1 shrink-0">
                 <MapPin className="w-3 h-3" />
@@ -522,7 +519,7 @@ const DeliveryTaskListItem = ({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4 shrink-0">
           <button
             onClick={() => onStart(assignment.id)}
@@ -611,13 +608,12 @@ const DetailOverlay = ({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Order Difficulty</label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    container.order_difficulty === 'HIGH' 
+                  <span className={`px-2 py-1 rounded-full text-xs ${container.order_difficulty === 'HIGH'
                       ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                       : container.order_difficulty === 'MEDIUM'
-                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                  }`}>
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    }`}>
                     {container.order_difficulty}
                   </span>
                 </div>
@@ -701,18 +697,17 @@ const DetailOverlay = ({
                 <div key={order.order_code} className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">ORD-{order.order_code}</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-white">ORD-{order.order_code}{(order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">${order.price}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      order.order_status === 'ASSEMBLY-COMPLETED' 
+                    <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'ASSEMBLY-COMPLETED'
                         ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                    }`}>
+                      }`}>
                       {order.order_status.replace('-', ' ')}
                     </span>
                   </div>
-                  
+
                   {/* Order Details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -721,18 +716,17 @@ const DetailOverlay = ({
                         {order.cutting_files.map((file) => (
                           <div key={file.id} className="flex items-center justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">File #{file.id}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              file.status === 'COMPLATED' 
+                            <span className={`px-2 py-1 rounded-full text-xs ${file.status === 'COMPLATED'
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                              }`}>
                               {file.status}
                             </span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    
+
                     <div>
                       <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Mockup</h5>
                       {order.mockup && (

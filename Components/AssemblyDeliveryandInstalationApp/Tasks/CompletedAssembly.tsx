@@ -76,16 +76,16 @@ export const CompletedAssembly = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data from localStorage
       const userData = localStorage.getItem('user_data');
       if (!userData) {
         throw new Error('User data not found');
       }
-      
+
       const user = JSON.parse(userData);
       const userId = user.id;
-      
+
       const response = await api.get(`/api/assembly-assign/?status=COMPLATED&assigned_to=${userId}&ordering=-date&page=${currentPage}`);
       setTasks(response.data.results || []);
       setTotalPages(Math.ceil(response.data.count / 10));
@@ -104,14 +104,14 @@ export const CompletedAssembly = () => {
 
   const calculateDuration = (startDate: string | null, completeDate: string | null) => {
     if (!startDate || !completeDate) return 'N/A';
-    
+
     const start = new Date(startDate);
     const complete = new Date(completeDate);
     const diffMs = complete.getTime() - start.getTime();
-    
+
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -120,17 +120,17 @@ export const CompletedAssembly = () => {
 
   const calculateScheduleOffset = (scheduledDate: string, actualDate: string | null) => {
     if (!actualDate) return 'N/A';
-    
+
     const scheduled = new Date(scheduledDate);
     const actual = new Date(actualDate);
     const diffMs = actual.getTime() - scheduled.getTime();
-    
+
     const hours = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
     const minutes = Math.floor((Math.abs(diffMs) % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     const isEarly = diffMs < 0;
     const sign = isEarly ? '-' : '+';
-    
+
     if (hours > 0) {
       return `${sign}${hours}h ${minutes}m`;
     }
@@ -160,22 +160,20 @@ export const CompletedAssembly = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode('card')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'card'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'card'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'list'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="List View"
           >
             <List className="w-4 h-4" />
@@ -198,17 +196,17 @@ export const CompletedAssembly = () => {
         <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
           {tasks.map((task) =>
             viewMode === 'card' ? (
-              <CompletedAssemblyCard 
-                key={task.id} 
-                task={task} 
+              <CompletedAssemblyCard
+                key={task.id}
+                task={task}
                 formatDateTime={formatDateTime}
                 calculateDuration={calculateDuration}
                 calculateScheduleOffset={calculateScheduleOffset}
               />
             ) : (
-              <CompletedAssemblyListItem 
-                key={task.id} 
-                task={task} 
+              <CompletedAssemblyListItem
+                key={task.id}
+                task={task}
                 formatDateTime={formatDateTime}
                 calculateDuration={calculateDuration}
                 calculateScheduleOffset={calculateScheduleOffset}
@@ -225,11 +223,10 @@ export const CompletedAssembly = () => {
             <button
               key={page}
               onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-lg text-sm ${
-                currentPage === page
+              className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
-              }`}
+                }`}
             >
               {page}
             </button>
@@ -241,12 +238,12 @@ export const CompletedAssembly = () => {
 };
 
 // Card View Component for Completed Assembly Tasks
-const CompletedAssemblyCard = ({ 
-  task, 
+const CompletedAssemblyCard = ({
+  task,
   formatDateTime,
   calculateDuration,
   calculateScheduleOffset
-}: { 
+}: {
   task: AssemblyAssignment;
   formatDateTime: (dateString: string | null) => string;
   calculateDuration: (startDate: string | null, completeDate: string | null) => string;
@@ -262,6 +259,7 @@ const CompletedAssemblyCard = ({
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             ORD-{task.order.order_code}
+            {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Design Type: {task.order.design_type}
@@ -321,13 +319,12 @@ const CompletedAssemblyCard = ({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Schedule Offset:</span>
-              <span className={`font-medium ${
-                scheduleOffset.startsWith('-') 
-                  ? 'text-green-600 dark:text-green-400' 
+              <span className={`font-medium ${scheduleOffset.startsWith('-')
+                  ? 'text-green-600 dark:text-green-400'
                   : scheduleOffset.startsWith('+')
-                  ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
                 {scheduleOffset}
               </span>
             </div>
@@ -376,12 +373,12 @@ const CompletedAssemblyCard = ({
 };
 
 // List View Component for Completed Assembly Tasks
-const CompletedAssemblyListItem = ({ 
-  task, 
+const CompletedAssemblyListItem = ({
+  task,
   formatDateTime,
   calculateDuration,
   calculateScheduleOffset
-}: { 
+}: {
   task: AssemblyAssignment;
   formatDateTime: (dateString: string | null) => string;
   calculateDuration: (startDate: string | null, completeDate: string | null) => string;
@@ -397,6 +394,7 @@ const CompletedAssemblyListItem = ({
           <div className="flex items-center space-x-3 mb-2">
             <span className="font-medium text-gray-900 dark:text-white text-sm">
               ORD-{task.order.order_code}
+              {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
             </span>
             <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
               ${task.order.price}
@@ -405,19 +403,18 @@ const CompletedAssemblyListItem = ({
               Completed
             </span>
           </div>
-          
+
           <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
             <div className="flex items-center space-x-1 shrink-0">
               <Clock className="w-3 h-3 text-blue-600" />
               <span>Duration: {actualDuration}</span>
             </div>
-            <span className={`shrink-0 ${
-              scheduleOffset.startsWith('-') 
-                ? 'text-green-600 dark:text-green-400' 
+            <span className={`shrink-0 ${scheduleOffset.startsWith('-')
+                ? 'text-green-600 dark:text-green-400'
                 : scheduleOffset.startsWith('+')
-                ? 'text-yellow-600 dark:text-yellow-400'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}>
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
               Offset: {scheduleOffset}
             </span>
             <span className="shrink-0">Started: {formatDateTime(task.start_date)}</span>
@@ -425,7 +422,7 @@ const CompletedAssemblyListItem = ({
             <span className="shrink-0">Team: {task.assigned_to.length} members</span>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4 shrink-0">
           <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
             <CheckCircle className="w-4 h-4" />

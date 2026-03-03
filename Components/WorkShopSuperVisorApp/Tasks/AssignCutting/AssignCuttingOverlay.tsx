@@ -318,6 +318,7 @@ export const AssignCuttingOverlay = ({
                                 <Package className="w-3 h-3 text-blue-600" />
                                 <span className="text-gray-700 dark:text-gray-300">
                                   ORD-{order.order_code}
+                                  {(order as any).order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}
                                 </span>
                               </div>
                               <span

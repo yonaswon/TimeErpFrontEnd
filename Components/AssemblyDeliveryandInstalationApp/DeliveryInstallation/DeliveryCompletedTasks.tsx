@@ -113,16 +113,16 @@ export const DeliveryCompletedTasks = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get user data from localStorage
       const userData = localStorage.getItem('user_data');
       if (!userData) {
         throw new Error('User data not found');
       }
-      
+
       const user = JSON.parse(userData);
       const userId = user.id;
-      
+
       const response = await api.get(`/api/dandi/?assigned_to=${userId}&ordering=-date&status=COMPLATED`);
       setAssignments(response.data.results || []);
     } catch (err: any) {
@@ -154,14 +154,14 @@ export const DeliveryCompletedTasks = () => {
 
   const calculateDuration = (startDate: string | null, completeDate: string | null) => {
     if (!startDate || !completeDate) return 'N/A';
-    
+
     const start = new Date(startDate);
     const complete = new Date(completeDate);
     const diffMs = complete.getTime() - start.getTime();
-    
+
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
     }
@@ -170,17 +170,17 @@ export const DeliveryCompletedTasks = () => {
 
   const calculateScheduleOffset = (scheduledDate: string, actualDate: string | null) => {
     if (!actualDate) return 'N/A';
-    
+
     const scheduled = new Date(scheduledDate);
     const actual = new Date(actualDate);
     const diffMs = actual.getTime() - scheduled.getTime();
-    
+
     const hours = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
     const minutes = Math.floor((Math.abs(diffMs) % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     const isEarly = diffMs < 0;
     const sign = isEarly ? '-' : '+';
-    
+
     if (hours > 0) {
       return `${sign}${hours}h ${minutes}m`;
     }
@@ -234,22 +234,20 @@ export const DeliveryCompletedTasks = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode('card')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'card'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'card'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="Card View"
           >
             <Grid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list'
+            className={`p-2 rounded-md transition-colors ${viewMode === 'list'
                 ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+              }`}
             title="List View"
           >
             <List className="w-4 h-4" />
@@ -268,18 +266,18 @@ export const DeliveryCompletedTasks = () => {
       <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
         {assignments.map((assignment) =>
           viewMode === 'card' ? (
-            <CompletedTaskCard 
-              key={assignment.id} 
-              assignment={assignment} 
+            <CompletedTaskCard
+              key={assignment.id}
+              assignment={assignment}
               onViewDetails={openDetailOverlay}
               formatDateTime={formatDateTime}
               calculateDuration={calculateDuration}
               calculateScheduleOffset={calculateScheduleOffset}
             />
           ) : (
-            <CompletedTaskListItem 
-              key={assignment.id} 
-              assignment={assignment} 
+            <CompletedTaskListItem
+              key={assignment.id}
+              assignment={assignment}
               onViewDetails={openDetailOverlay}
               formatDateTime={formatDateTime}
               calculateDuration={calculateDuration}
@@ -312,8 +310,8 @@ interface CompletedTaskCardProps {
   calculateScheduleOffset: (scheduledDate: string, actualDate: string | null) => string;
 }
 
-const CompletedTaskCard = ({ 
-  assignment, 
+const CompletedTaskCard = ({
+  assignment,
   onViewDetails,
   formatDateTime,
   calculateDuration,
@@ -328,7 +326,7 @@ const CompletedTaskCard = ({
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h4 
+          <h4
             className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
             onClick={() => onViewDetails(assignment)}
           >
@@ -375,13 +373,12 @@ const CompletedTaskCard = ({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Schedule Offset:</span>
-              <span className={`font-medium ${
-                scheduleOffset.startsWith('-') 
-                  ? 'text-green-600 dark:text-green-400' 
+              <span className={`font-medium ${scheduleOffset.startsWith('-')
+                  ? 'text-green-600 dark:text-green-400'
                   : scheduleOffset.startsWith('+')
-                  ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
                 {scheduleOffset}
               </span>
             </div>
@@ -448,11 +445,10 @@ const CompletedTaskCard = ({
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Invoice:</span>
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                container.invoice 
+              <span className={`px-2 py-1 rounded-full text-xs ${container.invoice
                   ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                   : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
-              }`}>
+                }`}>
                 {container.invoice ? 'Yes' : 'No'}
               </span>
             </div>
@@ -474,13 +470,12 @@ const CompletedTaskCard = ({
               Installation
             </span>
           )}
-          <span className={`px-2 py-1 rounded-full text-xs ${
-            container.order_difficulty === 'HIGH' 
+          <span className={`px-2 py-1 rounded-full text-xs ${container.order_difficulty === 'HIGH'
               ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
               : container.order_difficulty === 'MEDIUM'
-              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-          }`}>
+                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+            }`}>
             {container.order_difficulty}
           </span>
         </div>
@@ -492,7 +487,7 @@ const CompletedTaskCard = ({
         <div className="space-y-1">
           {container.orders.map((order) => (
             <div key={order.order_code} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-zinc-700 rounded">
-              <span className="text-gray-900 dark:text-white">ORD-{order.order_code}</span>
+              <span className="text-gray-900 dark:text-white">ORD-{order.order_code}{(order as any).order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}</span>
               <span className="text-gray-600 dark:text-gray-400">${order.price}</span>
             </div>
           ))}
@@ -503,8 +498,8 @@ const CompletedTaskCard = ({
 };
 
 // List View Component
-const CompletedTaskListItem = ({ 
-  assignment, 
+const CompletedTaskListItem = ({
+  assignment,
   onViewDetails,
   formatDateTime,
   calculateDuration,
@@ -521,10 +516,10 @@ const CompletedTaskListItem = ({
           <div className="shrink-0">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3 mb-2">
-              <span 
+              <span
                 className="font-medium text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={() => onViewDetails(assignment)}
               >
@@ -534,19 +529,18 @@ const CompletedTaskListItem = ({
                 COMPLETED
               </span>
             </div>
-            
+
             <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
               <div className="flex items-center space-x-1 shrink-0">
                 <Clock className="w-3 h-3 text-blue-600" />
                 <span>Duration: {actualDuration}</span>
               </div>
-              <span className={`shrink-0 ${
-                scheduleOffset.startsWith('-') 
-                  ? 'text-green-600 dark:text-green-400' 
+              <span className={`shrink-0 ${scheduleOffset.startsWith('-')
+                  ? 'text-green-600 dark:text-green-400'
                   : scheduleOffset.startsWith('+')
-                  ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
                 Offset: {scheduleOffset}
               </span>
               <span className="shrink-0">Completed: {formatDateTime(assignment.complate_date)}</span>
@@ -555,7 +549,7 @@ const CompletedTaskListItem = ({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4 shrink-0">
           <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
             <CheckCircle className="w-4 h-4" />
@@ -634,13 +628,12 @@ const DetailOverlay = ({
               <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
                 <FileText className="w-8 h-8 text-green-600 mx-auto mb-2" />
                 <div className="text-sm text-green-600 dark:text-green-400">Schedule Offset</div>
-                <div className={`text-xl font-bold ${
-                  scheduleOffset.startsWith('-') 
-                    ? 'text-green-600 dark:text-green-400' 
+                <div className={`text-xl font-bold ${scheduleOffset.startsWith('-')
+                    ? 'text-green-600 dark:text-green-400'
                     : scheduleOffset.startsWith('+')
-                    ? 'text-yellow-600 dark:text-yellow-400'
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}>
+                      ? 'text-yellow-600 dark:text-yellow-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}>
                   {scheduleOffset}
                 </div>
               </div>
@@ -710,13 +703,12 @@ const DetailOverlay = ({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Order Difficulty</label>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    container.order_difficulty === 'HIGH' 
+                  <span className={`px-2 py-1 rounded-full text-xs ${container.order_difficulty === 'HIGH'
                       ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                       : container.order_difficulty === 'MEDIUM'
-                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                  }`}>
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                    }`}>
                     {container.order_difficulty}
                   </span>
                 </div>
@@ -788,18 +780,17 @@ const DetailOverlay = ({
                 <div key={order.order_code} className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">ORD-{order.order_code}</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-white">ORD-{order.order_code}{(order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">${order.price}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      order.order_status === 'REM-ACCEPTED' 
+                    <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'REM-ACCEPTED'
                         ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                    }`}>
+                      }`}>
                       {order.order_status.replace('-', ' ')}
                     </span>
                   </div>
-                  
+
                   {/* Order Details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -808,18 +799,17 @@ const DetailOverlay = ({
                         {order.cutting_files.map((file) => (
                           <div key={file.id} className="flex items-center justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">File #{file.id}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              file.status === 'COMPLATED' 
+                            <span className={`px-2 py-1 rounded-full text-xs ${file.status === 'COMPLATED'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                 : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                            }`}>
+                              }`}>
                               {file.status}
                             </span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    
+
                     <div>
                       <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Mockup</h5>
                       {order.mockup && (
@@ -906,7 +896,7 @@ const DetailOverlay = ({
           >
             Close
           </button>
-         
+
         </div>
       </div>
     </div>

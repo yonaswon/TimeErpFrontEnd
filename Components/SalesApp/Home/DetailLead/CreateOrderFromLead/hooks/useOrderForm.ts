@@ -55,6 +55,7 @@ export function useOrderForm({
         id: item.id,
         type: item.type,
         name: item.name,
+        order_name: item.name || '',
         mockup_image: item.mockup_image || null,
         design_type: item.design_type || defaultDesignType,
         price: Math.round(item.price || 0),
@@ -175,6 +176,7 @@ export function useOrderForm({
         return {
           design_type: designType,
           order_status: "PRE-ACCEPTED",
+          order_name: item.order_name || '',
           mockup: item.type === "mockup" ? item.id : null,
           mockup_modification: item.type === "modification" ? item.id : null,
           price: price,

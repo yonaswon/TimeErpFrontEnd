@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Order } from './types'
 import OrderDetailOverlay from './OrderDetailOverlay'
 import BomFormOverlay from './BomFormOverlay'
@@ -17,6 +17,11 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
   const [showBomOverlay, setShowBomOverlay] = useState(false)
   const [togglingDxfReady, setTogglingDxfReady] = useState(false)
   const [deletingDxfId, setDeletingDxfId] = useState<number | null>(null)
+
+  // Sync local state when parent refetches new data
+  useEffect(() => {
+    setOrder(initialOrder)
+  }, [initialOrder])
 
   // Get user data from localStorage
   const getUserData = () => {
@@ -93,6 +98,11 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <div className="font-semibold text-gray-900 dark:text-white">
                 #ORD-{order.order_code}
+                {order.order_name && (
+                  <span className="ml-2 font-medium text-gray-600 dark:text-gray-400">
+                    — {order.order_name}
+                  </span>
+                )}
               </div>
               <span className={`text-xs px-2 py-1 rounded ${getStatusColor(order.order_status)}`}>
                 {formatStatus(order.order_status)}

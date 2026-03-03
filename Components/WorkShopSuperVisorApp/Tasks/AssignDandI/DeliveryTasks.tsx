@@ -120,7 +120,7 @@ export const DeliveryTasks = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await api.get('/api/dandi/?ordering=-date');
       setAssignments(response.data.results || []);
     } catch (err: any) {
@@ -226,21 +226,19 @@ export const DeliveryTasks = () => {
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
             onClick={() => setViewMode('card')}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              viewMode === 'card'
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === 'card'
                 ? 'bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400'
-            }`}
+              }`}
           >
             Card View
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${
-              viewMode === 'list'
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${viewMode === 'list'
                 ? 'bg-white dark:bg-zinc-600 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400'
-            }`}
+              }`}
           >
             List View
           </button>
@@ -251,9 +249,9 @@ export const DeliveryTasks = () => {
       <div className="space-y-3">
         {assignments.map((assignment) =>
           viewMode === 'card' ? (
-            <DeliveryTaskCard 
-              key={assignment.id} 
-              assignment={assignment} 
+            <DeliveryTaskCard
+              key={assignment.id}
+              assignment={assignment}
               onViewDetails={openDetailOverlay}
               onEdit={openEditOverlay}
               formatDateTime={formatDateTime}
@@ -261,9 +259,9 @@ export const DeliveryTasks = () => {
               getDifficultyColor={getDifficultyColor}
             />
           ) : (
-            <DeliveryTaskListItem 
-              key={assignment.id} 
-              assignment={assignment} 
+            <DeliveryTaskListItem
+              key={assignment.id}
+              assignment={assignment}
               onViewDetails={openDetailOverlay}
               onEdit={openEditOverlay}
               formatDateTime={formatDateTime}
@@ -310,9 +308,9 @@ interface DeliveryTaskCardProps {
   getDifficultyColor: (difficulty: string) => string;
 }
 
-const DeliveryTaskCard = ({ 
-  assignment, 
-  onViewDetails, 
+const DeliveryTaskCard = ({
+  assignment,
+  onViewDetails,
   onEdit,
   formatDateTime,
   getStatusColor,
@@ -327,7 +325,7 @@ const DeliveryTaskCard = ({
         <div className="flex-1">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h4 
+              <h4
                 className="font-medium text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={() => onViewDetails(assignment)}
               >
@@ -443,7 +441,7 @@ const DeliveryTaskCard = ({
             <div className="space-y-1">
               {container.orders.map((order) => (
                 <div key={order.order_code} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-zinc-700 rounded">
-                  <span className="text-gray-900 dark:text-white">ORD-{order.order_code}</span>
+                  <span className="text-gray-900 dark:text-white">ORD-{order.order_code}{order.order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {order.order_name}</span>}</span>
                   <span className="text-gray-600 dark:text-gray-400">${order.price}</span>
                 </div>
               ))}
@@ -456,9 +454,9 @@ const DeliveryTaskCard = ({
 };
 
 // List View Component
-const DeliveryTaskListItem = ({ 
-  assignment, 
-  onViewDetails, 
+const DeliveryTaskListItem = ({
+  assignment,
+  onViewDetails,
   onEdit,
   formatDateTime,
   getStatusColor,
@@ -473,10 +471,10 @@ const DeliveryTaskListItem = ({
           <div className="shrink-0">
             <Truck className="w-8 h-8 text-blue-600" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3 mb-2">
-              <span 
+              <span
                 className="font-medium text-gray-900 dark:text-white text-sm cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={() => onViewDetails(assignment)}
               >
@@ -489,7 +487,7 @@ const DeliveryTaskListItem = ({
                 {container.order_difficulty}
               </span>
             </div>
-            
+
             <div className="flex items-center space-x-4 text-xs text-gray-600 dark:text-gray-400 overflow-x-auto scrollbar-thin pb-1">
               <div className="flex items-center space-x-1 shrink-0">
                 <Phone className="w-3 h-3" />
@@ -514,7 +512,7 @@ const DeliveryTaskListItem = ({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2 ml-4 shrink-0">
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {container.orders.length} order(s)
@@ -699,18 +697,17 @@ const DetailOverlay = ({
                 <div key={order.order_code} className="border border-gray-200 dark:border-zinc-700 rounded-lg p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">ORD-{order.order_code}</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-white">ORD-{order.order_code}{order.order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {order.order_name}</span>}</h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400">${order.price}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      order.order_status === 'ASSEMBLY-COMPLETED' 
+                    <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'ASSEMBLY-COMPLETED'
                         ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                    }`}>
+                      }`}>
                       {order.order_status.replace('-', ' ')}
                     </span>
                   </div>
-                  
+
                   {/* Order Details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -719,18 +716,17 @@ const DetailOverlay = ({
                         {order.cutting_files.map((file) => (
                           <div key={file.id} className="flex items-center justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">File #{file.id}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              file.status === 'COMPLATED' 
+                            <span className={`px-2 py-1 rounded-full text-xs ${file.status === 'COMPLATED'
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                              }`}>
                               {file.status}
                             </span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    
+
                     <div>
                       <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Mockup</h5>
                       {order.mockup && (
@@ -781,9 +777,9 @@ const EditOverlay = ({
     fetchTeamMembers();
     // Set initial values
     setSelectedMembers(assignment.assigned_to.map(member => member.id));
-    setScheduleStartDate(assignment.schedule_start_date ? 
+    setScheduleStartDate(assignment.schedule_start_date ?
       new Date(assignment.schedule_start_date).toISOString().slice(0, 16) : '');
-    setScheduleCompleteDate(assignment.schedule_complate_date ? 
+    setScheduleCompleteDate(assignment.schedule_complate_date ?
       new Date(assignment.schedule_complate_date).toISOString().slice(0, 16) : '');
   }, [assignment]);
 
@@ -841,7 +837,7 @@ const EditOverlay = ({
 
       await api.patch(`/api/dandi/${assignment.id}/`, payload);
       onSuccess();
-      
+
     } catch (err: any) {
       console.error('Error updating assignment:', err);
       setError('Failed to update assignment. Please try again.');
@@ -936,7 +932,7 @@ const EditOverlay = ({
                           @{member.telegram_user_name}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {member.role.map((r:any) => r.Name).join(', ')}
+                          {member.role.map((r: any) => r.Name).join(', ')}
                         </div>
                       </div>
                     </label>
