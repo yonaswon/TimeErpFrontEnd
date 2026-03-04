@@ -23,6 +23,16 @@ export const MaterialDetails = ({
 
   const isLengthOrPiece = material.type === "L" || material.type === "P";
 
+  const getRealAvailable = (m: Material): string => {
+    if (m.type === 'A') return m.available;
+    const dist = m.stats?.inventory_distribution;
+    if (dist && typeof dist === 'object' && !Array.isArray(dist)) {
+      const total = Object.values(dist).reduce((sum: number, qty) => sum + Number(qty), 0);
+      return total % 1 === 0 ? String(total) : total.toFixed(3);
+    }
+    return m.available;
+  };
+
   const getTypeIcon = (type: string) => {
     const icons = {
       L: <Ruler className="w-5 h-5" />,
@@ -255,7 +265,7 @@ export const MaterialDetails = ({
               <Package className="w-5 h-5" />
               <div>
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {material.available}
+                  {getRealAvailable(material)}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   Available
@@ -305,7 +315,7 @@ export const MaterialDetails = ({
           {renderStatistics()}
 
           {/* Threshold Warning */}
-          {parseFloat(material.available) < material.min_threshold && (
+          {parseFloat(getRealAvailable(material)) < material.min_threshold && (
             <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400" />
               <div>
@@ -313,7 +323,7 @@ export const MaterialDetails = ({
                   Low Stock Warning
                 </div>
                 <div className="text-sm text-red-700 dark:text-red-400">
-                  Available ({material.available}) is below minimum threshold (
+                  Available ({getRealAvailable(material)}) is below minimum threshold (
                   {material.min_threshold})
                 </div>
               </div>
@@ -327,7 +337,7 @@ export const MaterialDetails = ({
         <ReleaseAdjustmentOverlay
           materialId={material.id}
           materialName={material.name}
-          available={material.available}
+          available={getRealAvailable(material)}
           onClose={() => setShowAdjustment(false)}
           onSuccess={() => {
             setShowAdjustment(false);
