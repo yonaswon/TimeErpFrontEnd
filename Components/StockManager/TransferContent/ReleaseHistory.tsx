@@ -146,6 +146,24 @@ export const ReleaseHistory = () => {
         return 'pcs';
     };
 
+    const getReasonBadge = (reason: string) => {
+        const config: Record<string, { label: string; classes: string }> = {
+            ORDER: { label: 'Order', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+            ADD: { label: 'Additional', classes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
+            SALE: { label: 'Product Sales', classes: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+            MAINTENANCE: { label: 'Maintenance', classes: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+            WAST: { label: 'Wastage', classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+            ADJ: { label: 'Adjustment', classes: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+            EDIT: { label: 'Edit', classes: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+        };
+        const c = config[reason] || { label: reason, classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+        return (
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${c.classes}`}>
+                {c.label}
+            </span>
+        );
+    };
+
     return (
         <div className="flex flex-col w-full">
             {/* Mobile-friendly Header with Filters Toggle */}
@@ -333,8 +351,9 @@ export const ReleaseHistory = () => {
                                         </div>
                                     </div>
 
-                                    {/* Status Badge & Confirmation Details */}
+                                    {/* Reason Badge & Status Badge */}
                                     <div className="flex-shrink-0 pt-3 sm:pt-0 border-t sm:border-0 border-gray-100 dark:border-zinc-700 flex flex-col items-start sm:items-end gap-2">
+                                        {getReasonBadge(release.reason)}
                                         <span className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium ${release.confirmed
                                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                             : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'

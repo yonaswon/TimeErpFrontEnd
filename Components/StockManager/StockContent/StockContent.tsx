@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, Loader2, RefreshCw } from 'lucide-react'
+import { Search, Filter, Loader2, RefreshCw, List, Table2 } from 'lucide-react'
 import { Material, MaterialsResponse } from './types'
 import { MaterialRow } from './MaterialRow'
+import { MaterialTable } from './MaterialTable'
 import { MaterialDetails } from './MaterialDetails'
 import api from '@/api'
 
@@ -14,6 +15,7 @@ export const StockContent = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('list')
 
   const fetchMaterials = async (showRefresh = false) => {
     try {
@@ -22,7 +24,7 @@ export const StockContent = () => {
       } else {
         setLoading(true)
       }
-      
+
       setError(null)
       const response = await api.get<MaterialsResponse>('/materials/')
       setMaterials(response.data.results)
@@ -78,14 +80,40 @@ export const StockContent = () => {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Stock Management
           </h2>
-          
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+
+          <div className="flex items-center gap-1">
+            {/* View Toggle */}
+            <div className="flex items-center bg-gray-100 dark:bg-zinc-700 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md transition-colors ${viewMode === 'list'
+                    ? 'bg-white dark:bg-zinc-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                title="List view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-md transition-colors ${viewMode === 'table'
+                    ? 'bg-white dark:bg-zinc-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                title="Table view"
+              >
+                <Table2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Search and Filter */}
@@ -120,22 +148,31 @@ export const StockContent = () => {
           )}
         </div>
 
-        {/* Materials List */}
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          {filteredMaterials.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              {searchTerm ? 'No materials found matching your search.' : 'No materials available.'}
-            </div>
-          ) : (
-            filteredMaterials.map((material) => (
-              <MaterialRow
-                key={material.id}
-                material={material}
-                onClick={setSelectedMaterial}
-              />
-            ))
-          )}
-        </div>
+        {/* Materials List or Table */}
+        {viewMode === 'list' ? (
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {filteredMaterials.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                {searchTerm ? 'No materials found matching your search.' : 'No materials available.'}
+              </div>
+            ) : (
+              filteredMaterials.map((material) => (
+                <MaterialRow
+                  key={material.id}
+                  material={material}
+                  onClick={setSelectedMaterial}
+                />
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="max-h-[60vh] overflow-y-auto">
+            <MaterialTable
+              materials={filteredMaterials}
+              onClick={setSelectedMaterial}
+            />
+          </div>
+        )}
       </div>
 
       {/* Material Details Overlay */}
@@ -143,6 +180,7 @@ export const StockContent = () => {
         material={selectedMaterial!}
         isOpen={!!selectedMaterial}
         onClose={() => setSelectedMaterial(null)}
+        onRefresh={() => fetchMaterials(true)}
       />
     </div>
   )

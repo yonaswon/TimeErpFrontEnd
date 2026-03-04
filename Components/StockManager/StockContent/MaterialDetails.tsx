@@ -1,19 +1,27 @@
-import { X, Package, Ruler, Square, MapPin, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { X, Package, Ruler, Square, MapPin, AlertTriangle, ArrowDownRight } from "lucide-react";
 import { Material } from "./types";
 import { MaterialStatus } from "./MaterialStatus";
+import ReleaseAdjustmentOverlay from "./ReleaseAdjustmentOverlay";
 
 interface MaterialDetailsProps {
   material: Material;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
 export const MaterialDetails = ({
   material,
   isOpen,
   onClose,
+  onRefresh,
 }: MaterialDetailsProps) => {
+  const [showAdjustment, setShowAdjustment] = useState(false);
+
   if (!isOpen) return null;
+
+  const isLengthOrPiece = material.type === "L" || material.type === "P";
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -64,13 +72,12 @@ export const MaterialDetails = ({
                 </div>
               </div>
               <div
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  inventory.unstarted === inventory.total
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
-                    : inventory.started > 0
+                className={`px-3 py-1 rounded-full text-xs font-medium ${inventory.unstarted === inventory.total
+                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
+                  : inventory.started > 0
                     ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"
                     : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                }`}
+                  }`}
               >
                 {inventory.finished > 0 ? "Partially Used" : "All Available"}
               </div>
@@ -85,7 +92,7 @@ export const MaterialDetails = ({
       return (
         <div className="space-y-3">
           {Object.entries(distribution).map(
-            ([inventoryName, quantity]:any, index) => (
+            ([inventoryName, quantity]: any, index) => (
               <div
                 key={index}
                 className="flex justify-between items-center p-3 bg-gray-50 dark:bg-zinc-800 rounded-lg"
@@ -100,11 +107,10 @@ export const MaterialDetails = ({
                   </div>
                 </div>
                 <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    parseFloat(quantity as string) > 0
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
-                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${parseFloat(quantity as string) > 0
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                    }`}
                 >
                   {parseFloat(quantity as string) > 0
                     ? "Available"
@@ -211,12 +217,23 @@ export const MaterialDetails = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {isLengthOrPiece && (
+              <button
+                onClick={() => setShowAdjustment(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+              >
+                <ArrowDownRight size={14} />
+                Release Adjustment
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
@@ -304,6 +321,21 @@ export const MaterialDetails = ({
           )}
         </div>
       </div>
+
+      {/* Release Adjustment Overlay */}
+      {showAdjustment && (
+        <ReleaseAdjustmentOverlay
+          materialId={material.id}
+          materialName={material.name}
+          available={material.available}
+          onClose={() => setShowAdjustment(false)}
+          onSuccess={() => {
+            setShowAdjustment(false);
+            onRefresh?.();
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 };
