@@ -191,7 +191,7 @@ export const MaterialDetails = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {stats?.total_available || 0}
+              {getRealAvailable(material)}
             </div>
             <div className="text-sm text-blue-700 dark:text-blue-300">
               Total Available
