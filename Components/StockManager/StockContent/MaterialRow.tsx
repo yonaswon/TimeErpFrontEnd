@@ -20,9 +20,8 @@ export const MaterialRow = ({ material, onClick }: MaterialRowProps) => {
     if (material.type === "A") {
       return `${material.available} pieces • ${material.parsialy_available} area`;
     }
-    return `${material.available} ${
-      material.type === "L" ? "meters" : "pieces"
-    }`;
+    return `${material.available} ${material.type === "L" ? "meters" : "pieces"
+      }`;
   };
 
   // Helper function to render detailed inventory distribution
@@ -99,10 +98,13 @@ export const MaterialRow = ({ material, onClick }: MaterialRowProps) => {
   const getTotalCount = () => {
     if (material.type === "A") {
       return material.stats.total_pieces || 0;
-    } else if (material.type === "L") {
-      return material.stats.total_available || 0;
     }
-    return 0;
+    // For L/P: sum from distribution to avoid backend double-count
+    const dist = material.stats.inventory_distribution;
+    if (dist && typeof dist === 'object' && !Array.isArray(dist)) {
+      return Object.values(dist).reduce((sum: number, qty) => sum + Number(qty), 0);
+    }
+    return material.stats.total_available || 0;
   };
 
   // Get distribution summary for the header

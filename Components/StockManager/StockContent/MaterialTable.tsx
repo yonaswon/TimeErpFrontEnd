@@ -38,7 +38,19 @@ export const MaterialTable = ({ materials, onClick }: MaterialTableProps) => {
     };
 
     const isLowStock = (material: Material) => {
-        return parseFloat(material.available) < material.min_threshold;
+        return parseFloat(getRealAvailable(material)) < material.min_threshold;
+    };
+
+    const getRealAvailable = (material: Material): string => {
+        const dist = material.stats?.inventory_distribution;
+        if (!dist) return material.available;
+        if (material.type === 'A') return material.available;
+        // For L/P: sum all location amounts from distribution to avoid backend double-count
+        if (typeof dist === 'object' && !Array.isArray(dist)) {
+            const total = Object.values(dist).reduce((sum: number, qty) => sum + Number(qty), 0);
+            return total % 1 === 0 ? String(total) : total.toFixed(3);
+        }
+        return material.available;
     };
 
     return (
@@ -90,7 +102,7 @@ export const MaterialTable = ({ materials, onClick }: MaterialTableProps) => {
                                 {/* Available */}
                                 <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                     <span className={`font-medium tabular-nums text-sm ${isLowStock(material) ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
-                                        {material.available}
+                                        {getRealAvailable(material)}
                                     </span>
                                     {isLowStock(material) && (
                                         <span className="ml-1 text-[10px] text-red-500 dark:text-red-400 font-semibold">
