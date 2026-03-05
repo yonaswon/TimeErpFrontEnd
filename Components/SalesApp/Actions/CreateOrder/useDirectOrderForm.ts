@@ -9,15 +9,13 @@ interface DirectOrderItem {
     order_name: string
 }
 
-interface Account {
-    id: number
-    bank: string
-    available_amount: string
-    account_number: string
-    account_type: string
-    account_name: string
-    deleted: boolean
-    date: string
+interface PaymentEntry {
+    method: string
+    amount: number
+    wallet: number | null
+    account: number | null
+    screenshot: File | null
+    note: string
 }
 
 interface UseDirectOrderFormParams {
@@ -44,15 +42,15 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
     const [installationService, setInstallationService] = useState(true)
     const [deliveryService, setDeliveryService] = useState(true)
 
-    // Payment fields
+    // Invoice (global)
     const [withInvoice, setWithInvoice] = useState(false)
-    const [paymentMethod, setPaymentMethod] = useState('')
-    const [selectedAccount, setSelectedAccount] = useState<number | null>(null)
-    const [selectedWallet, setSelectedWallet] = useState<number | null>(null)
-    const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null)
     const [invoiceImage, setInvoiceImage] = useState<File | null>(null)
-    const [paymentNote, setPaymentNote] = useState('')
-    const [accounts, setAccounts] = useState<Account[]>([])
+
+    // Multiple payments
+    const [payments, setPayments] = useState<PaymentEntry[]>([
+        { method: '', amount: 0, wallet: null, account: null, screenshot: null, note: '' }
+    ])
+
     const [submitting, setSubmitting] = useState(false)
 
     // Add new order item
@@ -65,7 +63,6 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
     const removeItem = (index: number) => {
         setItems(prev => {
             const newItems = prev.filter((_, i) => i !== index)
-            // Recalculate totals
             const full = newItems.reduce((sum, i) => sum + i.price, 0)
             const ratio = totalPayment > 0 ? advancePayment / totalPayment : 0.5
             setTotalPayment(Math.round(full))
@@ -118,18 +115,28 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
         if (!leadId) errors.push('Please select a lead')
         if (!location) errors.push('Location is required')
         if (!deliveryDate) errors.push('Delivery date is required')
-        if (!paymentMethod) errors.push('Payment method is required')
-        if ((paymentMethod === 'BANK' || paymentMethod === 'CHECK') && !selectedAccount) {
-            errors.push('Account selection is required for bank or check payments')
-        }
-        if ((paymentMethod === 'BANK' || paymentMethod === 'CHECK') && !paymentScreenshot) {
-            errors.push('Payment screenshot is required for BANK and CHECK payments')
-        }
 
         items.forEach((item, index) => {
             if (!item.mockup_image) errors.push(`Mockup image is required for order #${index + 1}`)
             if (!item.design_type) errors.push(`Design type is required for order #${index + 1}`)
         })
+
+        // Validate payments
+        if (payments.length === 0) errors.push('At least one payment is required')
+        payments.forEach((p, i) => {
+            if (!p.method) errors.push(`Payment #${i + 1}: method is required`)
+            if (!p.amount || p.amount <= 0) errors.push(`Payment #${i + 1}: amount must be > 0`)
+            if ((p.method === 'BANK' || p.method === 'CHECK') && !p.account) {
+                errors.push(`Payment #${i + 1}: account is required for ${p.method}`)
+            }
+            if ((p.method === 'BANK' || p.method === 'CHECK') && !p.screenshot) {
+                errors.push(`Payment #${i + 1}: screenshot is required for ${p.method}`)
+            }
+        })
+        const totalAllocated = payments.reduce((s, p) => s + p.amount, 0)
+        if (Math.round(totalAllocated) !== Math.round(advancePayment)) {
+            errors.push(`Total payment amounts (${totalAllocated}) must equal advance payment (${advancePayment})`)
+        }
 
         if (errors.length > 0) {
             alert('Please fix the following errors:\n' + errors.join('\n'))
@@ -154,6 +161,15 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
 
             const formData = new FormData()
 
+            // Build payments_data (without screenshot files)
+            const paymentsData = payments.map((p) => ({
+                method: p.method,
+                amount: p.amount,
+                wallet: p.wallet,
+                account: p.account,
+                note: p.note,
+            }))
+
             const payload: Record<string, any> = {
                 posted_by: 1,
                 lead_id: leadId,
@@ -170,10 +186,6 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
                 order_difficulty: orderDifficulty,
                 note: containerNote,
                 delivery_service: deliveryService,
-                wallet: selectedWallet,
-                method: paymentMethod,
-                account: selectedAccount,
-                payment_note: paymentNote,
             }
 
             Object.entries(payload).forEach(([key, value]) => {
@@ -183,6 +195,7 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
             })
 
             formData.append('orders_data', JSON.stringify(ordersData))
+            formData.append('payments_data', JSON.stringify(paymentsData))
 
             // Append mockup images
             items.forEach((item, index) => {
@@ -191,11 +204,12 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
                 }
             })
 
-            if (paymentMethod === 'BANK' || paymentMethod === 'CHECK') {
-                if (paymentScreenshot) {
-                    formData.append('payment_screenshot', paymentScreenshot)
+            // Append payment screenshots
+            payments.forEach((p, index) => {
+                if ((p.method === 'BANK' || p.method === 'CHECK') && p.screenshot) {
+                    formData.append(`payment_${index}_screenshot`, p.screenshot)
                 }
-            }
+            })
 
             if (withInvoice && invoiceImage) {
                 formData.append('invoice_image', invoiceImage)
@@ -232,13 +246,8 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
         installationService,
         deliveryService,
         withInvoice,
-        paymentMethod,
-        selectedAccount,
-        selectedWallet,
-        paymentScreenshot,
         invoiceImage,
-        paymentNote,
-        accounts,
+        payments,
         submitting,
 
         // Setters
@@ -250,13 +259,8 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
         setInstallationService,
         setDeliveryService,
         setWithInvoice,
-        setPaymentMethod,
-        setSelectedAccount,
-        setSelectedWallet,
-        setPaymentScreenshot,
         setInvoiceImage,
-        setPaymentNote,
-        setAccounts,
+        setPayments,
 
         // Handlers
         addItem,

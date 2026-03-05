@@ -41,13 +41,8 @@ export default function OrderFormStep({
     installationService,
     deliveryService,
     withInvoice,
-    paymentMethod,
-    selectedAccount,
-    selectedWallet,
-    paymentScreenshot,
     invoiceImage,
-    paymentNote,
-    accounts,
+    payments,
     submitting,
     // Setters
     setContainerNote,
@@ -58,13 +53,8 @@ export default function OrderFormStep({
     setInstallationService,
     setDeliveryService,
     setWithInvoice,
-    setPaymentMethod,
-    setSelectedAccount,
-    setSelectedWallet,
-    setPaymentScreenshot,
     setInvoiceImage,
-    setPaymentNote,
-    setAccounts,
+    setPayments,
     // Handlers
     handleItemChange,
     handleTotalPaymentChange,
@@ -80,13 +70,6 @@ export default function OrderFormStep({
     onSuccess,
     validateForm,
   });
-
-  // Set default wallet
-  useEffect(() => {
-    if (wallets.length > 0 && !selectedWallet) {
-      setSelectedWallet(wallets[0].id);
-    }
-  }, [wallets, selectedWallet, setSelectedWallet]);
 
   if (loading) {
     return (
@@ -145,21 +128,12 @@ export default function OrderFormStep({
       <PaymentSection
         withInvoice={withInvoice}
         setWithInvoice={setWithInvoice}
-        paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
-        selectedWallet={selectedWallet}
-        setSelectedWallet={setSelectedWallet}
-        selectedAccount={selectedAccount}
-        setSelectedAccount={setSelectedAccount}
-        paymentScreenshot={paymentScreenshot}
-        setPaymentScreenshot={setPaymentScreenshot}
         invoiceImage={invoiceImage}
         setInvoiceImage={setInvoiceImage}
-        paymentNote={paymentNote}
-        setPaymentNote={setPaymentNote}
+        payments={payments}
+        setPayments={setPayments}
         wallets={wallets}
-        accounts={accounts}
-        setAccounts={setAccounts}
+        advancePayment={advancePayment}
       />
 
       {/* Actions */}

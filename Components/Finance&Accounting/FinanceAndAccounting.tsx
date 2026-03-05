@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, Zap, Package, ShoppingCart } from "lucide-react";
+import { BarChart3, Zap, CreditCard, ShoppingCart } from "lucide-react";
 import ActionsContent from "./Actions/Actions";
 import { OverviewContent } from "./Overview/OverviewContent";
 import OrdersContent from "./Orders/OrdersContent";
+import PaymentsContent from "./Payments/PaymentsContent";
 import { GlobalProfile } from "../GlobalComponents/GlobalProfile/GlobalProfile";
 
-type TabType = "overview" | "actions" | "stock" | "orders" | "profile";
+type TabType = "overview" | "actions" | "payments" | "orders" | "profile";
 
 const FinanceAndAccounting = ({
   userData,
@@ -32,7 +33,7 @@ const FinanceAndAccounting = ({
   const tabs = [
     { id: "overview" as TabType, label: "Overview", icon: BarChart3 },
     { id: "actions" as TabType, label: "Actions", icon: Zap },
-    { id: "stock" as TabType, label: "Stock", icon: Package },
+    { id: "payments" as TabType, label: "Payments", icon: CreditCard },
     { id: "orders" as TabType, label: "Orders", icon: ShoppingCart },
     { id: "profile" as TabType, label: "Profile", icon: null },
   ];
@@ -43,8 +44,8 @@ const FinanceAndAccounting = ({
         return <OverviewContent />;
       case "actions":
         return <ActionsContent />;
-      case "stock":
-        return <StockContent />;
+      case "payments":
+        return <PaymentsContent />;
       case "orders":
         return <OrdersContent />;
       case "profile":
@@ -92,14 +93,14 @@ const FinanceAndAccounting = ({
                       "https://telegram.org/img/t_logo.png";
                   }}
                   className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${isActive
-                      ? "border-blue-500 scale-110"
-                      : "border-transparent"
+                    ? "border-blue-500 scale-110"
+                    : "border-transparent"
                     }`}
                 />
                 <span
                   className={`text-xs ${isActive
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-500 dark:text-gray-400"
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-500 dark:text-gray-400"
                     }`}
                 >
                   Profile
@@ -114,8 +115,8 @@ const FinanceAndAccounting = ({
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center justify-center flex-1 py-1 ${isActive
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-gray-500 dark:text-gray-400"
+                ? "text-blue-600 dark:text-blue-400"
+                : "text-gray-500 dark:text-gray-400"
                 }`}
             >
               {Icon && <Icon size={20} />}
@@ -130,20 +131,7 @@ const FinanceAndAccounting = ({
 
 export default FinanceAndAccounting;
 
-// ----------------------------
-// 🧾 Content Components
-// ----------------------------
 
-const StockContent = () => (
-  <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-      Stock Management
-    </h2>
-    <p className="text-gray-600 dark:text-gray-300 text-sm">
-      Manage and track your available stock efficiently.
-    </p>
-  </div>
-);
 
 // const OrdersContent = () => (
 //   <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">

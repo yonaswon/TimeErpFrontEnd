@@ -69,12 +69,12 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
             >
               {order.client}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5 flex-wrap">
               {order.orders
                 ?.slice(0, 3)
                 .map((item: any) => (
                   <span key={item.order_code} className="font-mono">
-                    ORD-{item.order_code}
+                    ORD-{item.order_code}{item.order_name ? ` - ${item.order_name}` : ''}
                   </span>
                 ))
                 .reduce(
@@ -147,7 +147,7 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
               key={item.order_code}
               className="font-mono text-xs bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded border border-gray-200 dark:border-zinc-700"
             >
-              ORD-{item.order_code}
+              ORD-{item.order_code}{item.order_name ? ` - ${item.order_name}` : ''}
             </span>
           ))}
           {remainingCount > 0 && (
@@ -188,11 +188,10 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
             </div>
           </div>
           <div
-            className={`text-xs font-bold px-2 py-1 rounded bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-zinc-700 ${
-              percentPaid >= 100
+            className={`text-xs font-bold px-2 py-1 rounded bg-white dark:bg-zinc-800 shadow-sm border border-gray-100 dark:border-zinc-700 ${percentPaid >= 100
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-blue-600 dark:text-blue-400"
-            }`}
+              }`}
           >
             {percentPaid >= 100 ? "Paid" : `${Math.round(percentPaid)}% Paid`}
           </div>
@@ -201,9 +200,8 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
         {/* Integrated Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 dark:bg-zinc-700 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              percentPaid >= 100 ? "bg-emerald-500" : "bg-blue-600"
-            }`}
+            className={`h-full rounded-full transition-all duration-500 ${percentPaid >= 100 ? "bg-emerald-500" : "bg-blue-600"
+              }`}
             style={{ width: `${Math.min(percentPaid, 100)}%` }}
           />
         </div>

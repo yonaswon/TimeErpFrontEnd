@@ -1,26 +1,23 @@
-import { FormItem } from "../types"
+import { FormItem, PaymentEntry } from "../types"
 
 interface ValidationParams {
   items: FormItem[]
   designTypes: any[]
-  materials: any[]
-  selectedWallet: number | null
-  paymentMethod: string
-  selectedAccount: number | null
-  paymentScreenshot: File | null
+  payments: PaymentEntry[]
   withInvoice: boolean
   invoiceImage: File | null
+  location?: string
+  deliveryDate?: string
 }
 
 export function useValidation() {
   const validateForm = (params: ValidationParams): string[] => {
     const errors: string[] = []
-    const { items, designTypes, materials, selectedWallet, paymentMethod, selectedAccount, paymentScreenshot, withInvoice, invoiceImage } = params
+    const { items, designTypes, payments, location, deliveryDate } = params
 
     if (designTypes.length === 0) {
       errors.push('Design types are not loaded yet')
     }
-   
 
     items.forEach((item, index) => {
       if (!item.design_type) {
@@ -34,19 +31,13 @@ export function useValidation() {
       }
     })
 
-    if (!selectedWallet) {
-      errors.push('Wallet selection is required')
+    if (!location) {
+      errors.push('Location is required')
     }
-    if (!paymentMethod) {
-      errors.push('Payment method is required')
+    if (!deliveryDate) {
+      errors.push('Delivery date is required')
     }
-    if ((paymentMethod === 'BANK' || paymentMethod === 'CHECK') && !selectedAccount) {
-      errors.push('Account selection is required for bank or check payments')
-    }
-    if ((paymentMethod === 'BANK' || paymentMethod === 'CHECK') && !paymentScreenshot) {
-      errors.push('Payment screenshot is required for BANK and CHECK payments')
-    }
-    
+
     return errors
   }
 

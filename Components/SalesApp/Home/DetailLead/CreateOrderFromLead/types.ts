@@ -49,3 +49,12 @@ export interface Wallet {
   non_invoice_balance: string
   date: string
 }
+
+export interface PaymentEntry {
+  method: string
+  amount: number
+  wallet: number | null
+  account: number | null
+  screenshot: File | null
+  note: string
+}

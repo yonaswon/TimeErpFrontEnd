@@ -12,31 +12,31 @@ interface Props {
 
 const STATUS_LABELS: Record<string, string> = {
     'PRE-ACCEPTED': 'Pre-Accept',
-    'PRE-PAYMENT CONFIRMED': 'Pre-Paid',
+    'PRE-CONFIRMED': 'Pre-Confirmed',
     'CNC-STARTED': 'CNC',
     'CNC-COMPLETED': 'CNC Done',
     'ASSEMBLY-STARTED': 'Assembly',
     'ASSEMBLY-COMPLETED': 'Asm Done',
     'DANDI-STARTED': 'Delivery',
     'REM-ACCEPTED': 'Rem Accept',
-    'REM-CONFIRMED': 'Rem Paid',
+    'REM-CONFIRMED': 'Rem Confirmed',
 };
 
 const STATUS_ORDER = [
-    'PRE-ACCEPTED', 'PRE-PAYMENT CONFIRMED', 'CNC-STARTED', 'CNC-COMPLETED',
+    'PRE-ACCEPTED', 'PRE-CONFIRMED', 'CNC-STARTED', 'CNC-COMPLETED',
     'ASSEMBLY-STARTED', 'ASSEMBLY-COMPLETED', 'DANDI-STARTED', 'REM-ACCEPTED', 'REM-CONFIRMED'
 ];
 
 const STATUS_PIPELINE = [
     { key: 'PRE-ACCEPTED', label: 'Pre-Accept', color: '#f59e0b' },
-    { key: 'PRE-PAYMENT CONFIRMED', label: 'Pre-Paid', color: '#f59e0b' },
+    { key: 'PRE-CONFIRMED', label: 'Pre-Confirmed', color: '#f59e0b' },
     { key: 'CNC-STARTED', label: 'CNC', color: '#3b82f6' },
     { key: 'CNC-COMPLETED', label: 'CNC Done', color: '#3b82f6' },
     { key: 'ASSEMBLY-STARTED', label: 'Assembly', color: '#8b5cf6' },
     { key: 'ASSEMBLY-COMPLETED', label: 'Asm Done', color: '#8b5cf6' },
     { key: 'DANDI-STARTED', label: 'Delivery', color: '#06b6d4' },
     { key: 'REM-ACCEPTED', label: 'Rem Accept', color: '#10b981' },
-    { key: 'REM-CONFIRMED', label: 'Rem Paid', color: '#10b981' },
+    { key: 'REM-CONFIRMED', label: 'Rem Confirmed', color: '#10b981' },
 ];
 
 function getStatusIndex(status: string): number {

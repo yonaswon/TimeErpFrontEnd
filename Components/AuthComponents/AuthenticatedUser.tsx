@@ -13,6 +13,7 @@ import GraphicsTeamApp from "../GraphicsTeamApp/GraphicsTeamApp";
 import WorkshopSupervisorApp from "../WorkShopSuperVisorApp/WorkshopSupervisorApp";
 import CncOperatorApp from "../CNCoperators/CncOperatorApp";
 import AssemblyDeliveryandInstalationApp from "../AssemblyDeliveryandInstalationApp/AssemblyDeliveryandInstalationApp";
+import OperationManagerApp from "../OperationManager/OperationManagerApp";
 
 interface AuthenticatedUserProps {
   userData: UserData;
@@ -85,6 +86,13 @@ export const AuthenticatedUser = ({
       )}
       {selectedRole && selectedRole == "Graphic Designer" && (
         <GraphicsTeamApp
+          userData={userData}
+          selectedRole={selectedRole}
+          onRoleSelect={onRoleSelect}
+        />
+      )}
+      {selectedRole && selectedRole == "OperationManager" && (
+        <OperationManagerApp
           userData={userData}
           selectedRole={selectedRole}
           onRoleSelect={onRoleSelect}

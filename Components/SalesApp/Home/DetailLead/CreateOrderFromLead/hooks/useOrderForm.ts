@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/api";
-import { FormItem, Account } from "../types";
+import { FormItem, Account, PaymentEntry } from "../types";
 
 interface UseOrderFormParams {
   leadId: number;
@@ -36,15 +36,14 @@ export function useOrderForm({
   const [deliveryService, setDeliveryService] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Payment fields
+  // Invoice (global)
   const [withInvoice, setWithInvoice] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
-  const [selectedWallet, setSelectedWallet] = useState<number | null>(null);
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [invoiceImage, setInvoiceImage] = useState<File | null>(null);
-  const [paymentNote, setPaymentNote] = useState("");
-  const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // Multiple payments
+  const [payments, setPayments] = useState<PaymentEntry[]>([
+    { method: '', amount: 0, wallet: null, account: null, screenshot: null, note: '' }
+  ]);
 
   // Initialize items from selectedItems and set default delivery date
   useEffect(() => {
@@ -72,41 +71,9 @@ export function useOrderForm({
     setAdvancePayment(Math.round(full * 0.5));
     setRemainingPayment(Math.round(full * 0.5));
 
-    // Set default delivery date to 7 days from now
-    // const defaultDeliveryDate = new Date();
-    // defaultDeliveryDate.setDate(defaultDeliveryDate.getDate() + 7);
-    // setDeliveryDate(defaultDeliveryDate.toISOString().slice(0, 16));
-
-    // Set location from lead data if available
-    // if (leadData.note) {
-    //   setLocation(leadData.note);
-    // }
+    // Set the first payment amount to the advance payment
+    setPayments([{ method: '', amount: Math.round(full * 0.5), wallet: null, account: null, screenshot: null, note: '' }]);
   }, [selectedItems, designTypes, leadData]);
-
-  // Fetch accounts based on invoice selection
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const accountType = withInvoice ? "P" : "C";
-        const response = await api.get(
-          `/finance/account/?account_type=${accountType}&deleted=false`
-        );
-        const accountsData = response.data.results || response.data;
-        setAccounts(accountsData);
-        setSelectedAccount(null);
-      } catch (err) {
-        console.error("Failed to fetch accounts", err);
-        setAccounts([]);
-      }
-    };
-
-    if (paymentMethod === "BANK" || paymentMethod === "CHECK") {
-      fetchAccounts();
-    } else {
-      setAccounts([]);
-      setSelectedAccount(null);
-    }
-  }, [withInvoice, paymentMethod]);
 
   const handleItemChange = (
     index: number,
@@ -147,21 +114,37 @@ export function useOrderForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate payments
+    const paymentErrors: string[] = [];
+    if (payments.length === 0) paymentErrors.push('At least one payment is required');
+    payments.forEach((p, i) => {
+      if (!p.method) paymentErrors.push(`Payment #${i + 1}: method is required`);
+      if (!p.amount || p.amount <= 0) paymentErrors.push(`Payment #${i + 1}: amount must be > 0`);
+      if ((p.method === 'BANK' || p.method === 'CHECK') && !p.account) {
+        paymentErrors.push(`Payment #${i + 1}: account is required for ${p.method}`);
+      }
+      if ((p.method === 'BANK' || p.method === 'CHECK') && !p.screenshot) {
+        paymentErrors.push(`Payment #${i + 1}: screenshot is required for ${p.method}`);
+      }
+    });
+    const totalAllocated = payments.reduce((s, p) => s + p.amount, 0);
+    if (Math.round(totalAllocated) !== Math.round(advancePayment)) {
+      paymentErrors.push(`Total payment amounts (${totalAllocated}) must equal advance payment (${advancePayment})`);
+    }
+
     const validationErrors = validateForm({
       items,
       designTypes,
-      selectedWallet,
-      paymentMethod,
-      selectedAccount,
-      paymentScreenshot,
+      payments,
       withInvoice,
       invoiceImage,
       location,
       deliveryDate,
     });
 
-    if (validationErrors.length > 0) {
-      alert("Please fix the following errors:\n" + validationErrors.join("\n"));
+    const allErrors = [...validationErrors, ...paymentErrors];
+    if (allErrors.length > 0) {
+      alert("Please fix the following errors:\n" + allErrors.join("\n"));
       return;
     }
 
@@ -181,15 +164,22 @@ export function useOrderForm({
           mockup_modification: item.type === "modification" ? item.id : null,
           price: price,
           note: item.note || "",
-          boms_data: [], // Empty BOM data
-          // Don't include mockup_image here if it's a file, handle separately
+          boms_data: [],
         };
       });
 
       const formData = new FormData();
 
-      // Append all basic fields
-      const payload = {
+      // Build payments_data (without screenshot files)
+      const paymentsData = payments.map((p) => ({
+        method: p.method,
+        amount: p.amount,
+        wallet: p.wallet,
+        account: p.account,
+        note: p.note,
+      }));
+
+      const payload: Record<string, any> = {
         posted_by: 1,
         lead_id: leadId,
         client: leadData.customer_name || "Unknown Client",
@@ -205,10 +195,6 @@ export function useOrderForm({
         order_difficulty: orderDifficulty,
         note: containerNote,
         delivery_service: deliveryService,
-        wallet: selectedWallet,
-        method: paymentMethod,
-        account: selectedAccount,
-        payment_note: paymentNote,
       };
 
       Object.entries(payload).forEach(([key, value]) => {
@@ -218,6 +204,7 @@ export function useOrderForm({
       });
 
       formData.append("orders_data", JSON.stringify(ordersData));
+      formData.append("payments_data", JSON.stringify(paymentsData));
 
       // Append mockup images if they are new files
       items.forEach((item, index) => {
@@ -226,11 +213,12 @@ export function useOrderForm({
         }
       });
 
-      if (paymentMethod === "BANK" || paymentMethod === "CHECK") {
-        if (paymentScreenshot) {
-          formData.append("payment_screenshot", paymentScreenshot);
+      // Append payment screenshots
+      payments.forEach((p, index) => {
+        if ((p.method === 'BANK' || p.method === 'CHECK') && p.screenshot) {
+          formData.append(`payment_${index}_screenshot`, p.screenshot);
         }
-      }
+      });
 
       if (withInvoice && invoiceImage) {
         formData.append("invoice_image", invoiceImage);
@@ -267,13 +255,8 @@ export function useOrderForm({
     installationService,
     deliveryService,
     withInvoice,
-    paymentMethod,
-    selectedAccount,
-    selectedWallet,
-    paymentScreenshot,
     invoiceImage,
-    paymentNote,
-    accounts,
+    payments,
     submitting,
 
     // Setters
@@ -286,13 +269,8 @@ export function useOrderForm({
     setInstallationService,
     setDeliveryService,
     setWithInvoice,
-    setPaymentMethod,
-    setSelectedAccount,
-    setSelectedWallet,
-    setPaymentScreenshot,
     setInvoiceImage,
-    setPaymentNote,
-    setAccounts,
+    setPayments,
 
     // Handlers
     handleItemChange,

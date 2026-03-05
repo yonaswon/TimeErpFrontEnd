@@ -15,12 +15,13 @@ export const useTelegramAuth = () => {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isOutsideTelegram, setIsOutsideTelegram] = useState(false)
 
   const checkAuth = async () => {
     try {
       const accessToken = localStorage.getItem('access_token')
       const storedUserData = localStorage.getItem('user_data')
-      
+
       if (accessToken && storedUserData) {
         const parsedUserData = JSON.parse(storedUserData)
         // Only use stored data if user has roles
@@ -30,12 +31,12 @@ export const useTelegramAuth = () => {
           return
         } else {
           // Clear storage if no roles
-          console.log(accessToken,'acess token')
+          console.log(accessToken, 'acess token')
           localStorage.removeItem('access_token')
           localStorage.removeItem('user_data')
         }
       }
-      
+
       // No valid token or no roles, try Telegram auth
       await handleTelegramAuth()
     } catch (err) {
@@ -48,15 +49,15 @@ export const useTelegramAuth = () => {
   const handleTelegramAuth = async () => {
     try {
       if (!window.Telegram?.WebApp) {
-        setError('Telegram WebApp not available')
+        setIsOutsideTelegram(true)
         setLoading(false)
         return
       }
 
       const initData = window?.Telegram?.WebApp.initData
-      
+
       if (!initData) {
-        setError('No init data from Telegram')
+        setIsOutsideTelegram(true)
         setLoading(false)
         return
       }
@@ -64,18 +65,18 @@ export const useTelegramAuth = () => {
       const response = await api.post('/core/telegram-login/', {
         init_data: initData
       })
-      console.log(response,'response form teh telegram login')
+      console.log(response, 'response form teh telegram login')
 
       if (response.data.access && response.data.user) {
         const userData = response.data.user
-        console.log(response.data.access,'acess token')
-        
+        console.log(response.data.access, 'acess token')
+
         // Only store if user has roles
         if (userData.role && userData.role.length > 0) {
           localStorage.setItem('access_token', response.data.access)
           localStorage.setItem('user_data', JSON.stringify(userData))
         }
-        
+
         setUserData(userData)
       } else {
         setError('No access token or user data received')
@@ -102,6 +103,7 @@ export const useTelegramAuth = () => {
     userData,
     loading,
     error,
+    isOutsideTelegram,
     retryAuth
   }
 }

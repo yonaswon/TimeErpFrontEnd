@@ -1,18 +1,20 @@
 import { Wallet } from '@/types/finance'
-import { DollarSign, Receipt, Zap } from 'lucide-react'
+import { DollarSign, Receipt, Zap, Coins } from 'lucide-react'
 
 interface WalletBalanceProps {
   wallet: Wallet
+  pityWallet?: Wallet | null
   loading?: boolean
 }
 
-export const WalletBalance = ({ wallet, loading }: WalletBalanceProps) => {
+export const WalletBalance = ({ wallet, pityWallet, loading }: WalletBalanceProps) => {
   if (loading) {
     return (
       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200/50 dark:border-zinc-800/50">
         <div className="animate-pulse space-y-4">
           <div className="h-7 bg-gray-200 dark:bg-zinc-800 rounded w-32"></div>
           <div className="flex gap-4">
+            <div className="flex-1 h-12 bg-gray-200 dark:bg-zinc-800 rounded-xl"></div>
             <div className="flex-1 h-12 bg-gray-200 dark:bg-zinc-800 rounded-xl"></div>
             <div className="flex-1 h-12 bg-gray-200 dark:bg-zinc-800 rounded-xl"></div>
           </div>
@@ -27,7 +29,11 @@ export const WalletBalance = ({ wallet, loading }: WalletBalanceProps) => {
     return `${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Birr`
   }
 
-  const totalBalance = parseFloat(wallet.invoice_balance) + parseFloat(wallet.non_invoice_balance)
+  const financeTotal = parseFloat(wallet.invoice_balance) + parseFloat(wallet.non_invoice_balance)
+  const pityTotal = pityWallet
+    ? parseFloat(pityWallet.invoice_balance) + parseFloat(pityWallet.non_invoice_balance)
+    : 0
+  const grandTotal = financeTotal + pityTotal
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200/50 dark:border-zinc-800/50">
@@ -38,7 +44,7 @@ export const WalletBalance = ({ wallet, loading }: WalletBalanceProps) => {
           <span className="text-sm font-semibold">Total Balance</span>
         </div>
         <div className="text-2xl font-bold text-gray-900 dark:text-white">
-          {formatBalance(totalBalance.toString())}
+          {formatBalance(grandTotal.toString())}
         </div>
       </div>
 
@@ -51,7 +57,7 @@ export const WalletBalance = ({ wallet, loading }: WalletBalanceProps) => {
             {formatBalance(wallet.invoice_balance)}
           </div>
         </div>
-        
+
         <div className="flex-1 text-center p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/50">
           <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Non-Invoice</div>
@@ -59,6 +65,16 @@ export const WalletBalance = ({ wallet, loading }: WalletBalanceProps) => {
             {formatBalance(wallet.non_invoice_balance)}
           </div>
         </div>
+
+        {pityWallet && (
+          <div className="flex-1 text-center p-3 bg-orange-50/50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-800/50">
+            <Coins className="w-5 h-5 text-orange-600 dark:text-orange-400 mx-auto mb-2" />
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Pity</div>
+            <div className="text-base font-semibold text-gray-900 dark:text-white">
+              {formatBalance(pityTotal.toString())}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

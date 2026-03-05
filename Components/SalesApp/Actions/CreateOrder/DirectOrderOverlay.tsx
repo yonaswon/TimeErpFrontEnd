@@ -31,13 +31,8 @@ export default function DirectOrderOverlay({ onClose }: DirectOrderOverlayProps)
         installationService,
         deliveryService,
         withInvoice,
-        paymentMethod,
-        selectedAccount,
-        selectedWallet,
-        paymentScreenshot,
         invoiceImage,
-        paymentNote,
-        accounts,
+        payments,
         submitting,
         // Setters
         setContainerNote,
@@ -48,13 +43,8 @@ export default function DirectOrderOverlay({ onClose }: DirectOrderOverlayProps)
         setInstallationService,
         setDeliveryService,
         setWithInvoice,
-        setPaymentMethod,
-        setSelectedAccount,
-        setSelectedWallet,
-        setPaymentScreenshot,
         setInvoiceImage,
-        setPaymentNote,
-        setAccounts,
+        setPayments,
         // Handlers
         addItem,
         removeItem,
@@ -67,13 +57,6 @@ export default function DirectOrderOverlay({ onClose }: DirectOrderOverlayProps)
         wallets,
         onSuccess: () => setSuccess(true),
     })
-
-    // Set default wallet
-    useEffect(() => {
-        if (wallets.length > 0 && !selectedWallet) {
-            setSelectedWallet(wallets[0].id)
-        }
-    }, [wallets, selectedWallet, setSelectedWallet])
 
     if (success) {
         return (
@@ -204,21 +187,12 @@ export default function DirectOrderOverlay({ onClose }: DirectOrderOverlayProps)
                             <PaymentSection
                                 withInvoice={withInvoice}
                                 setWithInvoice={setWithInvoice}
-                                paymentMethod={paymentMethod}
-                                setPaymentMethod={setPaymentMethod}
-                                selectedWallet={selectedWallet}
-                                setSelectedWallet={setSelectedWallet}
-                                selectedAccount={selectedAccount}
-                                setSelectedAccount={setSelectedAccount}
-                                paymentScreenshot={paymentScreenshot}
-                                setPaymentScreenshot={setPaymentScreenshot}
                                 invoiceImage={invoiceImage}
                                 setInvoiceImage={setInvoiceImage}
-                                paymentNote={paymentNote}
-                                setPaymentNote={setPaymentNote}
+                                payments={payments}
+                                setPayments={setPayments}
                                 wallets={wallets}
-                                accounts={accounts}
-                                setAccounts={setAccounts}
+                                advancePayment={advancePayment}
                             />
                         </div>
                     )}

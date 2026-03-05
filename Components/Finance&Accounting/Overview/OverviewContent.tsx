@@ -23,11 +23,12 @@ export const OverviewContent = () => {
   const [viewType, setViewType] = useState<ViewType>('grid')
 
   const { wallet, loading: walletLoading, error: walletError, refetch: refetchWallet } = useWallet()
-  const { 
-    purchases, 
-    loading: purchasesLoading, 
-    error: purchasesError, 
-    refetch: refetchPurchases 
+  const { wallet: pityWallet, loading: pityWalletLoading, refetch: refetchPityWallet } = useWallet(3)
+  const {
+    purchases,
+    loading: purchasesLoading,
+    error: purchasesError,
+    refetch: refetchPurchases
   } = usePurchases(currentPage)
 
   // Reset to page 1 when tab changes
@@ -37,6 +38,7 @@ export const OverviewContent = () => {
 
   const handleRefresh = () => {
     refetchWallet()
+    refetchPityWallet()
     refetchPurchases()
   }
 
@@ -60,28 +62,26 @@ export const OverviewContent = () => {
   return (
     <div className="space-y-6">
       {/* Wallet Balance */}
-      <WalletBalance wallet={wallet!} loading={walletLoading} />
+      <WalletBalance wallet={wallet!} pityWallet={pityWallet!} loading={walletLoading || pityWalletLoading} />
 
       {/* Refresh and View Toggle */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewType('grid')}
-            className={`p-2 rounded-lg border transition-colors ${
-              viewType === 'grid' 
-                ? 'bg-blue-500 text-white border-blue-500' 
+            className={`p-2 rounded-lg border transition-colors ${viewType === 'grid'
+                ? 'bg-blue-500 text-white border-blue-500'
                 : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'
-            }`}
+              }`}
           >
             <Grid size={16} />
           </button>
           <button
             onClick={() => setViewType('list')}
-            className={`p-2 rounded-lg border transition-colors ${
-              viewType === 'list' 
-                ? 'bg-blue-500 text-white border-blue-500' 
+            className={`p-2 rounded-lg border transition-colors ${viewType === 'list'
+                ? 'bg-blue-500 text-white border-blue-500'
                 : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'
-            }`}
+              }`}
           >
             <List size={16} />
           </button>
@@ -137,7 +137,7 @@ export const OverviewContent = () => {
               {/* Purchases Grid/List */}
               {viewType === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {purchases?.results.map((purchase:any) => (
+                  {purchases?.results.map((purchase: any) => (
                     <PurchaseCard
                       key={purchase.id}
                       purchase={purchase}
@@ -148,7 +148,7 @@ export const OverviewContent = () => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {purchases?.results.map((purchase:any) => (
+                  {purchases?.results.map((purchase: any) => (
                     <PurchaseLine
                       key={purchase.id}
                       purchase={purchase}
@@ -165,7 +165,7 @@ export const OverviewContent = () => {
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, purchases.count)} of {purchases.count} purchases
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
@@ -174,11 +174,11 @@ export const OverviewContent = () => {
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    
+
                     <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium">
                       {currentPage}
                     </span>
-                    
+
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={!purchases.next}
