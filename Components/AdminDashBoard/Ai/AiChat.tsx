@@ -1,7 +1,9 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../../../api';
-import { Bot, Send, User, AlertCircle, Sparkles, X, MessageSquare, Plus, Menu, Brain } from 'lucide-react';
+import { Bot, Send, User, AlertCircle, Sparkles, X, MessageSquare, Plus, Menu, Brain, Clock, Zap, Search, Database } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './AiChat.css';
 
 interface ChatMessage {
@@ -135,6 +137,7 @@ export default function AiChat() {
     const [deepThinkState, setDeepThinkState] = useState<'idle' | 'planning' | 'awaiting_approval' | 'executing'>('idle');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const chatRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -230,6 +233,8 @@ export default function AiChat() {
         setLoading(true);
         setError('');
 
+        let isCurrentlyStreaming = false;
+
         try {
             // Build conversation history for context
             const conversationHistory = messages.map(m => ({
@@ -237,33 +242,104 @@ export default function AiChat() {
                 content: m.content,
             }));
 
-            const response = await api.post('/ai-agent/chat/', {
-                message: text.trim(),
-                conversation_history: conversationHistory,
-                model_provider: modelProvider,
-                session_id: activeSessionId,
-                deep_think_mode: currentDeepThinkMode || undefined
+            // Use fetch for streaming response
+            const token = localStorage.getItem("access_token");
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            if (token) {
+                headers['Authorization'] = `JWT ${token}`;
+            }
+
+            const baseURL = api.defaults.baseURL || '';
+            const response = await fetch(`${baseURL}/ai-agent/chat/`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    message: text.trim(),
+                    conversation_history: conversationHistory,
+                    model_provider: modelProvider,
+                    session_id: activeSessionId,
+                    deep_think_mode: currentDeepThinkMode || undefined
+                })
             });
 
-            const newSessionId = response.data.session_id;
-
-            const assistantMessage: ChatMessage = {
-                role: 'assistant',
-                content: response.data.response || 'No response received.',
-                timestamp: new Date(),
-                functionCalls: response.data.function_calls,
-            };
-
-            setMessages(prev => [...prev, assistantMessage]);
-
-            if (!activeSessionId && newSessionId) {
-                setActiveSessionId(newSessionId);
+            if (!response.ok) {
+                let errData;
+                try { errData = await response.json(); } catch (e) { }
+                throw new Error((errData && errData.error) || 'Failed to get response');
             }
-            // Update session title from AI-generated title
-            if (response.data.session_title) {
+
+            // Create placeholder assistant message
+            const assistantMessageItem: ChatMessage = {
+                role: 'assistant',
+                content: '',
+                timestamp: new Date(),
+                functionCalls: [],
+            };
+            setMessages(prev => [...prev, assistantMessageItem]);
+
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = '';
+
+            let currentSessionId = activeSessionId;
+            let finalSessionTitle = '';
+
+            isCurrentlyStreaming = true;
+
+            if (reader) {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop() || '';
+
+                    for (const part of parts) {
+                        if (part.startsWith('data: ')) {
+                            const dataStr = part.slice(6);
+                            if (dataStr === '[DONE]') break;
+                            try {
+                                const data = JSON.parse(dataStr);
+
+                                if (data.type === 'session_info') {
+                                    currentSessionId = data.session_id;
+                                    finalSessionTitle = data.session_title;
+                                    if (!activeSessionId) setActiveSessionId(currentSessionId);
+                                } else if (data.type === 'message') {
+                                    setMessages(prev => {
+                                        const newMsgs = [...prev];
+                                        const last = { ...newMsgs[newMsgs.length - 1] };
+                                        last.content = last.content + data.content;
+                                        newMsgs[newMsgs.length - 1] = last;
+                                        return newMsgs;
+                                    });
+                                } else if (data.type === 'tool_call') {
+                                    setMessages(prev => {
+                                        const newMsgs = [...prev];
+                                        const last = { ...newMsgs[newMsgs.length - 1] };
+                                        last.functionCalls = [...(last.functionCalls || []), { function: data.function, args: data.args }];
+                                        newMsgs[newMsgs.length - 1] = last;
+                                        return newMsgs;
+                                    });
+                                } else if (data.type === 'error') {
+                                    setError(data.content);
+                                }
+                            } catch (e) {
+                                console.error('Parse error', e, dataStr);
+                            }
+                        }
+                    }
+                }
+                isCurrentlyStreaming = false;
+            }
+
+            if (finalSessionTitle) {
                 setSessions(prev => prev.map(s =>
-                    s.id === (newSessionId || activeSessionId)
-                        ? { ...s, title: response.data.session_title }
+                    s.id === currentSessionId
+                        ? { ...s, title: finalSessionTitle }
                         : s
                 ));
             }
@@ -276,9 +352,8 @@ export default function AiChat() {
             }
 
         } catch (err: any) {
-            const errorMsg = err?.response?.data?.error ||
-                err?.message ||
-                'Failed to get response from AI';
+            const errorMsg = err?.message || 'Failed to get response from AI';
+
             setError(errorMsg);
 
             // Add error as assistant message
@@ -309,168 +384,229 @@ export default function AiChat() {
     };
 
     return (
-        <div className="ai-chat-layout">
-            {/* Sidebar */}
-            <div className={`ai-chat-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-                <div className="ai-chat-sidebar-header">
-                    <button className="ai-new-chat-btn" onClick={startNewChat}>
-                        <Plus size={16} />
-                        New Chat
+        <div className="flex h-[calc(100vh-100px)] bg-gray-50/50">
+            {/* Sidebar for chat sessions */}
+            <div className={`
+                absolute md:static z-20 h-full w-64 bg-white border-r shadow-sm transition-transform duration-300
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            `}>
+                <div className="p-4 border-b flex justify-between items-center">
+                    <h2 className="font-semibold text-gray-700">Chat History</h2>
+                    <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500 hover:text-gray-700">
+                        <X className="w-5 h-5" />
                     </button>
-                    {window.innerWidth < 768 && (
-                        <button className="ai-close-sidebar-btn" onClick={() => setSidebarOpen(false)}>
-                            <X size={18} />
-                        </button>
-                    )}
+                    <button
+                        onClick={startNewChat}
+                        className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-full transition-colors"
+                        title="New Chat"
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
                 </div>
-                <div className="ai-chat-session-list">
+                <div className="overflow-y-auto h-[calc(100%-65px)]">
                     {sessions.map(session => (
                         <div
                             key={session.id}
-                            className={`ai-chat-session-item ${activeSessionId === session.id ? 'active' : ''}`}
                             onClick={() => loadSession(session)}
+                            className={`
+                                p-3 flex items-center gap-3 cursor-pointer border-b hover:bg-gray-50 transition-colors
+                                ${activeSessionId === session.id ? 'bg-indigo-50/50 border-l-2 border-l-indigo-600' : ''}
+                            `}
                         >
-                            <MessageSquare size={16} className="ai-chat-session-icon" />
-                            <div className="ai-chat-session-title">{session.title}</div>
+                            <MessageSquare className={`w-4 h-4 ${activeSessionId === session.id ? 'text-indigo-600' : 'text-gray-400'}`} />
+                            <div className="flex-1 truncate text-sm">
+                                <span className={activeSessionId === session.id ? 'text-indigo-900 font-medium' : 'text-gray-600'}>
+                                    {session.title || 'New Chat'}
+                                </span>
+                                <div className="text-xs text-gray-400">{new Date(session.created_at || '').toLocaleDateString()}</div>
+                            </div>
                         </div>
                     ))}
                     {sessions.length === 0 && (
-                        <div className="ai-chat-no-sessions">No recent chats</div>
+                        <div className="p-4 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
+                            <Clock className="w-5 h-5 text-gray-300" />
+                            No history yet
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Main Chat Area */}
-            <div className="ai-chat-container">
+            {/* Overlay for mobile sidebar */}
+            {sidebarOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black/20 z-10"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            {/* Main chat area */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white shadow-sm rounded-lg overflow-hidden m-4">
                 {/* Header */}
-                <div className="ai-chat-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                        <button className="ai-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                            <Menu size={20} />
+                <div className="px-6 py-4 border-b bg-white flex justify-between items-center shadow-sm z-10">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-500 hover:text-gray-700">
+                            <Menu className="w-5 h-5" />
                         </button>
-                        <div className="ai-chat-header-icon">
-                            <Bot size={22} />
+                        <div className="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 rounded-lg shadow-sm">
+                            <Bot className="w-5 h-5 text-white" />
                         </div>
-                        <div className="ai-chat-header-info">
-                            <h3>TimeERP AI Assistant</h3>
-                            <p>
-                                <span className="ai-chat-status-dot" style={{ display: 'inline-block', marginRight: 6, verticalAlign: 'middle' }} />
-                                Ready
-                            </p>
+                        <div>
+                            <h1 className="text-lg font-bold text-gray-800 tracking-tight">TimeERP Business Brain</h1>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                <span className="flex h-2 w-2 relative">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                Agent Active
+                            </div>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                            className={`ai-deep-think-toggle ${isDeepThink ? 'active' : ''}`}
-                            onClick={() => setIsDeepThink(!isDeepThink)}
-                            disabled={loading || deepThinkState !== 'idle'}
-                            title="Enable DeepThink for complex planning"
-                        >
-                            <Brain size={16} /> <span>DeepThink</span>
-                        </button>
+
+                    <div className="flex items-center gap-2 bg-gray-50/80 p-1.5 rounded-lg border">
+                        <Zap className={`w-4 h-4 ${modelProvider === 'gemini' ? 'text-blue-500' : 'text-gray-400'}`} />
                         <select
                             value={modelProvider}
-                            onChange={(e) => setModelProvider(e.target.value)}
-                            className="ai-model-selector"
-                            disabled={loading}
+                            onChange={(e) => setModelProvider(e.target.value as any)}
+                            className="bg-transparent text-sm border-none focus:ring-0 text-gray-700 font-medium cursor-pointer"
                         >
                             <option value="gemini">Gemini 2.0 Flash</option>
-                            <option value="openai">OpenAI GPT-4o</option>
-                            <option value="anthropic">Claude 3.5 Sonnet</option>
+                            <option value="openai">GPT-4o</option>
+                            <option value="anthropic">Claude 3.5</option>
                         </select>
                     </div>
                 </div>
 
-                {/* Messages */}
-                <div className="ai-chat-messages">
-                    {messages.length === 0 && !loading ? (
-                        <div className="ai-welcome">
-                            <div className="ai-welcome-icon">
-                                <Sparkles size={28} />
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6" ref={chatRef}>
+                    {messages.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4 fade-in">
+                            <div className="w-16 h-16 bg-gradient-to-tr from-indigo-100 to-purple-100 rounded-full flex items-center justify-center shadow-sm">
+                                <Search className="w-8 h-8 text-indigo-400" />
                             </div>
-                            <div className="ai-suggestions">
-                                <div className="ai-suggestions-title">
-                                    What can I help you with?
-                                </div>
-                                <div className="ai-suggestions-subtitle">
-                                    I can analyze orders, finance, stock, leads, production, and more.
-                                </div>
-                                <div className="ai-suggestions-grid">
-                                    {SUGGESTION_ITEMS.map((item, idx) => (
-                                        <button
-                                            key={idx}
-                                            className="ai-suggestion-chip"
-                                            onClick={() => handleSuggestionClick(item.text)}
-                                        >
-                                            <span className="ai-suggestion-chip-icon">{item.icon}</span>
-                                            {item.text}
-                                        </button>
-                                    ))}
-                                </div>
+                            <p className="text-lg font-medium text-gray-500">How can I help you analyze today?</p>
+                            <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-xl">
+                                {SUGGESTION_ITEMS.map((suggestion, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleSuggestionClick(suggestion.text)}
+                                        className="text-xs bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all font-medium flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <span>{suggestion.icon}</span>
+                                        {suggestion.text}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     ) : (
-                        <>
-                            {messages.map((msg, idx) => (
-                                <div key={idx} className={`ai-message-row ${msg.role}`}>
-                                    <div className={`ai-message-wrapper ${msg.role}`}>
-                                        <div className="ai-message-avatar">
-                                            {msg.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
+                        messages.map((msg, idx) => {
+                            const isLastMessage = idx === messages.length - 1;
+                            const isStreamingMessage = isLastMessage && msg.role === 'assistant' && loading;
+
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}
+                                >
+                                    <div
+                                        className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user'
+                                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-tr-sm'
+                                            : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm ring-1 ring-black/5'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            {msg.role === 'user' ? (
+                                                <User className="w-4 h-4 text-indigo-200" />
+                                            ) : (
+                                                <Bot className="w-4 h-4 text-indigo-500" />
+                                            )}
+                                            <span className="text-xs font-semibold uppercase tracking-wider opacity-70">
+                                                {msg.role === 'user' ? 'You' : 'AI Agent'}
+                                            </span>
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div className="ai-message-bubble">
-                                                {msg.role === 'assistant' ? (
-                                                    <div
-                                                        className="ai-message-content"
-                                                        dangerouslySetInnerHTML={{
-                                                            __html: renderMarkdown(msg.content)
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="ai-message-content">
-                                                        {msg.content}
+
+                                        {msg.functionCalls && msg.functionCalls.length > 0 && (
+                                            <div className="mb-3">
+                                                {msg.functionCalls.map((fc, fIdx) => (
+                                                    <div key={fIdx} className="mb-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 font-mono flex flex-col gap-1.5 shadow-inner">
+                                                        <div className="flex items-center gap-2 text-indigo-700 font-bold border-b border-slate-200 pb-1.5">
+                                                            <Database className="w-3.5 h-3.5" />
+                                                            ⚙️ Executing: {fc.function}
+                                                        </div>
+                                                        <div className="pl-1 text-slate-500 overflow-x-auto whitespace-pre-wrap">
+                                                            {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
+                                                        </div>
                                                     </div>
-                                                )}
+                                                ))}
                                             </div>
-                                            {msg.functionCalls && msg.functionCalls.length > 0 && (
-                                                <div className="ai-function-calls">
-                                                    {msg.functionCalls.map((fc, fIdx) => (
-                                                        <span key={fIdx} className="ai-function-tag">
-                                                            ⚡ {fc.function}
-                                                        </span>
-                                                    ))}
-                                                </div>
+                                        )}
+
+                                        <div className="text-sm md:text-base leading-relaxed break-words ai-message-content" style={msg.role === 'user' ? {} : { color: '#374151' }}>
+                                            {msg.role === 'user' ? (
+                                                msg.content
+                                            ) : (
+                                                <>
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border border-gray-200 shadow-sm"><table className="min-w-full divide-y divide-gray-200" {...props} /></div>,
+                                                            thead: ({ node, ...props }) => <thead className="bg-gray-50" {...props} />,
+                                                            th: ({ node, ...props }) => <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50/50" {...props} />,
+                                                            td: ({ node, ...props }) => <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />,
+                                                            a: ({ node, ...props }) => <a className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium inline-flex items-center gap-1" target="_blank" rel="noopener noreferrer" {...props} />,
+                                                            code: ({ node, inline, ...props }: any) =>
+                                                                inline ? (
+                                                                    <code className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-sm font-mono border border-indigo-100" {...props} />
+                                                                ) : (
+                                                                    <div className="my-4 rounded-xl overflow-hidden border shadow-sm">
+                                                                        <div className="flex justify-between items-center bg-slate-800 px-4 py-2 text-xs text-slate-400 font-mono">
+                                                                            <span>{props.className?.replace('language-', '') || 'code'}</span>
+                                                                        </div>
+                                                                        <div className="bg-slate-900 p-4 overflow-x-auto">
+                                                                            <code className="text-sm font-mono text-slate-50" {...props} />
+                                                                        </div>
+                                                                    </div>
+                                                                ),
+                                                            img: ({ node, ...props }) => {
+                                                                let src = props.src;
+                                                                if (typeof src === 'string' && src.startsWith('/media/')) {
+                                                                    const baseURL = api.defaults.baseURL?.replace(/\/+$/, '') || '';
+                                                                    src = `${baseURL}${src}`;
+                                                                }
+                                                                return (
+                                                                    <span className="block my-4">
+                                                                        <img
+                                                                            className="rounded-xl shadow-md cursor-zoom-in hover:opacity-95 transition-opacity max-h-96 object-contain bg-gray-50 w-full"
+                                                                            loading="lazy"
+                                                                            {...props}
+                                                                            src={src as string}
+                                                                            alt={props.alt || 'AI generated image'}
+                                                                        />
+                                                                        {props.alt && <span className="block text-center text-xs text-gray-500 mt-2 font-medium">{props.alt}</span>}
+                                                                    </span>
+                                                                );
+                                                            },
+                                                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-2 space-y-1" {...props} />,
+                                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-2 space-y-1" {...props} />,
+                                                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                                            h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />,
+                                                            h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-2 text-gray-900 flex items-center gap-2" {...props} />,
+                                                            h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-gray-800" {...props} />,
+                                                            p: ({ node, ...props }) => <p className="my-2" {...props} />,
+                                                            blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-indigo-300 bg-indigo-50/50 pl-4 py-2 italic my-3 rounded-r-lg" {...props} />,
+                                                        }}
+                                                    >
+                                                        {msg.content}
+                                                    </ReactMarkdown>
+                                                    {isStreamingMessage && (
+                                                        <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse align-middle" style={{ animationDuration: '0.8s' }}></span>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-
-                            {loading && (
-                                <div className="ai-message-row assistant">
-                                    <div className="ai-message-wrapper assistant">
-                                        <div className="ai-message-avatar">
-                                            <Bot size={16} />
-                                        </div>
-                                        <div className="ai-thinking">
-                                            <div className="ai-thinking-dots">
-                                                <span />
-                                                <span />
-                                                <span />
-                                            </div>
-                                            Analyzing data...
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {error && !loading && (
-                                <div className="ai-error-msg">
-                                    <AlertCircle size={16} />
-                                    {error}
-                                </div>
-                            )}
-                        </>
+                            );
+                        })
                     )}
                     <div ref={messagesEndRef} />
                 </div>
