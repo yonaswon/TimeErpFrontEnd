@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Clock, User, Ruler, Box, Filter, CheckCircle, AlertCircle, X, Search, Image as ImageIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Clock, User, Ruler, Box, Filter, CheckCircle, AlertCircle, X, Search, Image as ImageIcon, ChevronDown, ChevronUp, MapPin, Layers } from 'lucide-react';
 import api, { base_url } from '@/api';
 
 interface Material {
@@ -55,17 +55,23 @@ export const ReleaseHistory = () => {
     const [userFilter, setUserFilter] = useState<number | 'ALL'>('ALL');
     const [dateFilter, setDateFilter] = useState<string>('');
     const [orderFilter, setOrderFilter] = useState<string>('');
+    const [inventoryFilter, setInventoryFilter] = useState<number | 'ALL'>('ALL');
+    const [materialFilter, setMaterialFilter] = useState<number | 'ALL'>('ALL');
 
     // Data for filters
     const [users, setUsers] = useState<UserAcc[]>([]);
+    const [inventories, setInventories] = useState<{ id: number; name: string }[]>([]);
+    const [materialsList, setMaterialsList] = useState<{ id: number; name: string; type: string }[]>([]);
 
     useEffect(() => {
         fetchUsers();
+        fetchInventories();
+        fetchMaterials();
     }, []);
 
     useEffect(() => {
         fetchReleases();
-    }, [statusFilter, userFilter, dateFilter, orderFilter]);
+    }, [statusFilter, userFilter, dateFilter, orderFilter, inventoryFilter, materialFilter]);
 
     const fetchUsers = async () => {
         try {
@@ -73,6 +79,26 @@ export const ReleaseHistory = () => {
             setUsers(resp.data);
         } catch (e) {
             console.error("Failed to load users", e);
+        }
+    };
+
+    const fetchInventories = async () => {
+        try {
+            const resp = await api.get('/stock/inventories/');
+            const data = resp.data.results || resp.data;
+            setInventories(data);
+        } catch (e) {
+            console.error("Failed to load inventories", e);
+        }
+    };
+
+    const fetchMaterials = async () => {
+        try {
+            const resp = await api.get('/stock/materials/');
+            const data = resp.data.results || resp.data;
+            setMaterialsList(data);
+        } catch (e) {
+            console.error("Failed to load materials", e);
         }
     };
 
@@ -88,6 +114,8 @@ export const ReleaseHistory = () => {
             if (userFilter !== 'ALL') url += `&released_by=${userFilter}`;
             if (dateFilter) url += `&date=${dateFilter}`;
             if (orderFilter) url += `&order=${orderFilter}`;
+            if (inventoryFilter !== 'ALL') url += `&inventory=${inventoryFilter}`;
+            if (materialFilter !== 'ALL') url += `&material=${materialFilter}`;
 
             const response = await api.get<ApiResponse>(url);
             setReleases(response.data.results);
@@ -119,6 +147,8 @@ export const ReleaseHistory = () => {
         setUserFilter('ALL');
         setDateFilter('');
         setOrderFilter('');
+        setInventoryFilter('ALL');
+        setMaterialFilter('ALL');
     };
 
     const toggleExpandRelease = (releaseId: number) => {
@@ -202,7 +232,7 @@ export const ReleaseHistory = () => {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {/* Status Filter */}
                         <div className="flex flex-col gap-1.5">
                             <label className="text-sm text-gray-600 dark:text-gray-400">Confirmation</label>
@@ -228,6 +258,36 @@ export const ReleaseHistory = () => {
                                 <option value="ALL">All Users</option>
                                 {users.map(u => (
                                     <option key={u.id} value={u.id}>{u.username}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Inventory Filter */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Inventory</label>
+                            <select
+                                value={inventoryFilter}
+                                onChange={(e) => setInventoryFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                                className="h-11 px-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="ALL">All Inventories</option>
+                                {inventories.map(inv => (
+                                    <option key={inv.id} value={inv.id}>{inv.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Material Filter */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Material</label>
+                            <select
+                                value={materialFilter}
+                                onChange={(e) => setMaterialFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                                className="h-11 px-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="ALL">All Materials</option>
+                                {materialsList.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
                                 ))}
                             </select>
                         </div>
