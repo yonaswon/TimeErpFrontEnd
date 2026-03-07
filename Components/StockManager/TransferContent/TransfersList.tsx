@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     ArrowDownLeft, ArrowUpRight, ArrowLeftRight,
-    Package, Ruler, Box, Clock, AlertCircle, Filter, X
+    Package, Ruler, Box, Clock, AlertCircle, Filter, X, MapPin, Layers
 } from 'lucide-react';
 import api from '@/api';
 
@@ -76,16 +76,30 @@ export const TransfersList = () => {
     const [showFilters, setShowFilters] = useState(false);
     const [directionFilter, setDirectionFilter] = useState<'ALL' | 'INCOMING' | 'OUTGOING'>('ALL');
     const [typeFilter, setTypeFilter] = useState<'ALL' | 'LANDP' | 'AREAL'>('ALL');
+    const [inventoryFilter, setInventoryFilter] = useState<number | 'ALL'>('ALL');
+    const [materialFilter, setMaterialFilter] = useState<number | 'ALL'>('ALL');
+
+    // Data for filter dropdowns
+    const [inventories, setInventories] = useState<{ id: number; name: string }[]>([]);
+    const [materialsList, setMaterialsList] = useState<{ id: number; name: string; type: string }[]>([]);
+
+    useEffect(() => {
+        api.get('/inventories/').then(r => setInventories(r.data.results || r.data)).catch(console.error);
+        api.get('/materials/').then(r => setMaterialsList(r.data.results || r.data)).catch(console.error);
+    }, []);
 
     useEffect(() => {
         fetchTransfers();
-    }, [directionFilter, typeFilter]);
+    }, [directionFilter, typeFilter, inventoryFilter, materialFilter]);
 
     const buildUrl = (base: string) => {
         let url = `${base}?ordering=-date`;
         if (directionFilter === 'INCOMING') url += `&to_inventory=${STOCK_KEEPER_ID}`;
         if (directionFilter === 'OUTGOING') url += `&from_inventory=${STOCK_KEEPER_ID}`;
-        // If ALL, show both directions involving inventory 2
+        if (inventoryFilter !== 'ALL') {
+            url += `&from_inventory=${inventoryFilter}`;
+        }
+        if (materialFilter !== 'ALL') url += `&material_id=${materialFilter}`;
         return url;
     };
 
@@ -198,6 +212,8 @@ export const TransfersList = () => {
     const clearFilters = () => {
         setDirectionFilter('ALL');
         setTypeFilter('ALL');
+        setInventoryFilter('ALL');
+        setMaterialFilter('ALL');
     };
 
     // ── Render ─────────────────────────────────────────
@@ -262,6 +278,36 @@ export const TransfersList = () => {
                                 <option value="ALL">All Types</option>
                                 <option value="LANDP">L&P Materials (Length / Piece)</option>
                                 <option value="AREAL">Areal Materials</option>
+                            </select>
+                        </div>
+
+                        {/* Inventory Filter */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Inventory</label>
+                            <select
+                                value={inventoryFilter}
+                                onChange={(e) => setInventoryFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                                className="h-11 px-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="ALL">All Inventories</option>
+                                {inventories.map(inv => (
+                                    <option key={inv.id} value={inv.id}>{inv.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Material Filter */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Material</label>
+                            <select
+                                value={materialFilter}
+                                onChange={(e) => setMaterialFilter(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                                className="h-11 px-3 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="ALL">All Materials</option>
+                                {materialsList.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name}</option>
+                                ))}
                             </select>
                         </div>
                     </div>
