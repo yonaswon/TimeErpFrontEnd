@@ -84,7 +84,7 @@ export const ReleaseHistory = () => {
 
     const fetchInventories = async () => {
         try {
-            const resp = await api.get('/stock/inventories/');
+            const resp = await api.get('/inventories/');
             const data = resp.data.results || resp.data;
             setInventories(data);
         } catch (e) {
@@ -94,7 +94,7 @@ export const ReleaseHistory = () => {
 
     const fetchMaterials = async () => {
         try {
-            const resp = await api.get('/stock/materials/');
+            const resp = await api.get('/materials/');
             const data = resp.data.results || resp.data;
             setMaterialsList(data);
         } catch (e) {
