@@ -6,6 +6,8 @@ import CreatePurchaseOverlay from "./createpurchase/CreatePurchaseOverlay";
 import { InWalletTransfer } from "./InWalletTransfer/InWalletTransferOverlay";
 import PityPurchaseOverlay from "./pitypurchase/PityPurchaseOverlay"; // Add this import
 import PityCostOverlay from "./pitypurchase/PityCostOverlay";
+import { FinanceLogs } from "./FinanceLogs";
+
 
 const ActionsContent = () => {
   const [showCreate, setShowCreate] = useState(false);
@@ -90,6 +92,11 @@ const ActionsContent = () => {
         open={showPityCost}
         onClose={() => setShowPityCost(false)}
       />
+
+      {/* Finance Logs */}
+      <div className="pt-2">
+        <FinanceLogs />
+      </div>
     </div>
   );
 };

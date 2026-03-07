@@ -123,13 +123,91 @@ const SUGGESTION_ITEMS = [
     { icon: '🚀', text: 'Show lead conversion analytics' },
 ];
 
+const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
+    const [displayed, setDisplayed] = useState('');
+
+    useEffect(() => {
+        if (!isStreaming) {
+            setDisplayed(content);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setDisplayed(prev => {
+                if (prev.length >= content.length) return content;
+                // Add between 1 to 4 characters per tick to simulate natural fast streaming
+                const nextChunkSizes = [1, 2, 3, 4];
+                const jump = nextChunkSizes[Math.floor(Math.random() * nextChunkSizes.length)];
+                return content.substring(0, prev.length + jump);
+            });
+        }, 15); // ~15ms tick
+
+        return () => clearInterval(interval);
+    }, [content, isStreaming]);
+
+    return (
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+                table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border shadow-sm" style={{ borderColor: 'var(--admin-border)' }}><table className="min-w-full divide-y" style={{ borderColor: 'var(--admin-border)' }} {...props} /></div>,
+                thead: ({ node, ...props }) => <thead style={{ background: 'var(--admin-bg)' }} {...props} />,
+                th: ({ node, ...props }) => <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--admin-text-secondary)', background: 'var(--admin-bg)' }} {...props} />,
+                td: ({ node, ...props }) => <td className="px-4 py-3 whitespace-nowrap text-sm border-t" style={{ color: 'var(--admin-text)', borderColor: 'var(--admin-border)' }} {...props} />,
+                a: ({ node, ...props }) => <a className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium inline-flex items-center gap-1" target="_blank" rel="noopener noreferrer" {...props} />,
+                code: ({ node, inline, ...props }: any) =>
+                    inline ? (
+                        <code className="px-1.5 py-0.5 rounded text-sm font-mono border" style={{ background: 'var(--admin-bg)', color: 'var(--admin-text)', borderColor: 'var(--admin-border)' }} {...props} />
+                    ) : (
+                        <div className="my-4 rounded-xl overflow-hidden border shadow-sm" style={{ borderColor: 'var(--admin-border)' }}>
+                            <div className="flex justify-between items-center px-4 py-2 text-xs font-mono" style={{ background: 'var(--admin-sidebar-bg)', color: 'var(--admin-sidebar-text)' }}>
+                                <span>{props.className?.replace('language-', '') || 'code'}</span>
+                            </div>
+                            <div className="p-4 overflow-x-auto" style={{ background: 'var(--admin-surface)' }}>
+                                <code className="text-sm font-mono" style={{ color: 'var(--admin-text)' }} {...props} />
+                            </div>
+                        </div>
+                    ),
+                img: ({ node, ...props }) => {
+                    let src = props.src;
+                    if (typeof src === 'string' && src.startsWith('/media/')) {
+                        const baseURL = api.defaults.baseURL?.replace(/\/+$/, '') || '';
+                        src = `${baseURL}${src}`;
+                    }
+                    return (
+                        <span className="block my-4">
+                            <img
+                                className="rounded-xl shadow-md cursor-zoom-in hover:opacity-95 transition-opacity max-h-96 object-contain bg-gray-50 w-full"
+                                loading="lazy"
+                                {...props}
+                                src={src as string}
+                                alt={props.alt || 'AI generated image'}
+                            />
+                            {props.alt && <span className="block text-center text-xs text-gray-500 mt-2 font-medium">{props.alt}</span>}
+                        </span>
+                    );
+                },
+                ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-2 space-y-1" {...props} />,
+                ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-2 space-y-1" {...props} />,
+                li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />,
+                h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-2 text-gray-900 flex items-center gap-2" {...props} />,
+                h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-gray-800" {...props} />,
+                p: ({ node, ...props }) => <p className="my-2" {...props} />,
+                blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-gray-300 bg-gray-50/50 pl-4 py-2 italic my-3 rounded-r-lg" {...props} />,
+            }}
+        >
+            {displayed}
+        </ReactMarkdown>
+    );
+};
+
 export default function AiChat() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
-    const [modelProvider, setModelProvider] = useState('gemini');
+    const [modelProvider, setModelProvider] = useState('openai');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imageModal, setImageModal] = useState<string | null>(null);
@@ -242,6 +320,15 @@ export default function AiChat() {
                 content: m.content,
             }));
 
+            // Add placeholder assistant message BEFORE fetch so the loading dots appear during TTFB
+            const assistantMessageItem: ChatMessage = {
+                role: 'assistant',
+                content: '',
+                timestamp: new Date(),
+                functionCalls: [],
+            };
+            setMessages(prev => [...prev, assistantMessageItem]);
+
             // Use fetch for streaming response
             const token = localStorage.getItem("access_token");
             const headers: Record<string, string> = {
@@ -269,15 +356,6 @@ export default function AiChat() {
                 try { errData = await response.json(); } catch (e) { }
                 throw new Error((errData && errData.error) || 'Failed to get response');
             }
-
-            // Create placeholder assistant message
-            const assistantMessageItem: ChatMessage = {
-                role: 'assistant',
-                content: '',
-                timestamp: new Date(),
-                functionCalls: [],
-            };
-            setMessages(prev => [...prev, assistantMessageItem]);
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder("utf-8");
@@ -352,17 +430,44 @@ export default function AiChat() {
             }
 
         } catch (err: any) {
-            const errorMsg = err?.message || 'Failed to get response from AI';
+            let errorMsg = 'Failed to get response from AI';
+            try {
+                if (typeof err === 'string') {
+                    errorMsg = err;
+                } else if (err?.message) {
+                    errorMsg = typeof err.message === 'string' ? err.message : JSON.stringify(err.message);
+                } else if (err) {
+                    errorMsg = JSON.stringify(err);
+                }
+            } catch (e) {
+                // Ignore parse errors on complex objects
+            }
+
+            if (typeof errorMsg !== 'string') {
+                errorMsg = String(errorMsg);
+            }
+
+            if (errorMsg.length > 500) {
+                errorMsg = errorMsg.substring(0, 500) + '...';
+            }
 
             setError(errorMsg);
 
-            // Add error as assistant message
-            const errorMessage: ChatMessage = {
-                role: 'assistant',
-                content: `⚠️ Error: ${errorMsg}`,
-                timestamp: new Date(),
-            };
-            setMessages(prev => [...prev, errorMessage]);
+            // Remove the empty placeholder if it failed during TTFB
+            setMessages(prev => {
+                const msgs = [...prev];
+                if (msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant' && msgs[msgs.length - 1].content === '') {
+                    msgs.pop();
+                }
+
+                // Add error as assistant message
+                const errorMessage: ChatMessage = {
+                    role: 'assistant',
+                    content: `⚠️ Error: ${errorMsg}`,
+                    timestamp: new Date(),
+                };
+                return [...msgs, errorMessage];
+            });
         } finally {
             setLoading(false);
         }
@@ -384,14 +489,14 @@ export default function AiChat() {
     };
 
     return (
-        <div className="flex h-[calc(100vh-100px)] bg-gray-50/50">
+        <div className="ai-chat-layout h-[calc(100vh-100px)]">
             {/* Sidebar for chat sessions */}
-            <div className={`
-                absolute md:static z-20 h-full w-64 bg-white border-r shadow-sm transition-transform duration-300
+            <div className={`ai-chat-sidebar
+                absolute md:static z-20 h-full border-r transition-transform duration-300
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-            `}>
-                <div className="p-4 border-b flex justify-between items-center">
-                    <h2 className="font-semibold text-gray-700">Chat History</h2>
+            `} style={{ background: 'var(--admin-sidebar-bg)', borderColor: 'var(--admin-border)' }}>
+                <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'var(--admin-border)' }}>
+                    <h2 className="font-semibold" style={{ color: 'var(--admin-sidebar-text)' }}>Chat History</h2>
                     <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500 hover:text-gray-700">
                         <X className="w-5 h-5" />
                     </button>
@@ -408,17 +513,17 @@ export default function AiChat() {
                         <div
                             key={session.id}
                             onClick={() => loadSession(session)}
-                            className={`
-                                p-3 flex items-center gap-3 cursor-pointer border-b hover:bg-gray-50 transition-colors
-                                ${activeSessionId === session.id ? 'bg-indigo-50/50 border-l-2 border-l-indigo-600' : ''}
-                            `}
+                            className={`p-3 flex items-center gap-3 cursor-pointer border-b transition-colors`}
+                            style={activeSessionId === session.id
+                                ? { background: 'var(--admin-primary-light)', borderColor: 'var(--admin-border)', borderLeftWidth: '2px', borderLeftStyle: 'solid', borderLeftColor: 'var(--admin-primary)' }
+                                : { borderColor: 'var(--admin-border)', borderLeftWidth: '2px', borderLeftStyle: 'solid', borderLeftColor: 'transparent' }}
                         >
-                            <MessageSquare className={`w-4 h-4 ${activeSessionId === session.id ? 'text-indigo-600' : 'text-gray-400'}`} />
+                            <MessageSquare className="w-4 h-4" style={{ color: activeSessionId === session.id ? 'var(--admin-primary)' : 'var(--admin-text-secondary)' }} />
                             <div className="flex-1 truncate text-sm">
-                                <span className={activeSessionId === session.id ? 'text-indigo-900 font-medium' : 'text-gray-600'}>
+                                <span className={activeSessionId === session.id ? 'font-medium' : ''} style={{ color: activeSessionId === session.id ? 'var(--admin-text)' : 'var(--admin-sidebar-text)' }}>
                                     {session.title || 'New Chat'}
                                 </span>
-                                <div className="text-xs text-gray-400">{new Date(session.created_at || '').toLocaleDateString()}</div>
+                                <div className="text-xs" style={{ color: 'var(--admin-text-muted)' }}>{new Date(session.created_at || '').toLocaleDateString()}</div>
                             </div>
                         </div>
                     ))}
@@ -440,19 +545,19 @@ export default function AiChat() {
             )}
 
             {/* Main chat area */}
-            <div className="flex-1 flex flex-col min-w-0 bg-white shadow-sm rounded-lg overflow-hidden m-4">
+            <div className="ai-chat-container flex-1 flex flex-col min-w-0">
                 {/* Header */}
-                <div className="px-6 py-4 border-b bg-white flex justify-between items-center shadow-sm z-10">
+                <div className="px-6 py-4 border-b flex justify-between items-center z-10 ai-chat-header-bg" style={{ background: 'var(--admin-surface)', borderColor: 'var(--admin-border)' }}>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-500 hover:text-gray-700">
+                        <button onClick={() => setSidebarOpen(true)} className="md:hidden hover:opacity-80 transition-opacity" style={{ color: 'var(--admin-text-secondary)' }}>
                             <Menu className="w-5 h-5" />
                         </button>
-                        <div className="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 rounded-lg shadow-sm">
-                            <Bot className="w-5 h-5 text-white" />
+                        <div className="p-2 rounded-lg shadow-sm" style={{ background: 'linear-gradient(135deg, var(--admin-primary), #8b5cf6)' }}>
+                            <Bot className="w-5 h-5" style={{ color: '#fff' }} />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-gray-800 tracking-tight">TimeERP Business Brain</h1>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                            <h1 className="text-lg font-bold tracking-tight" style={{ color: 'var(--admin-text)' }}>TimeERP Business Brain</h1>
+                            <div className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--admin-text-secondary)' }}>
                                 <span className="flex h-2 w-2 relative">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -462,16 +567,17 @@ export default function AiChat() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-gray-50/80 p-1.5 rounded-lg border">
-                        <Zap className={`w-4 h-4 ${modelProvider === 'gemini' ? 'text-blue-500' : 'text-gray-400'}`} />
+                    <div className="flex items-center gap-2 p-1.5 rounded-lg border" style={{ background: 'var(--admin-bg)', borderColor: 'var(--admin-border)' }}>
+                        <Zap className="w-4 h-4" style={{ color: modelProvider === 'openai' ? 'var(--admin-primary)' : 'var(--admin-text-muted)' }} />
                         <select
                             value={modelProvider}
                             onChange={(e) => setModelProvider(e.target.value as any)}
-                            className="bg-transparent text-sm border-none focus:ring-0 text-gray-700 font-medium cursor-pointer"
+                            className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer"
+                            style={{ color: 'var(--admin-text)' }}
                         >
-                            <option value="gemini">Gemini 2.0 Flash</option>
-                            <option value="openai">GPT-4o</option>
-                            <option value="anthropic">Claude 3.5</option>
+                            <option value="gemini" disabled style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>Gemini 2.0 Flash</option>
+                            <option value="openai" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>GPT-4o</option>
+                            <option value="anthropic" disabled style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>Claude 3.5</option>
                         </select>
                     </div>
                 </div>
@@ -479,17 +585,18 @@ export default function AiChat() {
                 {/* Chat Messages */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6" ref={chatRef}>
                     {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-4 fade-in">
-                            <div className="w-16 h-16 bg-gradient-to-tr from-indigo-100 to-purple-100 rounded-full flex items-center justify-center shadow-sm">
-                                <Search className="w-8 h-8 text-indigo-400" />
+                        <div className="h-full flex flex-col items-center justify-center space-y-4 fade-in">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--admin-border)' }}>
+                                <Search className="w-8 h-8" style={{ color: 'var(--admin-text-secondary)' }} />
                             </div>
-                            <p className="text-lg font-medium text-gray-500">How can I help you analyze today?</p>
+                            <p className="text-lg font-medium" style={{ color: 'var(--admin-text)' }}>How can I help you analyze today?</p>
                             <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-xl">
                                 {SUGGESTION_ITEMS.map((suggestion, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleSuggestionClick(suggestion.text)}
-                                        className="text-xs bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all font-medium flex items-center gap-1.5 shadow-sm"
+                                        className="text-xs border px-3 py-1.5 rounded-full transition-all font-medium flex items-center gap-1.5"
+                                        style={{ borderColor: 'var(--admin-border)', color: 'var(--admin-text)' }}
                                     >
                                         <span>{suggestion.icon}</span>
                                         {suggestion.text}
@@ -503,105 +610,51 @@ export default function AiChat() {
                             const isStreamingMessage = isLastMessage && msg.role === 'assistant' && loading;
 
                             return (
-                                <div
-                                    key={idx}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}
-                                >
-                                    <div
-                                        className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.role === 'user'
-                                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-tr-sm'
-                                            : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm ring-1 ring-black/5'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-2 mb-2">
-                                            {msg.role === 'user' ? (
-                                                <User className="w-4 h-4 text-indigo-200" />
-                                            ) : (
-                                                <Bot className="w-4 h-4 text-indigo-500" />
-                                            )}
-                                            <span className="text-xs font-semibold uppercase tracking-wider opacity-70">
-                                                {msg.role === 'user' ? 'You' : 'AI Agent'}
-                                            </span>
+                                <div key={idx} className="ai-message-row animate-in slide-in-from-bottom-2 duration-300">
+                                    <div className={`ai-message-wrapper ${msg.role}`}>
+                                        <div className="ai-message-avatar">
+                                            {msg.role === 'assistant' && <Sparkles className="w-5 h-5" />}
                                         </div>
+                                        <div className="ai-message-bubble">
 
-                                        {msg.functionCalls && msg.functionCalls.length > 0 && (
-                                            <div className="mb-3">
-                                                {msg.functionCalls.map((fc, fIdx) => (
-                                                    <div key={fIdx} className="mb-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 font-mono flex flex-col gap-1.5 shadow-inner">
-                                                        <div className="flex items-center gap-2 text-indigo-700 font-bold border-b border-slate-200 pb-1.5">
-                                                            <Database className="w-3.5 h-3.5" />
-                                                            ⚙️ Executing: {fc.function}
+                                            {msg.functionCalls && msg.functionCalls.length > 0 && (
+                                                <div className="mb-3">
+                                                    {msg.functionCalls.map((fc, fIdx) => (
+                                                        <div key={fIdx} className="mb-2 border rounded-lg p-2.5 text-xs font-mono flex flex-col gap-1.5 shadow-inner" style={{ background: 'var(--admin-bg)', borderColor: 'var(--admin-border)', color: 'var(--admin-text-secondary)' }}>
+                                                            <div className="flex items-center gap-2 font-bold border-b pb-1.5" style={{ color: 'var(--admin-primary)', borderColor: 'var(--admin-border)' }}>
+                                                                <Database className="w-3.5 h-3.5" />
+                                                                ⚙️ Executing: {fc.function}
+                                                            </div>
+                                                            <div className="pl-1 overflow-x-auto whitespace-pre-wrap" style={{ color: 'var(--admin-text-muted)' }}>
+                                                                {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
+                                                            </div>
                                                         </div>
-                                                        <div className="pl-1 text-slate-500 overflow-x-auto whitespace-pre-wrap">
-                                                            {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <div className="text-sm md:text-base leading-relaxed break-words ai-message-content" style={msg.role === 'user' ? {} : { color: '#374151' }}>
-                                            {msg.role === 'user' ? (
-                                                msg.content
-                                            ) : (
-                                                <>
-                                                    <ReactMarkdown
-                                                        remarkPlugins={[remarkGfm]}
-                                                        components={{
-                                                            table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border border-gray-200 shadow-sm"><table className="min-w-full divide-y divide-gray-200" {...props} /></div>,
-                                                            thead: ({ node, ...props }) => <thead className="bg-gray-50" {...props} />,
-                                                            th: ({ node, ...props }) => <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50/50" {...props} />,
-                                                            td: ({ node, ...props }) => <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />,
-                                                            a: ({ node, ...props }) => <a className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium inline-flex items-center gap-1" target="_blank" rel="noopener noreferrer" {...props} />,
-                                                            code: ({ node, inline, ...props }: any) =>
-                                                                inline ? (
-                                                                    <code className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-sm font-mono border border-indigo-100" {...props} />
-                                                                ) : (
-                                                                    <div className="my-4 rounded-xl overflow-hidden border shadow-sm">
-                                                                        <div className="flex justify-between items-center bg-slate-800 px-4 py-2 text-xs text-slate-400 font-mono">
-                                                                            <span>{props.className?.replace('language-', '') || 'code'}</span>
-                                                                        </div>
-                                                                        <div className="bg-slate-900 p-4 overflow-x-auto">
-                                                                            <code className="text-sm font-mono text-slate-50" {...props} />
-                                                                        </div>
-                                                                    </div>
-                                                                ),
-                                                            img: ({ node, ...props }) => {
-                                                                let src = props.src;
-                                                                if (typeof src === 'string' && src.startsWith('/media/')) {
-                                                                    const baseURL = api.defaults.baseURL?.replace(/\/+$/, '') || '';
-                                                                    src = `${baseURL}${src}`;
-                                                                }
-                                                                return (
-                                                                    <span className="block my-4">
-                                                                        <img
-                                                                            className="rounded-xl shadow-md cursor-zoom-in hover:opacity-95 transition-opacity max-h-96 object-contain bg-gray-50 w-full"
-                                                                            loading="lazy"
-                                                                            {...props}
-                                                                            src={src as string}
-                                                                            alt={props.alt || 'AI generated image'}
-                                                                        />
-                                                                        {props.alt && <span className="block text-center text-xs text-gray-500 mt-2 font-medium">{props.alt}</span>}
-                                                                    </span>
-                                                                );
-                                                            },
-                                                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-2 space-y-1" {...props} />,
-                                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-2 space-y-1" {...props} />,
-                                                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                                            h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />,
-                                                            h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-2 text-gray-900 flex items-center gap-2" {...props} />,
-                                                            h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-gray-800" {...props} />,
-                                                            p: ({ node, ...props }) => <p className="my-2" {...props} />,
-                                                            blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-indigo-300 bg-indigo-50/50 pl-4 py-2 italic my-3 rounded-r-lg" {...props} />,
-                                                        }}
-                                                    >
-                                                        {msg.content}
-                                                    </ReactMarkdown>
-                                                    {isStreamingMessage && (
-                                                        <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse align-middle" style={{ animationDuration: '0.8s' }}></span>
-                                                    )}
-                                                </>
+                                                    ))}
+                                                </div>
                                             )}
+
+                                            <div className="text-[16px] leading-[28px] break-words ai-message-content" style={msg.role === 'user' ? {} : { color: 'var(--admin-text)', fontFamily: 'Söhne, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif' }}>
+                                                {msg.role === 'user' ? (
+                                                    msg.content
+                                                ) : (
+                                                    (msg.content === '' && isStreamingMessage) ? (
+                                                        <div className="ai-thinking">
+                                                            <div className="ai-thinking-dots">
+                                                                <span style={{ backgroundColor: 'var(--admin-text)' }}></span>
+                                                                <span style={{ backgroundColor: 'var(--admin-text)' }}></span>
+                                                                <span style={{ backgroundColor: 'var(--admin-text)' }}></span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <TypewriterMarkdown content={msg.content} isStreaming={isStreamingMessage} />
+                                                            {isStreamingMessage && (
+                                                                <span className="inline-block w-3 h-3 ml-1 rounded-full animate-bounce align-middle" style={{ backgroundColor: 'var(--admin-text-secondary)', animationDuration: '0.8s' }}></span>
+                                                            )}
+                                                        </>
+                                                    )
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -627,6 +680,14 @@ export default function AiChat() {
                             </button>
                         </div>
                     )}
+                    {error && (
+                        <div className="w-full max-w-800px mb-4">
+                            <div className="ai-error-msg">
+                                <AlertCircle size={16} />
+                                {error}
+                            </div>
+                        </div>
+                    )}
                     <div className="ai-chat-input-wrapper">
                         <textarea
                             ref={textareaRef}
@@ -649,31 +710,33 @@ export default function AiChat() {
                 </div>
 
                 {/* Image Modal */}
-                {imageModal && (
-                    <div
-                        className="ai-image-modal-overlay"
-                        onClick={() => setImageModal(null)}
-                    >
-                        <button
+                {
+                    imageModal && (
+                        <div
+                            className="ai-image-modal-overlay"
                             onClick={() => setImageModal(null)}
-                            style={{
-                                position: 'absolute', top: 16, right: 16,
-                                background: 'rgba(0,0,0,0.5)', border: 'none',
-                                color: '#fff', borderRadius: 8, padding: 8,
-                                cursor: 'pointer', display: 'flex'
-                            }}
                         >
-                            <X size={20} />
-                        </button>
-                        <img
-                            src={imageModal}
-                            alt="Full size"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    </div>
-                )}
+                            <button
+                                onClick={() => setImageModal(null)}
+                                style={{
+                                    position: 'absolute', top: 16, right: 16,
+                                    background: 'rgba(0,0,0,0.5)', border: 'none',
+                                    color: '#fff', borderRadius: 8, padding: 8,
+                                    cursor: 'pointer', display: 'flex'
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                            <img
+                                src={imageModal}
+                                alt="Full size"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                    )
+                }
             </div>
-        </div>
+        </div >
     );
 }
 

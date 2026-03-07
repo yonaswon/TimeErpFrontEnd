@@ -4,7 +4,7 @@
 .ai-chat-layout {
     display: flex;
     height: 100vh;
-    background: var(--admin-card);
+    background: var(--admin-bg);
     overflow: hidden;
     position: relative;
 }
@@ -14,7 +14,7 @@
     flex-direction: column;
     flex: 1;
     overflow: hidden;
-    background: var(--admin-surface);
+    background: var(--admin-bg);
     position: relative;
 }
 
@@ -271,37 +271,51 @@
 }
 
 .ai-message-wrapper.assistant .ai-message-avatar {
-    background: #10a37f;
-    /* ChatGPT green */
-    color: #fff;
-    border: none;
+    background: transparent;
+    color: var(--admin-text);
+    border: 1px solid var(--admin-border);
 }
 
 .ai-message-wrapper.user .ai-message-avatar {
     display: none;
-    /* new ChatGPT hides user avatar */
 }
 
 .ai-message-bubble {
-    max-width: 80%;
+    max-width: calc(100% - 48px);
     word-wrap: break-word;
     overflow-wrap: break-word;
-    line-height: 1.3;
-    font-size: 15px;
+    line-height: 1.6;
+    font-size: 16px;
+    font-family: Söhne, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
 }
 
+/* ChatGPT Assistant text has no background bubble */
 .ai-message-wrapper.assistant .ai-message-bubble {
     background: transparent;
     color: var(--admin-text);
-    padding: 4px 0;
+    padding: 2px 0;
 }
 
+/* ChatGPT User text has a modern subtle gray pill layout */
 .ai-message-wrapper.user .ai-message-bubble {
-    background: var(--admin-bg);
-    /* light grey for user */
-    color: var(--admin-text);
-    padding: 10px 16px;
+    background: #f4f4f4;
+    color: #0d0d0d;
+    padding: 10px 18px;
     border-radius: 20px;
+}
+
+/* Dark mode overrides for user bubble */
+@media (prefers-color-scheme: dark) {
+    .ai-message-wrapper.user .ai-message-bubble {
+        background: #2f2f2f;
+        color: #ececec;
+    }
+
+    .ai-message-wrapper.assistant .ai-message-avatar {
+        background: transparent;
+        color: #ececec;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
 }
 
 /* ─── Message Content — Markdown Rendering ───────────────────────────────── */
@@ -531,15 +545,16 @@
 
 /* ─── Input Area matching ChatGPT ─────────────────────────────────────────── */
 .ai-chat-input-area {
-    padding: 16px;
-    background: transparent;
+    padding: 16px 24px 24px 24px;
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     display: flex;
-    justify-content: center;
-    background: linear-gradient(180deg, transparent, var(--admin-surface) 30%);
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(180deg, transparent, var(--admin-bg) 40%);
+    z-index: 10;
 }
 
 .ai-chat-input-wrapper {
@@ -548,24 +563,29 @@
     align-items: flex-end;
     width: 100%;
     max-width: 800px;
-    background: var(--admin-bg);
+    background: var(--admin-surface);
     border: 1px solid var(--admin-border);
-    border-radius: 24px;
-    padding: 6px 12px;
+    border-radius: 26px;
+    padding: 8px 12px 8px 16px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s;
+}
+
+.ai-chat-input-wrapper:focus-within {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
 }
 
 .ai-chat-input {
     flex: 1;
-    padding: 12px 16px;
+    padding: 8px 0;
     border: none;
     background: transparent;
     color: var(--admin-text);
-    font-size: 15px;
+    font-size: 16px;
     font-family: inherit;
     resize: none;
     outline: none;
-    min-height: 48px;
+    min-height: 40px;
     max-height: 200px;
     line-height: 1.5;
 }
@@ -575,29 +595,29 @@
 }
 
 .ai-chat-send-btn {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: none;
-    background: var(--admin-primary);
-    color: #fff;
+    background: var(--admin-text);
+    color: var(--admin-surface);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
     transition: opacity 0.2s, transform 0.1s;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .ai-chat-send-btn:hover:not(:disabled) {
-    opacity: 0.9;
+    opacity: 0.8;
 }
 
 .ai-chat-send-btn:disabled {
-    opacity: 0.5;
-    background: var(--admin-border);
-    color: var(--admin-text-secondary);
+    opacity: 0.2;
+    background: var(--admin-text);
+    color: var(--admin-surface);
     cursor: not-allowed;
 }
 
