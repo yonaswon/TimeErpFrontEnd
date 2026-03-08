@@ -17,6 +17,7 @@ import PurchaseDetailOverlay from './PurchaseDetailOverlay';
 import ContainerDetailOverlay from './ContainerDetailOverlay';
 import AiChat from './Ai/AiChat';
 import StockRecord from '../StockRecord/StockRecord';
+import MaterialUsageProgress from './MaterialUsageProgress';
 import { DashboardData, Filters } from './types';
 
 
@@ -79,12 +80,14 @@ export default function AdminDashBoard() {
         finance: 'Finance',
         stock: 'Stock Management',
         'stock-records': 'Stock Records',
+        'material-usage': 'Material Usage Progress',
         ai: 'AI Assistant',
     };
 
     const renderContent = () => {
         // Self-contained sections that don't need dashboard data
         if (activeSection === 'stock-records') return <StockRecord />;
+        if (activeSection === 'material-usage') return <MaterialUsageProgress />;
         if (activeSection === 'ai') return <AiChat />;
 
         if (loading) {

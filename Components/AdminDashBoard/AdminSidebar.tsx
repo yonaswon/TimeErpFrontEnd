@@ -8,7 +8,8 @@ import {
     DollarSign,
     Package,
     Bot,
-    ClipboardList
+    ClipboardList,
+    Activity
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -26,6 +27,7 @@ const sections = [
     { id: 'finance', label: 'Finance', icon: DollarSign },
     { id: 'stock', label: 'Stock', icon: Package },
     { id: 'stock-records', label: 'Stock Records', icon: ClipboardList },
+    { id: 'material-usage', label: 'Material Usage', icon: Activity },
     { id: 'ai', label: 'AI Assistant', icon: Bot },
 ];
 
