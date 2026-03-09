@@ -20,7 +20,7 @@ export const OtpLogin = () => {
         setLoading(true)
         setError(null)
         try {
-            await api.post('/core/request-otp/', { username })
+            await api.post('/core/request-otp/', { username, client: 'web' })
             setStep(2)
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to request OTP')
@@ -38,7 +38,7 @@ export const OtpLogin = () => {
         setLoading(true)
         setError(null)
         try {
-            const response = await api.post('/core/verify-otp/', { username, otp })
+            const response = await api.post('/core/verify-otp/', { username, otp, client: 'web' })
             if (response.data.access && response.data.user) {
                 localStorage.setItem('access_token', response.data.access)
                 localStorage.setItem('user_data', JSON.stringify(response.data.user))

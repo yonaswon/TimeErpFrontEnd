@@ -18,6 +18,7 @@ import ContainerDetailOverlay from './ContainerDetailOverlay';
 import AiChat from './Ai/AiChat';
 import StockRecord from '../StockRecord/StockRecord';
 import MaterialUsageProgress from './MaterialUsageProgress';
+import CallLogList from './CallLogs/CallLogList';
 import { DashboardData, Filters } from './types';
 
 
@@ -81,6 +82,7 @@ export default function AdminDashBoard() {
         stock: 'Stock Management',
         'stock-records': 'Stock Records',
         'material-usage': 'Material Usage Progress',
+        'call-logs': 'Call Logs Dashboard',
         ai: 'AI Assistant',
     };
 
@@ -88,6 +90,7 @@ export default function AdminDashBoard() {
         // Self-contained sections that don't need dashboard data
         if (activeSection === 'stock-records') return <StockRecord />;
         if (activeSection === 'material-usage') return <MaterialUsageProgress />;
+        if (activeSection === 'call-logs') return <CallLogList />;
         if (activeSection === 'ai') return <AiChat />;
 
         if (loading) {
