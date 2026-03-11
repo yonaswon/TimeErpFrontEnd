@@ -1,7 +1,9 @@
-// Tasks/CompletedAssembly.tsx
 import { useState, useEffect } from 'react';
 import { CheckCircle, Grid, List, AlertCircle, Clock, Package } from 'lucide-react';
 import api from '@/api';
+import { useSidebar } from "@/Components/GlobalComponents/SideBar/SidebarContext";
+import { ReleaseOverlay } from "./ReleaseOverlay";
+import ReleaseContent from "./Release/ReleaseContent";
 
 interface AssemblyAssignment {
   id: number;
@@ -67,10 +69,36 @@ export const CompletedAssembly = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [releaseOverlay, setReleaseOverlay] = useState<{
+    isOpen: boolean;
+    task: AssemblyAssignment | null;
+  }>({
+    isOpen: false,
+    task: null,
+  });
+  const { openSidebar } = useSidebar();
 
   useEffect(() => {
     fetchCompletedTasks();
   }, [currentPage]);
+
+  const openReleaseSideBar = (id: any) => {
+    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
+  };
+
+  const openReleaseOverlay = (task: AssemblyAssignment) => {
+    setReleaseOverlay({
+      isOpen: true,
+      task,
+    });
+  };
+
+  const closeReleaseOverlay = () => {
+    setReleaseOverlay({
+      isOpen: false,
+      task: null,
+    });
+  };
 
   const fetchCompletedTasks = async () => {
     try {
@@ -161,8 +189,8 @@ export const CompletedAssembly = () => {
           <button
             onClick={() => setViewMode('card')}
             className={`p-2 rounded-md transition-colors ${viewMode === 'card'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             title="Card View"
           >
@@ -171,8 +199,8 @@ export const CompletedAssembly = () => {
           <button
             onClick={() => setViewMode('list')}
             className={`p-2 rounded-md transition-colors ${viewMode === 'list'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             title="List View"
           >
@@ -202,6 +230,7 @@ export const CompletedAssembly = () => {
                 formatDateTime={formatDateTime}
                 calculateDuration={calculateDuration}
                 calculateScheduleOffset={calculateScheduleOffset}
+                onRelease={openReleaseOverlay}
               />
             ) : (
               <CompletedAssemblyListItem
@@ -210,6 +239,7 @@ export const CompletedAssembly = () => {
                 formatDateTime={formatDateTime}
                 calculateDuration={calculateDuration}
                 calculateScheduleOffset={calculateScheduleOffset}
+                onRelease={openReleaseOverlay}
               />
             )
           )}
@@ -224,14 +254,23 @@ export const CompletedAssembly = () => {
               key={page}
               onClick={() => handlePageChange(page)}
               className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
                 }`}
             >
               {page}
             </button>
           ))}
         </div>
+      )}
+
+      {/* Release Overlay */}
+      {releaseOverlay.isOpen && releaseOverlay.task && (
+        <ReleaseOverlay
+          task={releaseOverlay.task}
+          onClose={closeReleaseOverlay}
+          onSuccess={fetchCompletedTasks}
+        />
       )}
     </div>
   );
@@ -242,15 +281,22 @@ const CompletedAssemblyCard = ({
   task,
   formatDateTime,
   calculateDuration,
-  calculateScheduleOffset
+  calculateScheduleOffset,
+  onRelease
 }: {
   task: AssemblyAssignment;
   formatDateTime: (dateString: string | null) => string;
   calculateDuration: (startDate: string | null, completeDate: string | null) => string;
   calculateScheduleOffset: (scheduledDate: string, actualDate: string | null) => string;
+  onRelease: (task: AssemblyAssignment) => void;
 }) => {
   const actualDuration = calculateDuration(task.start_date, task.complate_date);
   const scheduleOffset = calculateScheduleOffset(task.schedule_complate_date, task.complate_date);
+  const { openSidebar } = useSidebar();
+
+  const openReleaseSideBar = (id: any) => {
+    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
+  };
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-4">
@@ -320,10 +366,10 @@ const CompletedAssemblyCard = ({
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Schedule Offset:</span>
               <span className={`font-medium ${scheduleOffset.startsWith('-')
-                  ? 'text-green-600 dark:text-green-400'
-                  : scheduleOffset.startsWith('+')
-                    ? 'text-yellow-600 dark:text-yellow-400'
-                    : 'text-gray-600 dark:text-gray-400'
+                ? 'text-green-600 dark:text-green-400'
+                : scheduleOffset.startsWith('+')
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-gray-600 dark:text-gray-400'
                 }`}>
                 {scheduleOffset}
               </span>
@@ -368,6 +414,25 @@ const CompletedAssemblyCard = ({
           />
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex space-x-3">
+        <button
+          onClick={() => openReleaseSideBar(task.order.order_code)}
+          className="flex-1 flex items-center justify-center space-x-2 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+        >
+          <Package className="w-4 h-4" />
+          <span>See Release</span>
+        </button>
+
+        <button
+          onClick={() => onRelease(task)}
+          className="flex-1 flex items-center justify-center space-x-2 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+        >
+          <Package className="w-4 h-4" />
+          <span>Additional Release</span>
+        </button>
+      </div>
     </div>
   );
 };
@@ -377,15 +442,22 @@ const CompletedAssemblyListItem = ({
   task,
   formatDateTime,
   calculateDuration,
-  calculateScheduleOffset
+  calculateScheduleOffset,
+  onRelease
 }: {
   task: AssemblyAssignment;
   formatDateTime: (dateString: string | null) => string;
   calculateDuration: (startDate: string | null, completeDate: string | null) => string;
   calculateScheduleOffset: (scheduledDate: string, actualDate: string | null) => string;
+  onRelease: (task: AssemblyAssignment) => void;
 }) => {
   const actualDuration = calculateDuration(task.start_date, task.complate_date);
   const scheduleOffset = calculateScheduleOffset(task.schedule_complate_date, task.complate_date);
+  const { openSidebar } = useSidebar();
+
+  const openReleaseSideBar = (id: any) => {
+    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
+  };
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-700 p-3">
@@ -410,10 +482,10 @@ const CompletedAssemblyListItem = ({
               <span>Duration: {actualDuration}</span>
             </div>
             <span className={`shrink-0 ${scheduleOffset.startsWith('-')
-                ? 'text-green-600 dark:text-green-400'
-                : scheduleOffset.startsWith('+')
-                  ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-gray-600 dark:text-gray-400'
+              ? 'text-green-600 dark:text-green-400'
+              : scheduleOffset.startsWith('+')
+                ? 'text-yellow-600 dark:text-yellow-400'
+                : 'text-gray-600 dark:text-gray-400'
               }`}>
               Offset: {scheduleOffset}
             </span>
@@ -424,7 +496,21 @@ const CompletedAssemblyListItem = ({
         </div>
 
         <div className="flex items-center space-x-2 ml-4 shrink-0">
-          <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
+          <button
+            onClick={() => openReleaseSideBar(task.order.order_code)}
+            className="flex items-center space-x-1 px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+          >
+            <Package className="w-3 h-3" />
+            <span>See Release</span>
+          </button>
+          <button
+            onClick={() => onRelease(task)}
+            className="flex items-center space-x-1 px-2 py-1 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+          >
+            <Package className="w-3 h-3" />
+            <span>Release</span>
+          </button>
+          <div className="flex items-center space-x-1 px-2 py-1 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg text-sm font-medium">
             <CheckCircle className="w-4 h-4" />
           </div>
         </div>

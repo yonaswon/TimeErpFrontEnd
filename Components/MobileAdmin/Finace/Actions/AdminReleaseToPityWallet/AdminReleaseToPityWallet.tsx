@@ -14,6 +14,7 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
     const [formData, setFormData] = useState({
         fromAccount: null as number | null,
         amount: '',
+        invoice: false,
         note: '',
         confirmationImage: null as File | null,
     })
@@ -58,7 +59,7 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
             // Fixed values for admin release to pity wallet (from wallet 1 to wallet 3)
             submitData.append('from_wallet', '1')
             submitData.append('to_wallet', '3') // Pity Wallet ID is 3
-            submitData.append('invoice', 'false')
+            submitData.append('invoice', formData.invoice ? 'true' : 'false')
             submitData.append('from_account', formData.fromAccount!.toString())
             submitData.append('amount', formData.amount)
             submitData.append('confirmed_at', new Date().toISOString())
@@ -92,6 +93,7 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
         setFormData({
             fromAccount: null,
             amount: '',
+            invoice: false,
             note: '',
             confirmationImage: null,
         })
@@ -103,17 +105,17 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
     if (!open) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pt-10">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                 onClick={handleClose}
             />
 
-            <div className="relative w-full max-w-md mx-4 mb-6">
-                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-gray-200 dark:border-zinc-700 overflow-hidden">
+            <div className="relative w-full max-w-md mx-4 mb-6 max-h-[85vh] flex flex-col">
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-gray-200 dark:border-zinc-700 flex flex-col overflow-hidden h-full">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-zinc-700">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-zinc-700 shrink-0 bg-white dark:bg-zinc-900">
                         <h4 className="font-semibold text-gray-900 dark:text-white">
                             Release to Pity Wallet
                         </h4>
@@ -127,7 +129,7 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
                         </div>
                     </div>
 
-                    <div className="p-4">
+                    <div className="p-4 overflow-y-auto">
                         {success ? (
                             <div className="text-center py-6">
                                 <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
@@ -148,12 +150,29 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
                                 </div>
 
                                 <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                                    <div className="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-gray-200 dark:border-zinc-700 space-y-4">
+                                        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-700">
+                                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Is this an invoice transfer?</label>
+                                            <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                                <input
+                                                    type="checkbox"
+                                                    id="pity-invoice-toggle"
+                                                    checked={formData.invoice}
+                                                    onChange={(e) => handleInputChange('invoice', e.target.checked)}
+                                                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                                                    style={{ right: formData.invoice ? '0' : 'auto', left: formData.invoice ? 'auto' : '0', borderColor: formData.invoice ? '#2563EB' : '#D1D5DB' }}
+                                                />
+                                                <label htmlFor="pity-invoice-toggle" className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${formData.invoice ? 'bg-blue-600' : 'bg-gray-300'}`}></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <AdminAccountDropdown
                                         value={formData.fromAccount}
                                         onChange={(accountId) => handleInputChange('fromAccount', accountId)}
                                         disabled={submitting}
                                         required
-                                        invoice={false} // Pity is generally non-invoice personal account transfer source
+                                        invoice={formData.invoice}
                                     />
 
                                     <div>
@@ -250,6 +269,6 @@ export const AdminReleaseToPityWallet = ({ open, onClose }: AdminReleaseToPityWa
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }
