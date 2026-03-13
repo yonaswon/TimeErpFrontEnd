@@ -12,6 +12,7 @@ import {
   CreditCard,
   Upload,
   Package,
+  Hash,
 } from "lucide-react";
 import api from "@/api";
 import { OrderSearchOverlay } from "./OrderSearchOverlay";
@@ -33,6 +34,7 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
 
   const [formData, setFormData] = useState<MaintenanceFormData>({
     order: null,
+    old_order_code: "",
     client_name: "",
     client_contact: "",
     reported_issue: "",
@@ -44,7 +46,7 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
     method: "BANK",
     account: null,
     additional_image: null,
-    confirmation_image: null, // Added confirmation_image field
+    confirmation_image: null,
     note: "",
   });
 
@@ -88,6 +90,7 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
     setFormData((prev) => ({
       ...prev,
       order: order.order_code,
+      old_order_code: "",
       client_name: clientInfo.name,
       client_contact: clientInfo.contact,
       under_warranty: isUnderWarranty,
@@ -135,33 +138,48 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
 
     try {
       // Validate required fields
+      if (!formData.order && !formData.old_order_code.trim()) {
+        throw new Error(
+          "Either an order or old order code is required"
+        );
+      }
+      if (formData.old_order_code.trim() && isNaN(parseInt(formData.old_order_code))) {
+        throw new Error("Old order code must be a valid integer");
+      }
       if (!formData.client_name.trim()) {
         throw new Error("Client name is required");
       }
       if (!formData.reported_issue.trim()) {
         throw new Error("Reported issue is required");
       }
-      if (!formData.under_warranty && !formData.payment_amount) {
-        throw new Error(
-          "Payment amount is required for non-warranty maintenance"
-        );
-      }
-      if (formData.invoice && !formData.invoice_image) {
-        throw new Error("Invoice image is required when invoice is selected");
-      }
-      if (formData.method !== "CASH" && !formData.account) {
-        throw new Error("Account is required for non-cash payments");
-      }
-      // Require confirmation image for non-cash payments
-      if (formData.method !== "CASH" && !formData.confirmation_image) {
-        throw new Error("Confirmation image is required for non-cash payments");
+      // Payment validations only when NOT under warranty
+      if (!formData.under_warranty) {
+        if (!formData.payment_amount) {
+          throw new Error(
+            "Payment amount is required for non-warranty maintenance"
+          );
+        }
+        if (formData.invoice && !formData.invoice_image) {
+          throw new Error("Invoice image is required when invoice is selected");
+        }
+        if (formData.method !== "CASH" && !formData.account) {
+          throw new Error("Account is required for non-cash payments");
+        }
+        if (formData.method !== "CASH" && !formData.confirmation_image) {
+          throw new Error("Confirmation image is required for non-cash payments");
+        }
       }
 
       // Prepare form data for submission
       const submitData = new FormData();
 
       // Basic maintenance data
-      submitData.append("order", formData.order?.toString() || "");
+      if (formData.order) {
+        submitData.append("order", formData.order.toString());
+      }
+      if (formData.old_order_code.trim()) {
+        submitData.append("old_order_code", formData.old_order_code.trim());
+      }
       submitData.append("client_name", formData.client_name);
       submitData.append("client_contact", formData.client_contact);
       submitData.append("reported_issue", formData.reported_issue);
@@ -262,10 +280,10 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
           {/* Order Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Order (Optional)
+              Order *
             </label>
             {selectedOrder ? (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg" style={{ borderRadius: 12 }}>
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium text-blue-900 dark:text-blue-100">
@@ -292,12 +310,40 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
                 type="button"
                 onClick={() => setShowOrderSearch(true)}
                 className="w-full p-3 border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-gray-500 dark:text-gray-400"
+                style={{ borderRadius: 12, minHeight: 44 }}
               >
                 <Package className="w-6 h-6 mx-auto mb-2" />
-                <p>Select Order (Optional)</p>
+                <p>Select Order</p>
               </button>
             )}
           </div>
+
+          {/* Old Order Code - shown only when no order is selected */}
+          {!selectedOrder && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Old Order Code {!formData.order ? "*" : ""}
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                For orders before this system was implemented
+              </p>
+              <div className="relative">
+                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={formData.old_order_code}
+                  onChange={(e) =>
+                    handleInputChange("old_order_code", e.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{ height: 44, borderRadius: 8 }}
+                  placeholder="Enter old order code"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Client Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

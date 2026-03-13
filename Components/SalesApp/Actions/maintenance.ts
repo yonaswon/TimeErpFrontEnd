@@ -48,7 +48,7 @@ export interface Order {
   created_at: string;
   client_name?: string;
   client_contact?: string;
-  mockup_modification:any
+  mockup_modification: any
 }
 
 export interface OrdersResponse {
@@ -71,6 +71,7 @@ export interface Account {
 
 export interface MaintenanceFormData {
   order: number | null;
+  old_order_code: string;
   client_name: string;
   client_contact: string;
   reported_issue: string;
@@ -83,5 +84,5 @@ export interface MaintenanceFormData {
   account: number | null;
   additional_image: File | null;
   note: string;
-  confirmation_image:any,
+  confirmation_image: any,
 }
