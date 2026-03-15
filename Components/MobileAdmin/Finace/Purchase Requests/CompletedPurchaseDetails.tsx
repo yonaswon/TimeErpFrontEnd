@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { downloadFileInTelegram } from '@/utils/telegramdownloads'
 import { Purchase } from "@/types/purchase";
 import {
   X,
@@ -151,15 +152,9 @@ const CompletedPurchaseDetails: React.FC<CompletedPurchaseDetailsProps> = ({
             Open in New Tab
           </a>
           <button
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = imageUrl;
-              a.download = `${title.toLowerCase().replace(/\s+/g, "-")}-${
-                purchase.id
-              }.jpg`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
+            onClick={async () => {
+              const filename = `${title.toLowerCase().replace(/\s+/g, "-")}-${purchase.id}.jpg`;
+              await downloadFileInTelegram(imageUrl, filename);
             }}
             className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
           >

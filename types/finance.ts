@@ -128,6 +128,24 @@ export interface PurchaseResponse {
 // types/finance.ts
 // export interface TabType = 'payments' | 'requests' | 'actions';
 
+export interface OrderSummary {
+  order_code: number;
+  order_name: string | null;
+  mockup_image: string | null;
+  order_status: string;
+}
+
+export interface MaintenanceSummary {
+  id: number;
+  order: number | null;
+  old_order_code: number | null;
+  client_name: string | null;
+  client_contact: string | null;
+  reported_issue: string | null;
+  status: string;
+  under_warranty: boolean;
+}
+
 export interface Payment {
   id: number;
   order_container: {
@@ -149,9 +167,11 @@ export interface Payment {
     updated_at: string | null;
     posted_by: number;
     lead: number;
-    orders: number[];
-  };
-  material_sales_recored:any;
+    orders: OrderSummary[];
+  } | null;
+  maintenance: MaintenanceSummary | null;
+  material_sales_recored: any;
+  additional_image: string | null;
   accepted_by: {
     id: number;
     telegram_id: number;

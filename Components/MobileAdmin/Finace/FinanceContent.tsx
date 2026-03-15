@@ -35,7 +35,7 @@ const FinanceContent = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 px-2 py-4">
       {/* Wallet Cards Carousel */}
       <WalletCarousel wallets={wallets} loading={loading} />
 

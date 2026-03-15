@@ -13,18 +13,18 @@ export const TabContent = ({ activeTab }: TabContentProps) => {
   const renderContent = () => {
     switch (activeTab) {
       case 'payments':
-        return <PaymentConfirmations/>
+        return <PaymentConfirmations />
       case 'requests':
         return <RequestsContent />
       case 'actions':
         return <ActionsContent />
       default:
-        return <PaymentConfirmations/>
+        return <PaymentConfirmations />
     }
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-4 border border-gray-200 dark:border-zinc-700">
+    <div>
       {renderContent()}
     </div>
   )

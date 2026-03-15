@@ -1,6 +1,21 @@
 // PaymentDetailOverlay.tsx
-import { X, User, DollarSign, MapPin, Calendar, FileText, CreditCard, Clock, Mail, Building, Package, Box } from 'lucide-react';
-import { Payment } from '@/types/finance';
+import {
+  X,
+  User,
+  MapPin,
+  Calendar,
+  FileText,
+  CreditCard,
+  Building,
+  Package,
+  Wrench,
+  ShieldCheck,
+  CheckCircle,
+  Loader2,
+  ImageIcon,
+} from "lucide-react";
+import { Payment } from "@/types/finance";
+import { useState } from "react";
 
 interface PaymentDetailOverlayProps {
   payment: Payment;
@@ -9,257 +24,388 @@ interface PaymentDetailOverlayProps {
   isConfirming?: boolean;
 }
 
-export const PaymentDetailOverlay = ({ payment, onClose, onConfirm, isConfirming }: PaymentDetailOverlayProps) => {
+export const PaymentDetailOverlay = ({
+  payment,
+  onClose,
+  onConfirm,
+  isConfirming,
+}: PaymentDetailOverlayProps) => {
   const container = payment.order_container;
-  const isPending = payment.status === 'P';
-  const isCashPayment = payment.method === 'CASH';
+  const maintenance = payment.maintenance;
+  const isPending = payment.status === "P";
+  const isCashPayment = payment.method === "CASH";
   const showConfirmButton = isPending && !isCashPayment;
-  const isSalesPayment = payment.reason === 'SALES';
+  const isSalesPayment = payment.reason === "SALES";
+  const isMaintenance = payment.reason === "MAINTENANCE";
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const getReasonDisplay = (reason: string) => {
-    const reasonMap: { [key: string]: string } = {
-      'PRE': 'Pre-Payment',
-      'REM': 'Remaining Payment',
-      'FULL': 'Full Payment',
-      'SALES': 'Product Sales'
+    const map: Record<string, string> = {
+      PRE: "Pre-Payment",
+      REM: "Remaining Payment",
+      FULL: "Full Payment",
+      SALES: "Product Sales",
+      MAINTENANCE: "Maintenance",
     };
-    return reasonMap[reason] || reason;
+    return map[reason] || reason;
   };
 
+  const statusColor =
+    payment.status === "P"
+      ? "bg-[#F59E0B]/10 text-[#F59E0B]"
+      : "bg-[#16A34A]/10 text-[#16A34A] dark:text-[#22C55E]";
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Payment Details
-          </h2>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50">
+      <div className="bg-[#F9FAFB] dark:bg-[#0F172A] w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-hidden flex flex-col">
+        {/* ─── Header ─── */}
+        <div className="flex items-center justify-between p-4 bg-white dark:bg-[#1E293B] border-b border-[#E5E7EB] dark:border-[#334155]">
+          <div>
+            <h2 className="text-lg font-bold text-[#111827] dark:text-[#F1F5F9]">
+              Payment Details
+            </h2>
+            <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
+              #{payment.id} · {new Date(payment.created_at).toLocaleDateString()}
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
             disabled={isConfirming}
+            className="w-8 h-8 rounded-lg bg-[#F9FAFB] dark:bg-[#0F172A] flex items-center justify-center hover:bg-[#E5E7EB] dark:hover:bg-[#334155] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 text-[#6B7280]" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Payment Overview */}
-          <Section title="Payment Overview">
-            <InfoRow 
-              icon={DollarSign} 
-              label="Amount" 
-              value={`$${payment.amount}`} 
-            />
-            <InfoRow 
-              icon={CreditCard} 
-              label="Method" 
-              value={payment.method} 
-            />
-            <InfoRow 
-              icon={FileText} 
-              label="Reason" 
-              value={getReasonDisplay(payment.reason)} 
-            />
-            <InfoRow 
-              icon={Clock} 
-              label="Status" 
-              value={
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  payment.status === 'P' 
-                    ? 'bg-yellow-100 text-yellow-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {payment.status === 'P' ? 'Pending' : 'Confirmed'}
-                </span>
-              } 
-            />
-            <InfoRow 
-              icon={Building} 
-              label="Wallet" 
-              value={payment.wallet.name} 
-            />
-            <InfoRow 
-              icon={FileText} 
-              label="Invoice Required" 
-              value={payment.invoice ? 'Yes' : 'No'} 
-            />
-          </Section>
+        {/* ─── Content ─── */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Amount Card */}
+          <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E5E7EB] dark:border-[#334155]">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mb-0.5">
+                  Amount
+                </p>
+                <p className="text-2xl font-bold text-[#111827] dark:text-[#F1F5F9]">
+                  {payment.amount} Birr
+                </p>
+              </div>
+              <span
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold ${statusColor}`}
+              >
+                {payment.status === "P" ? "Pending" : "Confirmed"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <InfoPill
+                icon={CreditCard}
+                label={payment.method}
+                color="bg-[#2563EB]/10 text-[#2563EB] dark:text-[#3B82F6]"
+              />
+              <InfoPill
+                icon={FileText}
+                label={getReasonDisplay(payment.reason)}
+                color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400"
+              />
+              <InfoPill
+                icon={Building}
+                label={payment.wallet.name}
+                color="bg-[#F9FAFB] dark:bg-[#0F172A] text-[#6B7280] dark:text-[#94A3B8]"
+              />
+              {payment.invoice && (
+                <InfoPill
+                  icon={FileText}
+                  label="Invoice"
+                  color="bg-[#F59E0B]/10 text-[#F59E0B]"
+                />
+              )}
+            </div>
+          </div>
 
-          {/* Client Information - Only for order container payments */}
+          {/* ─── Order Container Details ─── */}
           {container && (
-            <Section title="Client Information">
-              <InfoRow icon={User} label="Client" value={container.client} />
-              <InfoRow icon={Mail} label="Contact" value={container.contact} />
-              <InfoRow icon={MapPin} label="Location" value={container.location} />
-            </Section>
-          )}
-
-          {/* Order Details - Only for order container payments */}
-          {container && (
-            <Section title="Order Details">
-              <InfoRow 
-                icon={Calendar} 
-                label="Delivery Date" 
-                value={new Date(container.delivery_date).toLocaleDateString()} 
-              />
-              <InfoRow 
-                icon={DollarSign} 
-                label="Full Payment" 
-                value={`$${container.full_payment}`} 
-              />
-              <InfoRow 
-                icon={DollarSign} 
-                label="Advance Paid" 
-                value={`$${payment.amount}`} 
-              />
-              <InfoRow 
-                icon={DollarSign} 
-                label="Remaining" 
-                value={`$${container.remaining_payment}`} 
-              />
-              <InfoRow 
-                icon={FileText} 
-                label="Order Difficulty" 
-                value={container.order_difficulty} 
-              />
-            </Section>
-          )}
-
-          {/* Sales Information - Only for product sales */}
-          {isSalesPayment && payment.material_sales_recored && (
-            <Section title="Sales Information">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2 text-sm">
-                  <Package className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium">Released Materials:</span>
+            <Section title="Client & Order Info" icon={User}>
+              <div className="space-y-3">
+                {/* Client row */}
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-[#2563EB] dark:text-[#3B82F6]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#111827] dark:text-[#F1F5F9]">
+                      {container.client}
+                    </p>
+                    <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
+                      {container.contact}
+                    </p>
+                    <div className="flex items-center space-x-1 text-xs text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                      <MapPin className="w-3 h-3" />
+                      <span>{container.location}</span>
+                    </div>
+                  </div>
                 </div>
-                {payment.material_sales_recored.release.map((releaseItem:any, index:any) => (
-                  <div key={releaseItem.id} className="bg-gray-50 dark:bg-zinc-700 rounded-lg p-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="font-medium">Material:</span> {releaseItem.material.name}
+
+                {/* Payment breakdown */}
+                <div className="grid grid-cols-3 gap-2">
+                  <MiniStat
+                    label="Full"
+                    value={`${container.full_payment} Birr`}
+                  />
+                  <MiniStat
+                    label="Advance"
+                    value={`${container.advance_payment} Birr`}
+                  />
+                  <MiniStat
+                    label="Remaining"
+                    value={`${container.remaining_payment} Birr`}
+                  />
+                </div>
+
+                {/* Meta row */}
+                <div className="flex flex-wrap gap-2">
+                  <InfoPill
+                    icon={Calendar}
+                    label={new Date(
+                      container.delivery_date
+                    ).toLocaleDateString()}
+                    color="bg-[#F9FAFB] dark:bg-[#0F172A] text-[#6B7280] dark:text-[#94A3B8]"
+                  />
+                  <InfoPill
+                    icon={FileText}
+                    label={container.order_difficulty}
+                    color="bg-[#F9FAFB] dark:bg-[#0F172A] text-[#6B7280] dark:text-[#94A3B8]"
+                  />
+                </div>
+
+                {/* Services */}
+                <div className="flex gap-2">
+                  {container.instalation_service && (
+                    <span className="text-xs px-2 py-1 rounded-md bg-[#16A34A]/10 text-[#16A34A] dark:text-[#22C55E] font-medium">
+                      ✓ Installation
+                    </span>
+                  )}
+                  {container.delivery_service && (
+                    <span className="text-xs px-2 py-1 rounded-md bg-[#16A34A]/10 text-[#16A34A] dark:text-[#22C55E] font-medium">
+                      ✓ Delivery
+                    </span>
+                  )}
+                </div>
+              </div>
+            </Section>
+          )}
+
+          {/* ─── Orders List ─── */}
+          {container && container.orders && container.orders.length > 0 && (
+            <Section
+              title={`Orders (${container.orders.length})`}
+              icon={Package}
+            >
+              <div className="space-y-2">
+                {container.orders.map((order) => (
+                  <div
+                    key={order.order_code}
+                    className="flex items-center space-x-3 bg-[#F9FAFB] dark:bg-[#0F172A] rounded-xl p-3 border border-[#E5E7EB] dark:border-[#334155]"
+                  >
+                    {order.mockup_image ? (
+                      <img
+                        src={order.mockup_image}
+                        alt={`ORD-${order.order_code}`}
+                        className="w-12 h-12 rounded-lg object-cover border border-[#E5E7EB] dark:border-[#334155] flex-shrink-0 cursor-pointer"
+                        onClick={() =>
+                          setExpandedImage(order.mockup_image)
+                        }
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-[#E5E7EB] dark:bg-[#334155] flex items-center justify-center flex-shrink-0">
+                        <ImageIcon className="w-5 h-5 text-[#6B7280] dark:text-[#94A3B8]" />
                       </div>
-                      <div>
-                        <span className="font-medium">Amount:</span> {releaseItem.amount}
-                      </div>
-                      <div>
-                        <span className="font-medium">Inventory:</span> {releaseItem.inventory.name}
-                      </div>
-                      <div>
-                        <span className="font-medium">Date:</span> {new Date(releaseItem.date).toLocaleDateString()}
-                      </div>
-                      {releaseItem.each_areal_material && releaseItem.each_areal_material.length > 0 && (
-                        <div className="col-span-2">
-                          <span className="font-medium">Areal Materials:</span>
-                          <div className="mt-1 space-y-1">
-                            {releaseItem.each_areal_material.map((arealMaterial:any) => (
-                              <div key={arealMaterial.id} className="text-xs bg-white dark:bg-zinc-600 p-2 rounded">
-                                Code: {arealMaterial.code} | 
-                                Size: {arealMaterial.current_width}x{arealMaterial.current_height} | 
-                                Status: {arealMaterial.started ? (arealMaterial.finished ? 'Finished' : 'Started') : 'Unstarted'}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[#111827] dark:text-[#F1F5F9]">
+                        ORD-{order.order_code}
+                      </p>
+                      {order.order_name && (
+                        <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] truncate">
+                          {order.order_name}
+                        </p>
                       )}
                     </div>
+                    <span className="text-xs px-2 py-1 rounded-md bg-[#2563EB]/10 text-[#2563EB] dark:text-[#3B82F6] font-semibold flex-shrink-0">
+                      {order.order_status.replace(/-/g, " ")}
+                    </span>
                   </div>
                 ))}
               </div>
             </Section>
           )}
 
-          {/* Services - Only for order container payments */}
-          {container && (
-            <Section title="Services">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    container.instalation_service ? 'bg-green-500' : 'bg-gray-300'
-                  }`} />
-                  <span className="text-sm">Installation Service</span>
+          {/* ─── Maintenance Details ─── */}
+          {isMaintenance && maintenance && (
+            <Section title="Maintenance Info" icon={Wrench}>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center flex-shrink-0">
+                    <Wrench className="w-5 h-5 text-[#F59E0B]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm font-bold text-[#111827] dark:text-[#F1F5F9]">
+                        MNT-{maintenance.id}
+                      </p>
+                      {maintenance.under_warranty && (
+                        <span className="inline-flex items-center space-x-0.5 px-1.5 py-0.5 rounded-md text-xs font-bold bg-[#16A34A]/10 text-[#16A34A] dark:text-[#22C55E]">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>Warranty</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                      {maintenance.order && (
+                        <span className="font-semibold text-[#2563EB] dark:text-[#3B82F6]">
+                          ORD-{maintenance.order}
+                        </span>
+                      )}
+                      {maintenance.old_order_code && (
+                        <span className="font-medium">
+                          OLD-{maintenance.old_order_code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    container.delivery_service ? 'bg-green-500' : 'bg-gray-300'
-                  }`} />
-                  <span className="text-sm">Delivery Service</span>
+
+                {maintenance.client_name && (
+                  <DetailRow label="Client" value={maintenance.client_name} />
+                )}
+                {maintenance.client_contact && (
+                  <DetailRow
+                    label="Contact"
+                    value={maintenance.client_contact}
+                  />
+                )}
+                {maintenance.reported_issue && (
+                  <div>
+                    <p className="text-xs font-medium text-[#6B7280] dark:text-[#94A3B8] mb-1">
+                      Reported Issue
+                    </p>
+                    <p className="text-sm text-[#111827] dark:text-[#F1F5F9] leading-relaxed bg-[#F9FAFB] dark:bg-[#0F172A] rounded-lg p-3 border border-[#E5E7EB] dark:border-[#334155]">
+                      {maintenance.reported_issue}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* ─── Sales Info ─── */}
+          {isSalesPayment && payment.material_sales_recored && (
+            <Section title="Sales Information" icon={Package}>
+              <div className="space-y-3">
+                {payment.material_sales_recored.release?.map(
+                  (releaseItem: any) => (
+                    <div
+                      key={releaseItem.id}
+                      className="bg-[#F9FAFB] dark:bg-[#0F172A] rounded-xl p-3 border border-[#E5E7EB] dark:border-[#334155] space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-[#111827] dark:text-[#F1F5F9]">
+                          {releaseItem.material.name}
+                        </p>
+                        <span className="text-xs font-medium text-[#6B7280] dark:text-[#94A3B8]">
+                          Qty: {releaseItem.amount}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-[#6B7280] dark:text-[#94A3B8]">
+                        <span>📦 {releaseItem.inventory.name}</span>
+                        <span>
+                          ·{" "}
+                          {new Date(releaseItem.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {releaseItem.each_areal_material?.length > 0 && (
+                        <div className="space-y-1 pt-1 border-t border-[#E5E7EB] dark:border-[#334155]">
+                          {releaseItem.each_areal_material.map(
+                            (am: any) => (
+                              <div
+                                key={am.id}
+                                className="text-xs text-[#6B7280] dark:text-[#94A3B8] bg-white dark:bg-[#1E293B] rounded-lg px-2.5 py-1.5"
+                              >
+                                <span className="font-medium">{am.code}</span>{" "}
+                                · {am.current_width}×{am.current_height}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* ─── Notes ─── */}
+          {(container?.special_requerment || container?.note || payment.note) && (
+            <Section title="Notes" icon={FileText}>
+              <div className="space-y-2.5">
+                {container?.special_requerment && (
+                  <NoteBlock
+                    label="Special Requirements"
+                    text={container.special_requerment}
+                  />
+                )}
+                {container?.note && (
+                  <NoteBlock label="Order Note" text={container.note} />
+                )}
+                {payment.note && (
+                  <NoteBlock label="Payment Note" text={payment.note} />
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* ─── Images ─── */}
+          {(payment.invoice_image ||
+            payment.confirmation_image ||
+            payment.additional_image) && (
+              <Section title="Documents" icon={ImageIcon}>
+                <div className="grid grid-cols-2 gap-3">
+                  {payment.invoice_image && (
+                    <ImageCard
+                      label="Invoice"
+                      src={payment.invoice_image}
+                      onExpand={() => setExpandedImage(payment.invoice_image)}
+                    />
+                  )}
+                  {payment.confirmation_image && (
+                    <ImageCard
+                      label="Confirmation"
+                      src={payment.confirmation_image}
+                      onExpand={() =>
+                        setExpandedImage(payment.confirmation_image)
+                      }
+                    />
+                  )}
+                  {payment.additional_image && (
+                    <ImageCard
+                      label="Additional"
+                      src={payment.additional_image}
+                      onExpand={() =>
+                        setExpandedImage(payment.additional_image)
+                      }
+                    />
+                  )}
                 </div>
-              </div>
-            </Section>
-          )}
-
-          {/* Special Requirements & Notes */}
-          {container?.special_requerment && (
-            <Section title="Special Requirements">
-              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                {container.special_requerment}
-              </p>
-            </Section>
-          )}
-
-          {container?.note && (
-            <Section title="Container Note">
-              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                {container.note}
-              </p>
-            </Section>
-          )}
-
-          {payment.note && (
-            <Section title="Payment Note">
-              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                {payment.note}
-              </p>
-            </Section>
-          )}
-
-          {/* Images */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {payment.invoice_image && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Invoice Image</h4>
-                <img
-                  src={payment.invoice_image}
-                  alt="Invoice"
-                  className="w-full max-w-md h-64 object-contain rounded-lg border border-gray-300 bg-gray-50"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
+              </Section>
             )}
-
-            {payment.confirmation_image && (
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Confirmation Image</h4>
-                <img
-                  src={payment.confirmation_image}
-                  alt="Payment confirmation"
-                  className="w-full max-w-md h-64 object-contain rounded-lg border border-gray-300 bg-gray-50"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 p-6 border-t border-gray-200 dark:border-zinc-700">
+        {/* ─── Footer ─── */}
+        <div className="p-4 bg-white dark:bg-[#1E293B] border-t border-[#E5E7EB] dark:border-[#334155] flex gap-3">
           <button
             onClick={onClose}
             disabled={isConfirming}
-            className={`px-6 py-2 rounded-lg transition-colors ${
-              isConfirming
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700'
-            }`}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold text-[#6B7280] dark:text-[#94A3B8] bg-[#F9FAFB] dark:bg-[#0F172A] hover:bg-[#E5E7EB] dark:hover:bg-[#334155] transition-colors border border-[#E5E7EB] dark:border-[#334155]"
           >
             Close
           </button>
@@ -267,44 +413,145 @@ export const PaymentDetailOverlay = ({ payment, onClose, onConfirm, isConfirming
             <button
               onClick={() => onConfirm(payment.id)}
               disabled={isConfirming}
-              className={`px-6 py-2 text-white rounded-lg transition-colors flex items-center justify-center min-w-[140px] ${
-                isConfirming
-                  ? 'bg-green-400 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
+              className={`flex-1 py-3 rounded-xl text-sm font-semibold text-white flex items-center justify-center space-x-2 transition-colors ${isConfirming
+                ? "bg-[#16A34A]/50 cursor-not-allowed"
+                : "bg-[#16A34A] hover:bg-[#15803D] active:bg-[#166534]"
+                }`}
             >
               {isConfirming ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Confirming...
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Confirming...</span>
                 </>
               ) : (
-                'Confirm Payment'
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Confirm Payment</span>
+                </>
               )}
             </button>
           )}
         </div>
       </div>
+
+      {/* ─── Expanded Image Viewer ─── */}
+      {expandedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setExpandedImage(null)}
+        >
+          <img
+            src={expandedImage}
+            alt="Expanded view"
+            className="max-w-full max-h-[85vh] object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setExpandedImage(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
-// Helper Components
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div>
-    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">{title}</h3>
-    <div className="space-y-3">{children}</div>
+// ─── Helper Components ──────────────────────────────────
+
+const Section = ({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon?: any;
+  children: React.ReactNode;
+}) => (
+  <div className="bg-white dark:bg-[#1E293B] rounded-xl p-4 border border-[#E5E7EB] dark:border-[#334155]">
+    <div className="flex items-center space-x-2 mb-3">
+      {Icon && (
+        <Icon className="w-4 h-4 text-[#6B7280] dark:text-[#94A3B8]" />
+      )}
+      <h3 className="text-sm font-bold text-[#111827] dark:text-[#F1F5F9] uppercase tracking-wider">
+        {title}
+      </h3>
+    </div>
+    {children}
   </div>
 );
 
-const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: any }) => (
-  <div className="flex items-start space-x-3">
-    <Icon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-32 shrink-0">
-      {label}:
-    </span>
-    <span className="text-sm text-gray-900 dark:text-white wrap-break-word flex-1">
+const InfoPill = ({
+  icon: Icon,
+  label,
+  color,
+}: {
+  icon: any;
+  label: string;
+  color: string;
+}) => (
+  <span
+    className={`inline-flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-semibold ${color}`}
+  >
+    <Icon className="w-3 h-3" />
+    <span>{label}</span>
+  </span>
+);
+
+const MiniStat = ({ label, value }: { label: string; value: string }) => (
+  <div className="bg-[#F9FAFB] dark:bg-[#0F172A] rounded-lg p-2.5 text-center border border-[#E5E7EB] dark:border-[#334155]">
+    <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">{label}</p>
+    <p className="text-sm font-bold text-[#111827] dark:text-[#F1F5F9] mt-0.5">
+      {value}
+    </p>
+  </div>
+);
+
+const DetailRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center justify-between text-sm">
+    <span className="text-[#6B7280] dark:text-[#94A3B8]">{label}</span>
+    <span className="font-medium text-[#111827] dark:text-[#F1F5F9]">
       {value}
     </span>
+  </div>
+);
+
+const NoteBlock = ({ label, text }: { label: string; text: string }) => (
+  <div>
+    <p className="text-xs font-medium text-[#6B7280] dark:text-[#94A3B8] mb-1">
+      {label}
+    </p>
+    <p className="text-sm text-[#111827] dark:text-[#F1F5F9] leading-relaxed bg-[#F9FAFB] dark:bg-[#0F172A] rounded-lg p-3 border border-[#E5E7EB] dark:border-[#334155]">
+      {text}
+    </p>
+  </div>
+);
+
+const ImageCard = ({
+  label,
+  src,
+  onExpand,
+}: {
+  label: string;
+  src: string;
+  onExpand: () => void;
+}) => (
+  <div
+    className="space-y-1.5 cursor-pointer group"
+    onClick={onExpand}
+  >
+    <img
+      src={src}
+      alt={label}
+      className="w-full h-32 object-cover rounded-xl border border-[#E5E7EB] dark:border-[#334155] group-hover:opacity-90 transition-opacity"
+      onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        target.style.display = "none";
+      }}
+    />
+    <p className="text-xs text-center text-[#6B7280] dark:text-[#94A3B8] font-medium">
+      {label}
+    </p>
   </div>
 );

@@ -43,10 +43,10 @@ declare global {
         expand: () => void;
         close: () => void;
         // Add downloadFile if it exists in your Telegram WebApp version
-        downloadFile?: (url: string, fileName?: string) => void;
+        downloadFile?: (params: { url: string; file_name: string }, callback?: (accepted: boolean) => void) => void;
       };
     };
   }
 }
 
-export {};
+export { };

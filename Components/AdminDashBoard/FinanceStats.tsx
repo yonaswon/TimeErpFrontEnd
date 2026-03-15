@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { DollarSign, CreditCard, ShoppingBag, AlertTriangle, Wallet } from 'lucide-react';
+import { DollarSign, CreditCard, ShoppingBag, AlertTriangle, Wallet, FileText, FileX, ArrowDownCircle, CheckCircle, Tag, Wrench } from 'lucide-react';
 import { DashboardData } from './types';
 
 interface Props {
@@ -36,24 +36,79 @@ export default function FinanceStats({ data, onPurchaseClick }: Props) {
                 <div className="admin-kpi-card kpi-success">
                     <div className="kpi-label"><DollarSign /> Confirmed</div>
                     <div className="kpi-value">{formatBirr(finance.total_confirmed)}</div>
-                    <div className="kpi-sub">Total confirmed payments</div>
+                    <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 500 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-success, #10b981)' }}>
+                                <FileText size={16} /> <span>Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.invoice_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning, #f59e0b)' }}>
+                                <FileX size={16} /> <span>Non-Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.non_invoice_total || 0)}</span>
+                            </div>
+                        </div>
+                        <div style={{ height: '1px', background: 'var(--admin-border)', opacity: 0.5, margin: '2px 0' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--admin-text)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <ArrowDownCircle size={14} style={{ color: 'var(--admin-primary, #3b82f6)' }} /> <span>Pre: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.pre_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <CheckCircle size={14} style={{ color: 'var(--admin-success, #10b981)' }} /> <span>Rem: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.rem_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Tag size={14} style={{ color: '#8b5cf6' }} /> <span>Sales: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.sales_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Wrench size={14} style={{ color: '#64748b' }} /> <span>Maint: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.maint_total || 0)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div className="admin-kpi-card kpi-warning">
                     <div className="kpi-label"><DollarSign /> Pending</div>
                     <div className="kpi-value">{formatBirr(finance.total_pending)}</div>
-                    <div className="kpi-sub">Awaiting confirmation</div>
+                    <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 500 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-success, #10b981)' }}>
+                                <FileText size={16} /> <span>Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.invoice_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning, #f59e0b)' }}>
+                                <FileX size={16} /> <span>Non-Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.non_invoice_total || 0)}</span>
+                            </div>
+                        </div>
+                        <div style={{ height: '1px', background: 'var(--admin-border)', opacity: 0.5, margin: '2px 0' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--admin-text)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <ArrowDownCircle size={14} style={{ color: 'var(--admin-primary, #3b82f6)' }} /> <span>Pre: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.pre_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <CheckCircle size={14} style={{ color: 'var(--admin-success, #10b981)' }} /> <span>Rem: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.rem_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Tag size={14} style={{ color: '#8b5cf6' }} /> <span>Sales: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.sales_total || 0)}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Wrench size={14} style={{ color: '#64748b' }} /> <span>Maint: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.maint_total || 0)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div className="admin-kpi-card kpi-primary">
-                    <div className="kpi-label"><ShoppingBag /> Purchases</div>
-                    <div className="kpi-value">{finance.purchases.total}</div>
-                    <div className="kpi-sub">{formatBirr(finance.purchases.total_amount)}</div>
+                    <div className="kpi-label"><Wallet /> Expected Remaining</div>
+                    <div className="kpi-value">{formatBirr(finance.expected_remaining || 0)}</div>
+                    <div className="kpi-sub">From active orders</div>
                 </div>
                 <div className="admin-kpi-card kpi-danger">
-                    <div className="kpi-label"><AlertTriangle /> Pity Costs</div>
-                    <div className="kpi-value">{formatBirr(finance.pity_costs.total)}</div>
+                    <div className="kpi-label"><ShoppingBag /> Expenses</div>
+                    <div className="kpi-value">{formatBirr(finance.expenses?.total || 0)}</div>
+                    <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', fontSize: '13px', fontWeight: 500 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-danger, #ef4444)' }}>
+                            <FileText size={16} /> <span>Inv: {formatBirr(finance.expenses?.invoice_total || 0)}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning, #f59e0b)' }}>
+                            <FileX size={16} /> <span>Non-Inv: {formatBirr(finance.expenses?.non_invoice_total || 0)}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-
             <div className="admin-stats-grid">
                 {/* Payments by Reason */}
                 <div className="admin-section-card">
@@ -77,6 +132,30 @@ export default function FinanceStats({ data, onPurchaseClick }: Props) {
                         </tbody>
                     </table>
                     {finance.payment_by_reason.length === 0 && <div className="admin-empty">No payments</div>}
+                </div>
+
+                {/* Expenses by Category */}
+                <div className="admin-section-card">
+                    <h3><ShoppingBag /> Expenses by Category</h3>
+                    <table className="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Count</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(finance.expenses?.by_category || []).map((cat) => (
+                                <tr key={cat.expense_category__name || 'Uncategorized'}>
+                                    <td>{cat.expense_category__name || 'Uncategorized'}</td>
+                                    <td>{cat.count}</td>
+                                    <td>{formatBirr(cat.total || 0)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {(!finance.expenses?.by_category || finance.expenses.by_category.length === 0) && <div className="admin-empty">No expenses</div>}
                 </div>
 
                 {/* Payments by Status */}

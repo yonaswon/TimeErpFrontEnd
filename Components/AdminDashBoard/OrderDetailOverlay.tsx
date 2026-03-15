@@ -208,6 +208,18 @@ export default function OrderDetailOverlay({ order, onClose, onSelectContainer }
                     <h4 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--admin-text-secondary)' }}>
                         Order Details
                     </h4>
+                    {data.mockup_image && (
+                        <div style={{ marginBottom: 16 }}>
+                            <img
+                                src={data.mockup_image}
+                                alt="Mockup"
+                                style={{
+                                    width: '100%', height: 180, objectFit: 'cover',
+                                    borderRadius: 8, border: '1px solid var(--admin-border)'
+                                }}
+                            />
+                        </div>
+                    )}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         <InfoItem label="Design Type" value={data.design_type} />
                         <InfoItem label="Price" value={formatBirr(data.price)} />
@@ -258,13 +270,30 @@ export default function OrderDetailOverlay({ order, onClose, onSelectContainer }
                                 background: so.is_current ? 'var(--admin-primary-light)' : 'var(--admin-bg)',
                                 border: so.is_current ? '1px solid var(--admin-primary)' : '1px solid transparent',
                             }}>
-                                <div>
-                                    <span style={{ fontWeight: 600, fontSize: 13 }}>#{so.order_code}</span>
-                                    <span style={{ fontSize: 11, color: 'var(--admin-text-secondary)', marginLeft: 8 }}>{so.design_type}</span>
-                                    {so.is_current && <span style={{ fontSize: 10, color: 'var(--admin-primary)', marginLeft: 6, fontWeight: 700 }}>CURRENT</span>}
+                                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                    {so.mockup_image ? (
+                                        <img
+                                            src={so.mockup_image}
+                                            alt={so.order_name || 'Mockup'}
+                                            style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--admin-border)' }}
+                                        />
+                                    ) : (
+                                        <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--admin-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--admin-border)' }}>
+                                            <ImageIcon size={16} color="var(--admin-text-muted)" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <span style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            ORD-{so.order_code}
+                                            {so.is_current && <span style={{ fontSize: 9, color: 'var(--admin-primary)', fontWeight: 800, padding: '2px 4px', background: 'rgba(37,99,235,0.1)', borderRadius: 4 }}>CURRENT</span>}
+                                        </span>
+                                        <div style={{ fontSize: 11, color: 'var(--admin-text-secondary)', marginTop: 2 }}>
+                                            {so.order_name ? `${so.order_name} • ` : ''}{so.design_type}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{ fontSize: 12, fontWeight: 600 }}>{formatBirr(so.price)}</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                                    <span style={{ fontSize: 12, fontWeight: 700 }}>{formatBirr(so.price)}</span>
                                     <span className="admin-status-badge" style={{
                                         fontSize: 9, padding: '2px 6px', height: 'auto',
                                         background: STATUS_COLORS[so.status] || 'var(--admin-text-muted)',

@@ -23,6 +23,7 @@ function formatBirr(n: number): string {
 export default function DashboardOverview({ data }: Props) {
     const totalProduction = Object.values(data.production.cnc || {}).reduce((a, b) => a + b, 0);
     const totalDeliveries = Object.values(data.production.delivery || {}).reduce((a, b) => a + b, 0);
+    const totalFinanceRevenue = data.finance.total_confirmed + data.finance.total_pending;
 
     return (
         <>
@@ -34,19 +35,29 @@ export default function DashboardOverview({ data }: Props) {
                     <div className="kpi-sub">{data.orders.total_containers} containers</div>
                 </div>
                 <div className="admin-kpi-card kpi-success">
-                    <div className="kpi-label"><DollarSign /> Revenue</div>
-                    <div className="kpi-value">{formatBirr(data.orders.financials.total_revenue)}</div>
-                    <div className="kpi-sub">Avg: {formatBirr(data.orders.financials.avg_order_value)}</div>
+                    <div className="kpi-label"><DollarSign /> Revenue & Finance Overview</div>
+                    <div className="kpi-value">{formatBirr(totalFinanceRevenue)}</div>
+                    <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', fontSize: '12px', fontWeight: 500 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--admin-success, #10b981)' }}>
+                            <span>Confirmed:</span> <span>{formatBirr(data.finance.total_confirmed)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--admin-warning, #f59e0b)' }}>
+                            <span>Pending:</span> <span>{formatBirr(data.finance.total_pending)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--admin-danger, #ef4444)' }}>
+                            <span>Expenses:</span> <span>{formatBirr(data.finance.expenses?.total || 0)}</span>
+                        </div>
+                    </div>
                 </div>
                 <div className="admin-kpi-card kpi-info">
                     <div className="kpi-label"><TrendingUp /> Active Leads</div>
                     <div className="kpi-value">{formatNum(data.sales.total_leads)}</div>
                     <div className="kpi-sub">{data.sales.conversion_rate}% conversion</div>
                 </div>
-                <div className="admin-kpi-card kpi-warning">
-                    <div className="kpi-label"><DollarSign /> Pending Payments</div>
-                    <div className="kpi-value">{formatBirr(data.finance.total_pending)}</div>
-                    <div className="kpi-sub">Confirmed: {formatBirr(data.finance.total_confirmed)}</div>
+                <div className="admin-kpi-card kpi-primary">
+                    <div className="kpi-label"><DollarSign /> Expected Remaining</div>
+                    <div className="kpi-value">{formatBirr(data.finance.expected_remaining || 0)}</div>
+                    <div className="kpi-sub">From active orders</div>
                 </div>
                 <div className="admin-kpi-card kpi-primary">
                     <div className="kpi-label"><Factory /> Production</div>
@@ -155,15 +166,15 @@ export default function DashboardOverview({ data }: Props) {
                 <div className="admin-section-card">
                     <h3><DollarSign /> Financial Summary</h3>
                     <div className="admin-detail-row">
-                        <span className="admin-detail-label">Total Revenue</span>
+                        <span className="admin-detail-label">Order Revenue (Booked)</span>
                         <span className="admin-detail-value">{formatBirr(data.orders.financials.total_revenue)}</span>
                     </div>
                     <div className="admin-detail-row">
-                        <span className="admin-detail-label">Advance Payments</span>
+                        <span className="admin-detail-label">Order Advance Payments</span>
                         <span className="admin-detail-value">{formatBirr(data.orders.financials.total_advance)}</span>
                     </div>
                     <div className="admin-detail-row">
-                        <span className="admin-detail-label">Remaining Payments</span>
+                        <span className="admin-detail-label">Order Remaining Payments</span>
                         <span className="admin-detail-value">{formatBirr(data.orders.financials.total_remaining)}</span>
                     </div>
                     <div className="admin-detail-row">
@@ -173,6 +184,10 @@ export default function DashboardOverview({ data }: Props) {
                     <div className="admin-detail-row">
                         <span className="admin-detail-label">Pending Payments</span>
                         <span className="admin-detail-value" style={{ color: 'var(--admin-warning)' }}>{formatBirr(data.finance.total_pending)}</span>
+                    </div>
+                    <div className="admin-detail-row">
+                        <span className="admin-detail-label">Total Expenses</span>
+                        <span className="admin-detail-value" style={{ color: 'var(--admin-danger)' }}>{formatBirr(data.finance.expenses?.total || 0)}</span>
                     </div>
                     <div className="admin-detail-row">
                         <span className="admin-detail-label">Pity Costs</span>

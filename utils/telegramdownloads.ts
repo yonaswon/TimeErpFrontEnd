@@ -13,30 +13,47 @@ import { downloadFile } from "./cuttingfileutils";
 // }
 
 export const downloadFileInTelegram = async (url: string, filename: string) => {
-  if (window.Telegram?.WebApp) {
-    try {
-      // Method 1: Use Telegram's downloadFile (if available)
-      if (window.Telegram.WebApp.downloadFile) {
-        window.Telegram.WebApp.downloadFile(url, filename);
-        return;
+  try {
+    if (window.Telegram?.WebApp) {
+      // 1. Try native Telegram WebApp download functionality (requires object params)
+      if (typeof window.Telegram.WebApp.downloadFile === 'function') {
+        try {
+          // New Telegram SDKs expect an object format
+          window.Telegram.WebApp.downloadFile({ url, file_name: filename });
+          return;
+        } catch (tgError) {
+          console.warn('Native downloadFile error:', tgError);
+          // Fall back to Blob download if native API fails
+        }
       }
-      
-      // Method 2: Open in external browser
-      window.Telegram.WebApp.openLink(url);
-      
-    } catch (error) {
-      console.error('Telegram download failed:', error);
-      // Fallback to opening in new tab
-      window.open(url, '_blank');
     }
-  } else {
-    // Fallback for non-Telegram environment
+
+    // 2. Fetch as Blob and create local anchor url fallback (cross-origin supported if CORS headers exist)
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+
     const link = document.createElement('a');
-    link.href = url;
+    link.href = downloadUrl;
     link.download = filename;
-    // link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    setTimeout(() => {
+      window.URL.revokeObjectURL(downloadUrl);
+    }, 100);
+
+  } catch (error) {
+    console.error('Download failed:', error);
+
+    // 3. Absolute fallback: open in new tab
+    if (window.Telegram?.WebApp?.openLink) {
+      window.Telegram.WebApp.openLink(url);
+    } else {
+      window.open(url, '_blank');
+    }
   }
 };

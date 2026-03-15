@@ -34,9 +34,26 @@ export interface DashboardData {
     };
     finance: {
         payment_by_reason: Array<{ reason: string; count: number; total: number }>;
-        payment_by_status: Array<{ status: string; count: number; total: number }>;
+        payment_by_status: Array<{
+            status: string;
+            count: number;
+            total: number;
+            invoice_total: number;
+            non_invoice_total: number;
+            pre_total: number;
+            rem_total: number;
+            sales_total: number;
+            maint_total: number;
+        }>;
         total_confirmed: number;
         total_pending: number;
+        expected_remaining: number;
+        expenses: {
+            total: number;
+            invoice_total: number;
+            non_invoice_total: number;
+            by_category: Array<{ expense_category__name: string; count: number; total: number }>;
+        };
         purchases: {
             total: number;
             in_progress: number;

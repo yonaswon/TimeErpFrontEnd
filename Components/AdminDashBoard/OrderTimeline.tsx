@@ -54,17 +54,19 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
     const [nextPage, setNextPage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [expandedContainer, setExpandedContainer] = useState<number | null>(null);
+    const [activeFilter, setActiveFilter] = useState<string | null>(null);
+    const [showDelayed, setShowDelayed] = useState(false);
 
     useEffect(() => {
         fetchContainers('/api/order-container/?ordering=-created_at');
     }, []);
 
-    const fetchContainers = async (url: string) => {
+    const fetchContainers = async (url: string, append = false) => {
         try {
             setLoading(true);
             const res = await api.get(url);
             const results = res.data?.results || res.data || [];
-            setContainers(prev => url.includes('page=') ? [...prev, ...results] : results);
+            setContainers(prev => append ? [...prev, ...results] : results);
             setNextPage(res.data?.next || null);
         } catch {
             // silently fail
@@ -73,17 +75,60 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
         }
     };
 
+    const handleFilterClick = (statusKey: string) => {
+        const newFilter = activeFilter === statusKey ? null : statusKey;
+        setActiveFilter(newFilter);
+
+        const delayedParam = showDelayed ? '&is_delayed=true' : '';
+        const url = newFilter
+            ? `/api/order-container/?ordering=-created_at&order_status=${newFilter}${delayedParam}`
+            : `/api/order-container/?ordering=-created_at${delayedParam}`;
+        fetchContainers(url, false);
+    };
+
+    const handleDelayedClick = () => {
+        const newDelayedState = !showDelayed;
+        setShowDelayed(newDelayedState);
+
+        const delayedParam = newDelayedState ? '&is_delayed=true' : '';
+        const url = activeFilter
+            ? `/api/order-container/?ordering=-created_at&order_status=${activeFilter}${delayedParam}`
+            : `/api/order-container/?ordering=-created_at${delayedParam}`;
+        fetchContainers(url, false);
+    };
+
     const toggleExpand = (id: number) => {
         setExpandedContainer(prev => prev === id ? null : id);
     };
 
     return (
         <div className="admin-section-card" style={{ padding: 0 }}>
-            <div style={{ padding: '20px 24px 0' }}>
-                <h3 style={{ marginBottom: 0 }}>Order Containers Timeline</h3>
-                <p style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 4 }}>
-                    {data.orders.total_containers} total containers · {data.orders.total_orders} orders
-                </p>
+            <div style={{ padding: '20px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <h3 style={{ marginBottom: 0 }}>Order Containers Timeline</h3>
+                    <p style={{ fontSize: 12, color: 'var(--admin-text-muted)', marginTop: 4 }}>
+                        {data.orders.total_containers} total containers · {data.orders.total_orders} orders
+                    </p>
+                </div>
+                <button
+                    onClick={handleDelayedClick}
+                    style={{
+                        padding: '6px 12px',
+                        borderRadius: 6,
+                        border: showDelayed ? '1px solid var(--admin-danger)' : '1px solid var(--admin-border)',
+                        background: showDelayed ? 'var(--admin-danger-light)' : 'var(--admin-surface)',
+                        color: showDelayed ? 'var(--admin-danger)' : 'var(--admin-text-secondary)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        transition: 'all 0.2s',
+                    }}
+                >
+                    ⚠ {showDelayed ? 'Delayed Orders Active' : 'Show Delayed Orders'}
+                </button>
             </div>
             {/* Status Timeline Summary */}
             <div style={{ padding: '12px 24px 0', overflowX: 'auto' }}>
@@ -91,11 +136,15 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
                     {STATUS_PIPELINE.map((step, idx) => {
                         const count = data.orders.status_distribution?.[step.key] || 0;
                         const hasOrders = count > 0;
+                        const isActive = activeFilter === step.key;
                         return (
-                            <div key={step.key} style={{
-                                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                flex: 1, position: 'relative', minWidth: 60,
-                            }}>
+                            <div key={step.key}
+                                onClick={() => handleFilterClick(step.key)}
+                                style={{
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                    flex: 1, position: 'relative', minWidth: 60, cursor: 'pointer',
+                                    opacity: activeFilter && !isActive ? 0.5 : 1, transition: 'opacity 0.2s'
+                                }}>
                                 {idx > 0 && (
                                     <div style={{
                                         position: 'absolute', top: 11, right: '50%', left: '-50%',
@@ -107,7 +156,8 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
                                     background: hasOrders ? step.color : 'var(--admin-border)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     zIndex: 1, flexShrink: 0, transition: 'all 0.3s',
-                                    boxShadow: hasOrders ? `0 0 0 3px ${step.color}25` : 'none',
+                                    boxShadow: isActive ? `0 0 0 4px ${step.color}40` : hasOrders ? `0 0 0 3px ${step.color}25` : 'none',
+                                    transform: isActive ? 'scale(1.15)' : 'scale(1)',
                                 }}>
                                     <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{count}</span>
                                 </div>
@@ -143,14 +193,22 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
                                             {formatDate(container.created_at)}
                                         </span>
                                     </div>
-                                    <div className="admin-timeline-meta">
+                                    <div className="admin-timeline-meta" style={{ marginBottom: 8 }}>
                                         <span>💰 {Math.round(container.full_payment || 0).toLocaleString()} Birr</span>
                                         <span>📍 {container.location || '-'}</span>
-                                        <span>📦 {orders.length} order{orders.length !== 1 ? 's' : ''}</span>
                                         <span>⚙️ {container.order_difficulty}</span>
                                         {container.delivery_date && (
                                             <span>🚚 {formatDate(container.delivery_date)}</span>
                                         )}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                                        {orders.map((o: any) => (
+                                            <div key={o.order_code} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--admin-bg)', padding: '4px 8px', borderRadius: 4, width: 'fit-content' }}>
+                                                <span style={{ fontWeight: 600 }}>ORD-{o.order_code}</span>
+                                                {o.order_name && <span style={{ color: 'var(--admin-text-secondary)' }}>- {o.order_name}</span>}
+                                                <span className="admin-status-badge" style={{ fontSize: 9, padding: '1px 4px', height: 'auto', marginLeft: 4 }}>{o.order_status}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                                 <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -192,8 +250,9 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
                                                     display: 'flex', justifyContent: 'space-between',
                                                     alignItems: 'center', marginBottom: 8
                                                 }}>
-                                                    <span style={{ fontWeight: 600, fontSize: 13 }}>
-                                                        Order #{order.order_code}
+                                                    <span style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                        ORD-{order.order_code}
+                                                        {order.order_name && <span style={{ fontSize: 11, color: 'var(--admin-text-secondary)', fontWeight: 500 }}>- {order.order_name}</span>}
                                                     </span>
                                                     <span className="admin-timeline-status" style={{
                                                         background: currentIdx >= 7 ? 'var(--admin-success)' :
@@ -234,7 +293,7 @@ export default function OrderTimeline({ data, onSelectOrder, onSelectContainer }
 
             {nextPage && !loading && (
                 <div className="admin-load-more">
-                    <button onClick={() => fetchContainers(nextPage!)}>
+                    <button onClick={() => fetchContainers(nextPage!, true)}>
                         Load More
                     </button>
                 </div>
