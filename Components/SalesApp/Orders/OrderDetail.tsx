@@ -25,10 +25,15 @@ import {
   Info,
   Pencil,
   Type,
+  Merge,
+  Trash2,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
 import api from "@/api";
 import OrderContainerEdit from "./OrderContainerEdit";
 import OrderEdit from "./OrderEdit";
+import ContainerMerge from "./ContainerMerge";
 
 interface OrderDetailProps {
   order: any;
@@ -45,6 +50,13 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
   const [editingContainer, setEditingContainer] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
+  const [showMerge, setShowMerge] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [sendingFinance, setSendingFinance] = useState(false);
+  const [showFinanceConfirm, setShowFinanceConfirm] = useState(false);
+  const [financeSendSuccess, setFinanceSendSuccess] = useState(false);
 
   const [designTypes, setDesignTypes] = useState<any[]>([]);
   const [loadingDesignTypes, setLoadingDesignTypes] = useState(false);
@@ -152,6 +164,39 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
     onClose();
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await api.post(`/api/order-container/${order.id}/delete_container/`);
+      onClose();
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to delete container";
+      setDeleteError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleSendToFinance = async () => {
+    setSendingFinance(true);
+    setFinanceSendSuccess(false);
+    try {
+      await api.post(`/api/order-container/${order.id}/resend_finance_notification/`);
+      setFinanceSendSuccess(true);
+      setShowFinanceConfirm(false);
+      setTimeout(() => setFinanceSendSuccess(false), 3000); // Hide success after 3s
+    } catch (err: any) {
+      console.error("Failed to resend finance notification", err);
+      alert("Failed to resend finance notification. Check console for details.");
+    } finally {
+      setSendingFinance(false);
+    }
+  };
+
   // --- Helpers ---
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -229,25 +274,49 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
               <Package size={24} className="text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+              <div className="flex items-center gap-2 sm:gap-3 mb-1">
                 <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
                   {order.client}
                 </h2>
                 <span
-                  className={`px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full border whitespace-nowrap ${getOrderStatusColor(
+                  className={`px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded-full border whitespace-nowrap shrink-0 ${getOrderStatusColor(
                     order.orders?.[0]?.order_status
                   )}`}
                 >
                   {order.orders?.[0]?.order_status?.replace(/-/g, " ") ||
                     "UNKNOWN"}
                 </span>
-                <button
-                  onClick={() => setEditingContainer(true)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all shrink-0"
-                  title="Edit order container"
-                >
-                  <Pencil size={14} />
-                </button>
+                <div className="flex items-center gap-1 shrink-0 ml-auto">
+                  <button
+                    onClick={() => setEditingContainer(true)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                    title="Edit order container"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowFinanceConfirm(true)}
+                    disabled={sendingFinance}
+                    className="p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-md transition-all disabled:opacity-50"
+                    title="Send manual notification to Finance Telegram group"
+                  >
+                    {sendingFinance ? <Loader size={14} className="animate-spin" /> : (financeSendSuccess ? <CheckCircle size={14} className="text-emerald-500" /> : <Send size={14} />)}
+                  </button>
+                  <button
+                    onClick={() => setShowMerge(true)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
+                    title="Merge another container into this one"
+                  >
+                    <Merge size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
+                    title="Delete this container"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
               <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-2">
                 <span className="flex flex-wrap items-center gap-1">
@@ -300,8 +369,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-2 py-4 text-sm font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap ${activeTab === tab.id
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400"
+                  : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                   }`}
               >
                 <tab.icon size={16} className="shrink-0" />
@@ -346,8 +415,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       <div className="flex items-center gap-2">
                         <div
                           className={`p-2 rounded-lg ${order.instalation_service
-                              ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
+                            ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
                             }`}
                         >
                           <Wrench size={16} />
@@ -368,8 +437,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       <div className="flex items-center gap-2">
                         <div
                           className={`p-2 rounded-lg ${order.delivery_service
-                              ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                              : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
+                            ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                            : "bg-gray-100 text-gray-400 dark:bg-zinc-800 dark:text-zinc-500"
                             }`}
                         >
                           <Truck size={16} />
@@ -852,10 +921,10 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       {/* Status Indicator Line */}
                       <div
                         className={`absolute left-0 top-0 bottom-0 w-1 ${payment.status === "C"
-                            ? "bg-emerald-500"
-                            : payment.status === "R"
-                              ? "bg-rose-500"
-                              : "bg-amber-500"
+                          ? "bg-emerald-500"
+                          : payment.status === "R"
+                            ? "bg-rose-500"
+                            : "bg-amber-500"
                           }`}
                       />
 
@@ -940,6 +1009,135 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
           onClose={() => setEditingOrder(null)}
           onUpdate={handleOrderUpdate}
         />
+      )}
+
+      {/* Merge Overlay */}
+      {showMerge && (
+        <ContainerMerge
+          targetContainer={order}
+          onClose={() => setShowMerge(false)}
+          onMergeComplete={() => {
+            setShowMerge(false);
+            onClose();
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Overlay */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-gray-200 dark:border-zinc-800 max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <AlertTriangle
+                  size={20}
+                  className="text-red-600 dark:text-red-400"
+                />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Delete Container
+              </h3>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Are you sure you want to delete the container for{" "}
+              <span className="font-bold text-gray-900 dark:text-white">
+                &quot;{order.client}&quot;
+              </span>
+              ?
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400 mb-4 leading-relaxed">
+              This will permanently delete all orders (
+              {order.orders?.length || 0}), payments, and the container itself.
+              This action cannot be undone.
+            </p>
+
+            {deleteError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4">
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {deleteError}
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteError(null);
+                }}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <Loader size={16} className="animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finance Send Confirmation Overlay */}
+      {showFinanceConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[80]">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <Send
+                    size={24}
+                    className="text-emerald-600 dark:text-emerald-400"
+                  />
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-center text-gray-900 dark:text-white mb-2">
+                Send to Finance?
+              </h3>
+              <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
+                Are you sure you want to manually trigger the Telegram notification for this container to the Finance group?
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowFinanceConfirm(false);
+                  }}
+                  disabled={sendingFinance}
+                  className="flex-1 py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendToFinance}
+                  disabled={sendingFinance}
+                  className="flex-1 py-2.5 px-4 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingFinance ? (
+                    <Loader size={16} className="animate-spin" />
+                  ) : (
+                    "Yes, Send"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

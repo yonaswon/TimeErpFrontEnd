@@ -1,6 +1,6 @@
 // Tasks/DeliveryStartedTasks.tsx
 import { useState, useEffect } from 'react';
-import { Truck, Calendar, MapPin, Users, DollarSign, CheckCircle, Grid, List, AlertCircle, Clock } from 'lucide-react';
+import { Truck, Calendar, MapPin, Users, DollarSign, CheckCircle, Grid, List, AlertCircle, Clock, ImageIcon } from 'lucide-react';
 import api from '@/api';
 
 interface DeliveryAssignment {
@@ -248,8 +248,8 @@ export const DeliveryStartedTasks = () => {
           <button
             onClick={() => setViewMode('card')}
             className={`p-2 rounded-md transition-colors ${viewMode === 'card'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             title="Card View"
           >
@@ -258,8 +258,8 @@ export const DeliveryStartedTasks = () => {
           <button
             onClick={() => setViewMode('list')}
             className={`p-2 rounded-md transition-colors ${viewMode === 'list'
-                ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             title="List View"
           >
@@ -614,6 +614,7 @@ const CompleteOverlay = ({
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
+  const [proofImages, setProofImages] = useState<File[]>([]);
   const [paymentNote, setPaymentNote] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [fetchingAccounts, setFetchingAccounts] = useState(false);
@@ -667,6 +668,10 @@ const CompleteOverlay = ({
         formData.append('payment_screenshot', paymentScreenshot);
       }
 
+      proofImages.forEach((img, index) => {
+        formData.append(`proof_image_${index}`, img);
+      });
+
       if (paymentMethod !== 'CASH') {
         formData.append('account', selectedAccount);
       }
@@ -697,6 +702,18 @@ const CompleteOverlay = ({
       setPaymentScreenshot(file);
     }
   };
+
+  const handleProofImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setProofImages(prev => [...prev, ...newFiles].slice(0, 10)); // Max 10 images
+    }
+  };
+
+  const removeProofImage = (indexToRemove: number) => {
+    setProofImages(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -755,8 +772,8 @@ const CompleteOverlay = ({
                     type="button"
                     onClick={() => setPaymentMethod(method)}
                     className={`p-3 text-center rounded-lg border transition-colors ${paymentMethod === method
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-600 hover:border-blue-500'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-600 hover:border-blue-500'
                       }`}
                   >
                     <div className="text-sm font-medium">{method}</div>
@@ -825,7 +842,7 @@ const CompleteOverlay = ({
             )}
 
             {/* Payment Note */}
-            <div>
+            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Payment Note (Optional)
               </label>
@@ -836,6 +853,55 @@ const CompleteOverlay = ({
                 className="w-full p-3 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
                 placeholder="Add any notes about the payment..."
               />
+            </div>
+
+            {/* Proof Images Section */}
+            <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Proof of Delivery / Installation
+              </label>
+              <div className="border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg p-4 text-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleProofImagesChange}
+                  className="hidden"
+                  id="proof-images"
+                  disabled={proofImages.length >= 10}
+                />
+                <label
+                  htmlFor="proof-images"
+                  className={`cursor-pointer text-sm font-medium flex items-center justify-center gap-2 ${proofImages.length >= 10 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-700'}`}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  {proofImages.length >= 10 ? 'Max 10 images reached' : 'Add Proof Images'}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Upload up to 10 images (PNG, JPG)
+                </p>
+              </div>
+
+              {/* Proof Images Preview */}
+              {proofImages.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {proofImages.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-zinc-700 rounded border border-gray-200 dark:border-zinc-600">
+                      <span className="text-xs text-gray-600 dark:text-gray-300 truncate w-3/4">
+                        {file.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeProofImage(index)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        title="Remove image"
+                      >
+                        <span className="text-lg leading-none">×</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -17,6 +17,7 @@ import {
     X,
     CreditCard,
     Upload,
+    ImageIcon,
 } from "lucide-react";
 import api from "@/api";
 import OrderDetailOverlay from "./OrderDetailOverlay";
@@ -474,6 +475,7 @@ const CompleteTaskOverlay = ({
     const [payments, setPayments] = useState<PaymentEntry[]>([
         { method: 'CASH', amount: Math.round(remainingPayment), wallet: 2, account: '', screenshot: null, note: '' }
     ]);
+    const [proofImages, setProofImages] = useState<File[]>([]);
 
     // Bank accounts cache per payment index
     const [accountsMap, setAccountsMap] = useState<Record<number, any[]>>({});
@@ -569,6 +571,11 @@ const CompleteTaskOverlay = ({
                 });
             }
 
+            // Append proof images regardless of payment remaining
+            proofImages.forEach((img, index) => {
+                formData.append(`proof_image_${index}`, img);
+            });
+
             await api.post(`/api/dandi/${task.id}/complete/`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
@@ -578,6 +585,17 @@ const CompleteTaskOverlay = ({
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleProofImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            setProofImages(prev => [...prev, ...newFiles].slice(0, 10)); // Max 10 images
+        }
+    };
+
+    const removeProofImage = (indexToRemove: number) => {
+        setProofImages(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
     return (
@@ -613,8 +631,8 @@ const CompleteTaskOverlay = ({
                     {/* Allocated vs Required */}
                     {remainingPayment > 0 && (
                         <div className={`p-3 rounded-lg text-sm font-medium ${Math.round(totalAllocated) === Math.round(remainingPayment)
-                                ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                            : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
                             }`}>
                             Allocated: {totalAllocated.toLocaleString()} / {remainingPayment.toLocaleString()} Birr
                             {Math.round(totalAllocated) !== Math.round(remainingPayment) && (
@@ -739,6 +757,55 @@ const CompleteTaskOverlay = ({
                             </button>
                         </div>
                     )}
+
+                    {/* Proof Images Section */}
+                    <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Proof of Delivery / Installation
+                        </label>
+                        <div className="border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg p-4 text-center">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleProofImagesChange}
+                                className="hidden"
+                                id="proof-images-all"
+                                disabled={proofImages.length >= 10}
+                            />
+                            <label
+                                htmlFor="proof-images-all"
+                                className={`cursor-pointer text-sm font-medium flex items-center justify-center gap-2 ${proofImages.length >= 10 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-700'}`}
+                            >
+                                <ImageIcon className="w-4 h-4" />
+                                {proofImages.length >= 10 ? 'Max 10 images reached' : 'Add Proof Images'}
+                            </label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Upload up to 10 images (PNG, JPG)
+                            </p>
+                        </div>
+
+                        {/* Proof Images Preview */}
+                        {proofImages.length > 0 && (
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                {proofImages.map((file, index) => (
+                                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-zinc-700 rounded border border-gray-200 dark:border-zinc-600">
+                                        <span className="text-xs text-gray-600 dark:text-gray-300 truncate w-3/4">
+                                            {file.name}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeProofImage(index)}
+                                            className="text-red-500 hover:text-red-700 p-1"
+                                            title="Remove image"
+                                        >
+                                            <span className="text-lg leading-none">×</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="p-6 border-t border-gray-200 dark:border-zinc-700 flex gap-3">
