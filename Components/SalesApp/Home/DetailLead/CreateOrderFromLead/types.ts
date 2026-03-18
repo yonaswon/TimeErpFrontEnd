@@ -38,6 +38,7 @@ export interface Account {
   account_number: string
   account_type: string
   account_name: string
+  transaction_id_number_of_character?: number | null
   deleted: boolean
   date: string
 }
@@ -55,6 +56,10 @@ export interface PaymentEntry {
   amount: number
   wallet: number | null
   account: number | null
+  transaction_id: string
+  account_transaction_length?: number | null
+  is_unique?: boolean | null
+  is_checking?: boolean
   screenshot: File | null
   note: string
 }

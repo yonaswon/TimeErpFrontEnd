@@ -42,7 +42,7 @@ export function useOrderForm({
 
   // Multiple payments
   const [payments, setPayments] = useState<PaymentEntry[]>([
-    { method: '', amount: 0, wallet: null, account: null, screenshot: null, note: '' }
+    { method: '', amount: 0, wallet: null, account: null, transaction_id: '', account_transaction_length: null, screenshot: null, note: '' }
   ]);
 
   // Initialize items from selectedItems and set default delivery date
@@ -72,7 +72,7 @@ export function useOrderForm({
     setRemainingPayment(Math.round(full * 0.5));
 
     // Set the first payment amount to the advance payment
-    setPayments([{ method: '', amount: Math.round(full * 0.5), wallet: null, account: null, screenshot: null, note: '' }]);
+    setPayments([{ method: '', amount: Math.round(full * 0.5), wallet: null, account: null, transaction_id: '', account_transaction_length: null, screenshot: null, note: '' }]);
   }, [selectedItems, designTypes, leadData]);
 
   const handleItemChange = (
@@ -123,6 +123,13 @@ export function useOrderForm({
       if ((p.method === 'BANK' || p.method === 'CHECK') && !p.account) {
         paymentErrors.push(`Payment #${i + 1}: account is required for ${p.method}`);
       }
+      if (p.method === 'BANK') {
+        if (!p.transaction_id || p.transaction_id.trim() === '') {
+          paymentErrors.push(`Payment #${i + 1}: transaction ID is required for BANK transfer`);
+        } else if (p.account_transaction_length && p.transaction_id.trim().length !== p.account_transaction_length) {
+          paymentErrors.push(`Payment #${i + 1}: transaction ID must be exactly ${p.account_transaction_length} characters`);
+        }
+      }
       if ((p.method === 'BANK' || p.method === 'CHECK') && !p.screenshot) {
         paymentErrors.push(`Payment #${i + 1}: screenshot is required for ${p.method}`);
       }
@@ -171,13 +178,16 @@ export function useOrderForm({
       const formData = new FormData();
 
       // Build payments_data (without screenshot files)
+      console.log('[DEBUG] payments at submit:', JSON.stringify(payments.map(p => ({ method: p.method, transaction_id: p.transaction_id, is_unique: p.is_unique }))));
       const paymentsData = payments.map((p) => ({
         method: p.method,
         amount: p.amount,
         wallet: p.wallet,
         account: p.account,
+        transaction_id: p.transaction_id || '',
         note: p.note,
       }));
+      console.log('[DEBUG] paymentsData payload:', JSON.stringify(paymentsData));
 
       const payload: Record<string, any> = {
         posted_by: 1,

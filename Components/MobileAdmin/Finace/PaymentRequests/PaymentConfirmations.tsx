@@ -12,6 +12,8 @@ import {
   ImageIcon,
   ShieldCheck,
   AlertTriangle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Payment, PaymentResponse } from "@/types/finance";
 import api from "@/api";
@@ -314,6 +316,34 @@ const PaymentCard = ({
   const isSales = payment.reason === "SALES";
   const isMaintenance = payment.reason === "MAINTENANCE";
 
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyId = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (payment.transaction_id) {
+      try {
+        await navigator.clipboard.writeText(payment.transaction_id);
+      } catch (err) {
+        // Fallback for Telegram Web App / non-secure contexts
+        const textArea = document.createElement("textarea");
+        textArea.value = payment.transaction_id;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (fallbackErr) {
+          console.error('Fallback copy failed', fallbackErr);
+        }
+        document.body.removeChild(textArea);
+      }
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    }
+  };
+
   return (
     <div
       className="bg-white dark:bg-[#1E293B] rounded-xl border border-[#E5E7EB] dark:border-[#334155] overflow-hidden transition-all duration-200 active:scale-[0.99]"
@@ -347,6 +377,17 @@ const PaymentCard = ({
               <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400">
                 {getReasonDisplay(payment.reason)}
               </span>
+              {payment.transaction_id && (
+                <button
+                  type="button"
+                  onClick={handleCopyId}
+                  className="flex items-center space-x-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                  title="Copy Transaction ID"
+                >
+                  <span className="truncate max-w-[100px]">{payment.transaction_id}</span>
+                  {copiedId ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                </button>
+              )}
               <span className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
                 {new Date(payment.created_at).toLocaleDateString()}
               </span>

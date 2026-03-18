@@ -202,6 +202,7 @@ export interface Payment {
   note: string;
   created_at: string;
   account: number | null;
+  transaction_id: string | null;
 }
 
 export interface PaymentResponse {

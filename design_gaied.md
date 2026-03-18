@@ -109,3 +109,13 @@ handle dark and white mode use api.tsx in the main folder for all api requests .
 
 
 its in the telegram mini app so make it responsive for mobile  and also its a companie (Sign Companie Managemtn system so make it usable in all design and design update)
+
+---
+
+## Useful System Commands
+To view the live logs for the backend services, use the following `journalctl` commands:
+
+- **Django (Daphne):** `journalctl -u daphne -f`
+- **Celery Worker:** `journalctl -u celery -f`
+- **Celery Beat:** `journalctl -u celerybeat -f`
+- **Nginx (Frontend/Proxy):** `journalctl -u nginx -f`

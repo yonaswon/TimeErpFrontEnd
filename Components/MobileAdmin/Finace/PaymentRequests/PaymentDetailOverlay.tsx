@@ -13,6 +13,8 @@ import {
   CheckCircle,
   Loader2,
   ImageIcon,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Payment } from "@/types/finance";
 import { useState } from "react";
@@ -38,6 +40,33 @@ export const PaymentDetailOverlay = ({
   const isSalesPayment = payment.reason === "SALES";
   const isMaintenance = payment.reason === "MAINTENANCE";
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyId = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (payment.transaction_id) {
+      try {
+        await navigator.clipboard.writeText(payment.transaction_id);
+      } catch (err) {
+        // Fallback for Telegram Web App / non-secure contexts
+        const textArea = document.createElement("textarea");
+        textArea.value = payment.transaction_id;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (fallbackErr) {
+          console.error('Fallback copy failed', fallbackErr);
+        }
+        document.body.removeChild(textArea);
+      }
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    }
+  };
 
   const getReasonDisplay = (reason: string) => {
     const map: Record<string, string> = {
@@ -118,6 +147,17 @@ export const PaymentDetailOverlay = ({
                   label="Invoice"
                   color="bg-[#F59E0B]/10 text-[#F59E0B]"
                 />
+              )}
+              {payment.transaction_id && (
+                <button
+                  type="button"
+                  onClick={handleCopyId}
+                  className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                  title="Copy Transaction ID"
+                >
+                  <span className="truncate max-w-[120px]">{payment.transaction_id}</span>
+                  {copiedId ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                </button>
               )}
             </div>
           </div>

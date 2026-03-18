@@ -14,6 +14,8 @@ interface PaymentEntry {
     amount: number
     wallet: number | null
     account: number | null
+    transaction_id: string
+    account_transaction_length?: number | null
     screenshot: File | null
     note: string
 }
@@ -48,7 +50,7 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
 
     // Multiple payments
     const [payments, setPayments] = useState<PaymentEntry[]>([
-        { method: '', amount: 0, wallet: null, account: null, screenshot: null, note: '' }
+        { method: '', amount: 0, wallet: null, account: null, transaction_id: '', account_transaction_length: null, screenshot: null, note: '' }
     ])
 
     const [submitting, setSubmitting] = useState(false)
@@ -129,6 +131,13 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
             if ((p.method === 'BANK' || p.method === 'CHECK') && !p.account) {
                 errors.push(`Payment #${i + 1}: account is required for ${p.method}`)
             }
+            if (p.method === 'BANK') {
+                if (!p.transaction_id || p.transaction_id.trim() === '') {
+                    errors.push(`Payment #${i + 1}: transaction ID is required for BANK transfer`)
+                } else if (p.account_transaction_length && p.transaction_id.trim().length !== p.account_transaction_length) {
+                    errors.push(`Payment #${i + 1}: transaction ID must be exactly ${p.account_transaction_length} characters`)
+                }
+            }
             if ((p.method === 'BANK' || p.method === 'CHECK') && !p.screenshot) {
                 errors.push(`Payment #${i + 1}: screenshot is required for ${p.method}`)
             }
@@ -167,6 +176,7 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
                 amount: p.amount,
                 wallet: p.wallet,
                 account: p.account,
+                transaction_id: p.transaction_id || '',
                 note: p.note,
             }))
 
