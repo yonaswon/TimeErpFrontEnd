@@ -1,5 +1,5 @@
 // StartedMaintenance.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Wrench,
   User,
@@ -11,8 +11,22 @@ import {
   X,
   Plus,
   Trash2,
+  CreditCard,
+  Upload,
+  Image,
+  Scan,
+  Loader2,
 } from "lucide-react";
+import jsQR from "jsqr";
 import api from "@/api";
+
+interface Account {
+  id: number;
+  bank: string;
+  account_number: string;
+  account_name: string;
+  transaction_id_number_of_character: number | null;
+}
 
 interface Maintenance {
   id: number;
@@ -85,6 +99,25 @@ export const StartedMaintenance = ({ userId }: StartedMaintenanceProps) => {
     currentPage: 1,
   });
 
+  // Payment States
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [txCheckStatus, setTxCheckStatus] = useState<{
+    is_checking: boolean;
+    is_unique: boolean | null;
+  }>({ is_checking: false, is_unique: null });
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [scanningQR, setScanningQR] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<"BANK" | "CASH">("BANK");
+  const [paymentAccount, setPaymentAccount] = useState<number | null>(null);
+  const [transactionId, setTransactionId] = useState<string>("");
+  const [accountTxLength, setAccountTxLength] = useState<number | null>(null);
+  const [confirmationImage, setConfirmationImage] = useState<File | null>(null);
+  const [paymentTiming, setPaymentTiming] = useState<"NOW" | "AFTER">("AFTER");
+
   useEffect(() => {
     fetchMaintenances();
   }, [userId]);
@@ -151,12 +184,109 @@ export const StartedMaintenance = ({ userId }: StartedMaintenanceProps) => {
     return pageParam ? parseInt(pageParam) : 1;
   };
 
+  const fetchAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const response = await api.get<Account[]>(`/finance/account/?account_type=P&deleted=false`);
+      setAccounts(response.data);
+      if (response.data.length > 0 && !paymentAccount) {
+        setPaymentAccount(response.data[0].id);
+        setAccountTxLength(response.data[0].transaction_id_number_of_character || null);
+      }
+    } catch (err) {
+      console.error("Error fetching accounts:", err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  const checkTransactionUniqueness = (txId: string, requiredLength: number | null) => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (!txId || txId.trim() === "") {
+      setTxCheckStatus({ is_checking: false, is_unique: null });
+      return;
+    }
+    if (requiredLength && txId.length !== requiredLength) {
+      setTxCheckStatus({ is_checking: false, is_unique: null });
+      return;
+    }
+    setTxCheckStatus({ is_checking: true, is_unique: null });
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.post("/finance/payment/check_transaction_id/", { transaction_id: txId });
+        setTxCheckStatus({ is_checking: false, is_unique: res.data.is_unique });
+      } catch (err) {
+        setTxCheckStatus({ is_checking: false, is_unique: null });
+      }
+    }, 500);
+  };
+
+  const handleScanQR = async () => {
+    const file = confirmationImage;
+    if (!file) return;
+
+    setScanningQR(true);
+    setScanError(null);
+
+    try {
+      const codeData = await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            if (!ctx) { resolve(null); return; }
+            const tryDecode = (w: number, h: number) => {
+              canvas.width = w; canvas.height = h;
+              ctx.drawImage(img, 0, 0, w, h);
+              const imageData = ctx.getImageData(0, 0, w, h);
+              try { return jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" }); } catch { return null; }
+            };
+            let ratio = Math.min(1, 2500 / img.width, 2500 / img.height);
+            let width1 = Math.round(img.width * ratio);
+            let height1 = Math.round(img.height * ratio);
+            let code = tryDecode(width1, height1);
+            if (!code) code = tryDecode(Math.round(width1 * 0.5), Math.round(height1 * 0.5));
+            if (!code) code = tryDecode(Math.round(width1 * 0.25), Math.round(height1 * 0.25));
+            resolve(code ? code.data : null);
+          };
+          img.onerror = () => resolve(null);
+          img.src = e.target?.result as string;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+
+      if (codeData) {
+        const trimmed = codeData.trim();
+        setTransactionId(trimmed);
+        checkTransactionUniqueness(trimmed, accountTxLength);
+      } else {
+        setScanError("No QR code found in image");
+        setTimeout(() => setScanError(null), 5000);
+      }
+    } catch {
+      setScanError("Failed to scan image");
+    } finally {
+      setScanningQR(false);
+    }
+  };
+
   const handleOpenCompletionModal = async (maintenance: Maintenance) => {
     setSelectedMaintenance(maintenance);
     setMaterialUsage([]);
     setCompletionNotes("");
+    setPaymentAmount("");
+    setPaymentMethod("BANK");
+    setTransactionId("");
+    setConfirmationImage(null);
+    setPaymentTiming("AFTER"); // Reset default
     setShowCompletionModal(true);
     await fetchMaterials(); // Fetch materials when modal opens
+    if (!maintenance.under_warranty) {
+      await fetchAccounts();
+    }
   };
 
   const handleCloseCompletionModal = () => {
@@ -216,13 +346,65 @@ export const StartedMaintenance = ({ userId }: StartedMaintenanceProps) => {
       return;
     }
 
+    // Payment validation if not under warranty
+    if (!selectedMaintenance.under_warranty && paymentTiming === "NOW") {
+      if (!paymentAmount) {
+        setError("Payment amount is required since item is not under warranty");
+        return;
+      }
+      if (paymentMethod !== "CASH" && !paymentAccount) {
+        setError("Account is required for non-cash payments");
+        return;
+      }
+      if (paymentMethod !== "CASH" && !confirmationImage) {
+        setError("Confirmation image is required for non-cash payments");
+        return;
+      }
+      if (paymentMethod === "BANK") {
+        if (!transactionId.trim()) {
+          setError("Transaction ID is required for bank payments");
+          return;
+        }
+        if (txCheckStatus.is_unique === false) {
+          setError("Transaction ID is already used");
+          return;
+        }
+        if (accountTxLength && transactionId.length !== accountTxLength) {
+          setError(`Transaction ID must be exactly ${accountTxLength} characters`);
+          return;
+        }
+      }
+    }
+
     setCompletingId(selectedMaintenance.id);
     try {
+      const submitData = new FormData();
+      submitData.append("materials_used", JSON.stringify(validMaterials));
+      submitData.append("completion_notes", completionNotes);
+      submitData.append("paid_after_maintenance", paymentTiming === "AFTER" ? "true" : "false");
+
+      if (!selectedMaintenance.under_warranty && paymentTiming === "NOW") {
+        submitData.append("payment_amount", paymentAmount);
+        submitData.append("method", paymentMethod);
+        submitData.append("wallet", paymentMethod === "CASH" ? "2" : "1");
+        if (paymentAccount) {
+          submitData.append("account", paymentAccount.toString());
+        }
+        if (paymentMethod === "BANK" && transactionId) {
+          submitData.append("transaction_id", transactionId);
+        }
+        if (paymentMethod !== "CASH" && confirmationImage) {
+          submitData.append("confirmation_image", confirmationImage);
+        }
+      }
+
       await api.post(
         `/api/maintenance/${selectedMaintenance.id}/complete_maintenance/`,
+        submitData,
         {
-          materials_used: validMaterials,
-          completion_notes: completionNotes,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
 
@@ -580,6 +762,172 @@ export const StartedMaintenance = ({ userId }: StartedMaintenanceProps) => {
                   </div>
                 )}
               </div>
+
+              {/* Payment Section - Only show when NOT under warranty */}
+              {!selectedMaintenance.under_warranty && (
+                <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100 flex items-center space-x-2">
+                      <CreditCard className="w-5 h-5" />
+                      <span>Payment Information (Out of Warranty)</span>
+                    </h3>
+
+                    <div className="flex items-center space-x-2 bg-white dark:bg-zinc-800 p-2 rounded-lg border border-blue-200 dark:border-blue-700 w-fit">
+                      <input
+                        type="checkbox"
+                        id="payNowToggle"
+                        checked={paymentTiming === "NOW"}
+                        onChange={(e) => setPaymentTiming(e.target.checked ? "NOW" : "AFTER")}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="payNowToggle" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                        Pay Now (If no, will be paid after maintenance)
+                      </label>
+                    </div>
+                  </div>
+
+                  {paymentTiming === "NOW" && (
+                    <div className="space-y-4 mt-4 pt-4 border-t border-blue-200 dark:border-blue-800/50">
+                      {/* Payment Amount */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Payment Amount *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          required
+                          className="w-full px-3 py-2 border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="0.000"
+                        />
+                      </div>
+
+                      {/* Payment Method */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Payment Method *
+                        </label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => {
+                            setPaymentMethod(e.target.value as "BANK" | "CASH");
+                            setPaymentAccount(null);
+                            setConfirmationImage(null);
+                            setTransactionId("");
+                            setAccountTxLength(null);
+                            setTxCheckStatus({ is_checking: false, is_unique: null });
+                          }}
+                          required
+                          className="w-full px-3 py-2 border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="BANK">Bank Transfer</option>
+                          <option value="CASH">Cash</option>
+                        </select>
+                      </div>
+
+                      {/* Account Selection - Only show for non-cash payments */}
+                      {paymentMethod !== "CASH" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Account *
+                          </label>
+                          <select
+                            value={paymentAccount || ""}
+                            onChange={(e) => {
+                              const val = e.target.value ? parseInt(e.target.value) : null;
+                              setPaymentAccount(val);
+                              const accountObj = accounts.find((a) => a.id === val);
+                              setAccountTxLength(accountObj?.transaction_id_number_of_character || null);
+                              setTxCheckStatus({ is_checking: false, is_unique: null });
+                            }}
+                            required
+                            disabled={loadingAccounts}
+                            className="w-full px-3 py-2 border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                          >
+                            <option value="">Select Account</option>
+                            {accounts.map((account) => (
+                              <option key={account.id} value={account.id}>
+                                {account.bank} - {account.account_number} ({account.account_name})
+                              </option>
+                            ))}
+                          </select>
+                          {loadingAccounts && (
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-500 mt-2" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Transaction ID - Only for BANK */}
+                      {paymentMethod === "BANK" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Transaction ID *{" "}
+                            {accountTxLength ? `(${accountTxLength} characters)` : ""}
+                          </label>
+                          <input
+                            type="text"
+                            value={transactionId}
+                            onChange={(e) => {
+                              setTransactionId(e.target.value);
+                              checkTransactionUniqueness(e.target.value, accountTxLength);
+                            }}
+                            className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${(accountTxLength && transactionId.length > 0 && transactionId.length !== accountTxLength) || txCheckStatus.is_unique === false ? "border-red-500" : txCheckStatus.is_unique === true ? "border-green-500" : "border-blue-200 dark:border-blue-700"}`}
+                            placeholder="Enter transaction ID"
+                            required
+                          />
+                          {accountTxLength && transactionId.length > 0 && transactionId.length !== accountTxLength && (
+                            <p className="text-xs text-red-500 mt-1">
+                              Must be exactly {accountTxLength} characters.
+                            </p>
+                          )}
+                          {((accountTxLength === null) || (accountTxLength !== null && transactionId.length === accountTxLength)) && transactionId.length > 0 && (
+                            <div className="mt-1 text-xs">
+                              {txCheckStatus.is_checking && <span className="text-gray-500">Checking uniqueness...</span>}
+                              {!txCheckStatus.is_checking && txCheckStatus.is_unique === true && <span className="text-green-500">✅ Unique</span>}
+                              {!txCheckStatus.is_checking && txCheckStatus.is_unique === false && <span className="text-red-500">❌ This Transaction ID is already used</span>}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Confirmation Image - Required for non-cash payments */}
+                      {paymentMethod !== "CASH" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Confirmation Image *
+                          </label>
+                          <div className="relative">
+                            <Upload className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => setConfirmationImage(e.target.files?.[0] || null)}
+                              required
+                              className="w-full pl-10 pr-4 py-2 border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                          </div>
+                          {paymentMethod === "BANK" && confirmationImage && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={handleScanQR}
+                                disabled={scanningQR}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-800/50 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                              >
+                                <Scan size={16} />
+                                {scanningQR ? "Scanning..." : "Scan QR for Tx ID"}
+                              </button>
+                              {scanError && <span className="text-xs text-red-500">{scanError}</span>}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Completion Notes */}
               <div className="mb-6">

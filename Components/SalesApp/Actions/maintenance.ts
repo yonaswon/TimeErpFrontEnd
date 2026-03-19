@@ -65,6 +65,7 @@ export interface Account {
   account_number: string;
   account_type: "C" | "P";
   account_name: string;
+  transaction_id_number_of_character: number | null;
   deleted: boolean;
   date: string;
 }
@@ -77,12 +78,15 @@ export interface MaintenanceFormData {
   reported_issue: string;
   image: File | null;
   under_warranty: boolean;
+  paid_after_maintenance: boolean;
   payment_amount: string;
   invoice: boolean;
   invoice_image: File | null;
   method: "BANK" | "CASH" | "CHECK";
   account: number | null;
+  transaction_id: string;
+  account_transaction_length: number | null;
   additional_image: File | null;
   note: string;
-  confirmation_image: any,
+  confirmation_image: any;
 }

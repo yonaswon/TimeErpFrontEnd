@@ -86,6 +86,20 @@ const MaintenanceContent = () => {
         }
     };
 
+    const handleDelete = async (e: React.MouseEvent, maintenance: any) => {
+        e.stopPropagation();
+        if (window.confirm(`Are you sure you want to delete maintenance request for ${maintenance.client_name}?`)) {
+            try {
+                await api.delete(`/api/maintenance/${maintenance.id}/`);
+                // Remove from local state immediately
+                setMaintenanceRecords((prev) => prev.filter((item) => item.id !== maintenance.id));
+            } catch (err: any) {
+                console.error("Delete error:", err);
+                setError(err.response?.data?.message || err.message || "Failed to delete maintenance record");
+            }
+        }
+    };
+
     return (
         <div className="w-full">
             {/* Header with Search and Refresh */}
@@ -158,6 +172,7 @@ const MaintenanceContent = () => {
                                     key={item.id}
                                     maintenance={item}
                                     onViewDetails={setSelectedMaintenance}
+                                    onDelete={handleDelete}
                                 />
                             ))
                         ) : (

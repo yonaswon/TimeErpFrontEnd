@@ -3,20 +3,24 @@ import {
     User,
     Calendar,
     AlertCircle,
-    CheckCircle,
     Clock,
-    MapPin,
     Phone,
+    Send,
+    CheckCircle,
+    XCircle,
+    Trash2,
 } from "lucide-react";
 
 interface MaintenanceCardProps {
     maintenance: any;
     onViewDetails: (maintenance: any) => void;
+    onDelete?: (e: React.MouseEvent, maintenance: any) => void;
 }
 
 const MaintenanceCard = ({
     maintenance,
     onViewDetails,
+    onDelete,
 }: MaintenanceCardProps) => {
     const getStatusStyle = (status: string) => {
         switch (status) {
@@ -64,7 +68,7 @@ const MaintenanceCard = ({
                         >
                             {maintenance.client_name || "Unknown Client"}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <span
                                 className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wide rounded-md border ${getStatusStyle(
                                     maintenance.status
@@ -77,6 +81,56 @@ const MaintenanceCard = ({
                                     Warranty
                                 </span>
                             )}
+                        </div>
+                    </div>
+                    {/* Actions and Badges */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        {maintenance.status === 'NA' && onDelete && (
+                            (!maintenance.payment || maintenance.payment.status !== 'C') ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete(e, maintenance);
+                                    }}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                    title="Delete Maintenance"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        alert("Please ask the admin to delete the confirmed payment first.");
+                                    }}
+                                    className="p-1.5 text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-md transition-colors cursor-not-allowed"
+                                    title="Confirmed payment exists. Ask admin to delete."
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            )
+                        )}
+                        <div className="flex items-center gap-1.5">
+                            <div
+                                title={maintenance.order_group_message_id ? "Order notification sent" : "Order notification not sent"}
+                                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${maintenance.order_group_message_id
+                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                    : "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400"
+                                    }`}
+                            >
+                                <Send size={9} />
+                                O
+                            </div>
+                            <div
+                                title={maintenance.finance_group_message_id ? "Finance notification sent" : "Finance notification not sent"}
+                                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${maintenance.finance_group_message_id
+                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                    : "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400"
+                                    }`}
+                            >
+                                <Send size={9} />
+                                F
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -108,7 +162,7 @@ const MaintenanceCard = ({
                 </div>
             </div>
 
-            {/* --- FOOTER: Assigned To --- */}
+            {/* --- FOOTER: Assigned To & Recorded By --- */}
             <div className="px-3 sm:px-4 py-2 bg-gray-50/50 dark:bg-zinc-900/50 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <User size={14} className="text-gray-400" />
@@ -119,12 +173,19 @@ const MaintenanceCard = ({
                             : "Unassigned"}
                     </span>
                 </div>
-                {maintenance.scheduled_start_date && (
-                    <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                        <Clock size={12} />
-                        <span>{formatDate(maintenance.scheduled_start_date)}</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    {maintenance.scheduled_start_date && (
+                        <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                            <Clock size={12} />
+                            <span>{formatDate(maintenance.scheduled_start_date)}</span>
+                        </div>
+                    )}
+                    {maintenance.posted_by && (
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                            by {maintenance.posted_by.first_name || maintenance.posted_by.username}
+                        </span>
+                    )}
+                </div>
             </div>
         </div>
     );

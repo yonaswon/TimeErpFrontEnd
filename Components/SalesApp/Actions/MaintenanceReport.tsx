@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X,
   Loader2,
@@ -13,7 +13,10 @@ import {
   Upload,
   Package,
   Hash,
+  Scan,
+  AlertCircle,
 } from "lucide-react";
+import jsQR from "jsqr";
 import api from "@/api";
 import { OrderSearchOverlay } from "./OrderSearchOverlay";
 import { MaintenanceFormData, Order, Account } from "./maintenance";
@@ -32,6 +35,17 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
 
+  // Transaction ID uniqueness check state
+  const [txCheckStatus, setTxCheckStatus] = useState<{
+    is_checking: boolean;
+    is_unique: boolean | null;
+  }>({ is_checking: false, is_unique: null });
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // QR scan state
+  const [scanningQR, setScanningQR] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<MaintenanceFormData>({
     order: null,
     old_order_code: "",
@@ -40,11 +54,14 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
     reported_issue: "",
     image: null,
     under_warranty: false,
+    paid_after_maintenance: false,
     payment_amount: "",
     invoice: false,
     invoice_image: null,
     method: "BANK",
     account: null,
+    transaction_id: "",
+    account_transaction_length: null,
     additional_image: null,
     confirmation_image: null,
     note: "",
@@ -94,7 +111,126 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
       client_name: clientInfo.name,
       client_contact: clientInfo.contact,
       under_warranty: isUnderWarranty,
+      // Default: if under warranty, paid after; if not, paid now
+      paid_after_maintenance: isUnderWarranty,
     }));
+  };
+
+  // Debounced transaction ID uniqueness check
+  const checkTransactionUniqueness = (
+    transactionId: string,
+    requiredLength: number | null
+  ) => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    if (!transactionId || transactionId.trim() === "") {
+      setTxCheckStatus({ is_checking: false, is_unique: null });
+      return;
+    }
+
+    if (requiredLength && transactionId.length !== requiredLength) {
+      setTxCheckStatus({ is_checking: false, is_unique: null });
+      return;
+    }
+
+    setTxCheckStatus({ is_checking: true, is_unique: null });
+
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.post("/finance/payment/check_transaction_id/", {
+          transaction_id: transactionId,
+        });
+        setTxCheckStatus({
+          is_checking: false,
+          is_unique: res.data.is_unique,
+        });
+      } catch (err) {
+        console.error("Failed to check transaction ID uniqueness:", err);
+        setTxCheckStatus({ is_checking: false, is_unique: null });
+      }
+    }, 500);
+  };
+
+  // QR scan from confirmation image
+  const handleScanQR = async () => {
+    const file = formData.confirmation_image;
+    if (!file) return;
+
+    setScanningQR(true);
+    setScanError(null);
+
+    try {
+      const codeData = await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new window.Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+
+            const tryDecode = (w: number, h: number) => {
+              canvas.width = w;
+              canvas.height = h;
+              ctx.drawImage(img, 0, 0, w, h);
+              const imageData = ctx.getImageData(0, 0, w, h);
+              try {
+                return jsQR(
+                  imageData.data,
+                  imageData.width,
+                  imageData.height,
+                  { inversionAttempts: "attemptBoth" }
+                );
+              } catch {
+                return null;
+              }
+            };
+
+            let ratio = Math.min(1, 2500 / img.width, 2500 / img.height);
+            let width1 = Math.round(img.width * ratio);
+            let height1 = Math.round(img.height * ratio);
+            let code = tryDecode(width1, height1);
+
+            if (!code) {
+              code = tryDecode(
+                Math.round(width1 * 0.5),
+                Math.round(height1 * 0.5)
+              );
+            }
+            if (!code) {
+              code = tryDecode(
+                Math.round(width1 * 0.25),
+                Math.round(height1 * 0.25)
+              );
+            }
+
+            resolve(code ? code.data : null);
+          };
+          img.onerror = () => resolve(null);
+          img.src = e.target?.result as string;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+
+      if (codeData) {
+        const trimmed = codeData.trim();
+        setFormData((prev) => ({ ...prev, transaction_id: trimmed }));
+        checkTransactionUniqueness(trimmed, formData.account_transaction_length);
+      } else {
+        setScanError("No QR code found in image");
+        setTimeout(() => setScanError(null), 5000);
+      }
+    } catch {
+      setScanError("Failed to scan image");
+    } finally {
+      setScanningQR(false);
+    }
   };
 
   // Handle form input changes
@@ -108,12 +244,35 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
 
     // Set wallet based on payment method
     if (field === "method") {
-      if (value === "CASH") {
-        // Wallet ID 2 for cash
-        setFormData((prev) => ({ ...prev, wallet: 2 }));
-      } else {
-        // Wallet ID 1 for non-cash
-        setFormData((prev) => ({ ...prev, wallet: 1 }));
+      // Reset account, screenshot, transaction_id when method changes
+      setFormData((prev) => ({
+        ...prev,
+        method: value,
+        account: null,
+        confirmation_image: null,
+        transaction_id: "",
+        account_transaction_length: null,
+      }));
+      setTxCheckStatus({ is_checking: false, is_unique: null });
+    }
+
+    // When account changes, update account_transaction_length
+    if (field === "account") {
+      const accountObj = accounts.find((a) => a.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        account: value,
+        account_transaction_length:
+          accountObj?.transaction_id_number_of_character || null,
+      }));
+      setTxCheckStatus({ is_checking: false, is_unique: null });
+    }
+
+    // When transaction_id changes, trigger uniqueness check
+    if (field === "transaction_id") {
+      setFormData((prev) => ({ ...prev, transaction_id: value }));
+      if (formData.method === "BANK") {
+        checkTransactionUniqueness(value, formData.account_transaction_length);
       }
     }
   };
@@ -129,6 +288,9 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
   ) => {
     setFormData((prev) => ({ ...prev, [field]: file }));
   };
+
+  // Whether payment section should be shown
+  const showPaymentSection = !formData.paid_after_maintenance;
 
   // Submit maintenance request
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,12 +314,11 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
       if (!formData.reported_issue.trim()) {
         throw new Error("Reported issue is required");
       }
-      // Payment validations only when NOT under warranty
-      if (!formData.under_warranty) {
+
+      // Payment validations only when paying now (not paid_after_maintenance)
+      if (showPaymentSection) {
         if (!formData.payment_amount) {
-          throw new Error(
-            "Payment amount is required for non-warranty maintenance"
-          );
+          throw new Error("Payment amount is required when paying now");
         }
         if (formData.invoice && !formData.invoice_image) {
           throw new Error("Invoice image is required when invoice is selected");
@@ -167,6 +328,23 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
         }
         if (formData.method !== "CASH" && !formData.confirmation_image) {
           throw new Error("Confirmation image is required for non-cash payments");
+        }
+        // Transaction ID validation for BANK
+        if (formData.method === "BANK") {
+          if (!formData.transaction_id.trim()) {
+            throw new Error("Transaction ID is required for bank payments");
+          }
+          if (
+            formData.account_transaction_length &&
+            formData.transaction_id.length !== formData.account_transaction_length
+          ) {
+            throw new Error(
+              `Transaction ID must be exactly ${formData.account_transaction_length} characters`
+            );
+          }
+          if (txCheckStatus.is_unique === false) {
+            throw new Error("Transaction ID is already used");
+          }
         }
       }
 
@@ -184,6 +362,10 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
       submitData.append("client_contact", formData.client_contact);
       submitData.append("reported_issue", formData.reported_issue);
       submitData.append("under_warranty", formData.under_warranty.toString());
+      submitData.append(
+        "paid_after_maintenance",
+        formData.paid_after_maintenance.toString()
+      );
       submitData.append("status", "NA"); // NOT ASSIGNED
 
       // Add maintenance image
@@ -191,8 +373,8 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
         submitData.append("image", formData.image);
       }
 
-      // Payment data if not under warranty
-      if (!formData.under_warranty) {
+      // Payment data only when paying now
+      if (showPaymentSection) {
         submitData.append("payment_amount", formData.payment_amount);
         submitData.append("method", formData.method);
         submitData.append("wallet", formData.method === "CASH" ? "2" : "1");
@@ -217,13 +399,18 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
           submitData.append("confirmation_image", formData.confirmation_image);
         }
 
+        // Add transaction_id for BANK payments
+        if (formData.method === "BANK" && formData.transaction_id) {
+          submitData.append("transaction_id", formData.transaction_id);
+        }
+
         if (formData.note) {
           submitData.append("note", formData.note);
         }
       }
 
       // Submit to API
-      const response = await api.post("/api/maintenance/", submitData, {
+      await api.post("/api/maintenance/", submitData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -462,8 +649,53 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
             </div>
           </div>
 
-          {/* Payment Section - Only show if not under warranty */}
-          {!formData.under_warranty && (
+          {/* Payment Timing Toggle */}
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <CreditCard className="w-5 h-5 text-amber-600" />
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    Payment Timing
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {formData.paid_after_maintenance
+                      ? "Payment will be collected after maintenance is done"
+                      : "Payment is being made now"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInputChange("paid_after_maintenance", false)
+                  }
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${!formData.paid_after_maintenance
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-gray-400"
+                    }`}
+                >
+                  Paid Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInputChange("paid_after_maintenance", true)
+                  }
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${formData.paid_after_maintenance
+                      ? "bg-amber-600 text-white"
+                      : "bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-gray-400"
+                    }`}
+                >
+                  Paid After Maintenance
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Section - Only show when paying now */}
+          {showPaymentSection && (
             <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <h3 className="font-medium text-blue-900 dark:text-blue-100 flex items-center space-x-2">
                 <CreditCard className="w-5 h-5" />
@@ -555,7 +787,7 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
                   <select
                     value={formData.account || ""}
                     onChange={(e) =>
-                      handleInputChange("account", parseInt(e.target.value))
+                      handleInputChange("account", e.target.value ? parseInt(e.target.value) : null)
                     }
                     required
                     disabled={loadingAccounts}
@@ -564,13 +796,78 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
                     <option value="">Select Account</option>
                     {accounts.map((account) => (
                       <option key={account.id} value={account.id}>
-                        {account.bank} - {account.account_number}
+                        {account.bank} - {account.account_number} ({account.account_name})
                       </option>
                     ))}
                   </select>
                   {loadingAccounts && (
                     <Loader2 className="w-4 h-4 animate-spin text-blue-500 mt-2" />
                   )}
+                </div>
+              )}
+
+              {/* Transaction ID - Only for BANK */}
+              {formData.method === "BANK" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Transaction ID *{" "}
+                    {formData.account_transaction_length
+                      ? `(${formData.account_transaction_length} characters)`
+                      : ""}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.transaction_id}
+                    onChange={(e) =>
+                      handleInputChange("transaction_id", e.target.value)
+                    }
+                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${(formData.account_transaction_length &&
+                        formData.transaction_id.length > 0 &&
+                        formData.transaction_id.length !==
+                        formData.account_transaction_length) ||
+                        txCheckStatus.is_unique === false
+                        ? "border-red-500"
+                        : txCheckStatus.is_unique === true
+                          ? "border-green-500"
+                          : "border-gray-200 dark:border-zinc-700"
+                      }`}
+                    placeholder="Enter transaction ID"
+                    required
+                  />
+                  {/* Length validation warning */}
+                  {formData.account_transaction_length &&
+                    formData.transaction_id.length > 0 &&
+                    formData.transaction_id.length !==
+                    formData.account_transaction_length && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Must be exactly {formData.account_transaction_length}{" "}
+                        characters.
+                      </p>
+                    )}
+                  {/* Uniqueness feedback */}
+                  {((formData.account_transaction_length === null) ||
+                    (formData.account_transaction_length !== null &&
+                      formData.transaction_id.length ===
+                      formData.account_transaction_length)) &&
+                    formData.transaction_id.length > 0 && (
+                      <div className="mt-1 text-xs">
+                        {txCheckStatus.is_checking && (
+                          <span className="text-gray-500">
+                            Checking uniqueness...
+                          </span>
+                        )}
+                        {!txCheckStatus.is_checking &&
+                          txCheckStatus.is_unique === true && (
+                            <span className="text-green-500">✅ Unique</span>
+                          )}
+                        {!txCheckStatus.is_checking &&
+                          txCheckStatus.is_unique === false && (
+                            <span className="text-red-500">
+                              ❌ This Transaction ID is already used
+                            </span>
+                          )}
+                      </div>
+                    )}
                 </div>
               )}
 
@@ -595,6 +892,30 @@ export const MaintenanceReport: React.FC<MaintenanceReportProps> = ({
                       className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
                   </div>
+                  {/* Scan QR button — shown after upload for BANK */}
+                  {formData.method === "BANK" && formData.confirmation_image && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={handleScanQR}
+                        disabled={scanningQR}
+                        className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-xs disabled:opacity-50"
+                      >
+                        {scanningQR ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Scan className="w-3.5 h-3.5" />
+                        )}
+                        Scan QR from Screenshot
+                      </button>
+                      {scanError && (
+                        <span className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {scanError}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Upload payment confirmation screenshot or photo
                   </p>

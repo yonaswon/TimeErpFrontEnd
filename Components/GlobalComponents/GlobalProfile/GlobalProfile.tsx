@@ -1,7 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { useTheme } from 'next-themes'
+import { BarChart3 } from 'lucide-react'
 import { AdminUserManager } from '../../Admin/AdminUserManager/AdminUserManager'
+import PerformanceDashboard from './PerformanceDashboard'
 
 interface GlobalProfileProps {
     user: any;
@@ -12,6 +15,7 @@ interface GlobalProfileProps {
 
 export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: GlobalProfileProps) => {
     const { theme, setTheme } = useTheme()
+    const [showDashboard, setShowDashboard] = useState(false)
 
     const handleLogout = () => {
         localStorage.removeItem('access_token')
@@ -59,6 +63,20 @@ export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: Gl
                     <span className="text-xs bg-gray-100 dark:bg-zinc-700 px-3 py-1.5 rounded-md border border-gray-200 dark:border-zinc-600 shadow-sm flex items-center gap-2">
                         {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
                     </span>
+                </button>
+            </div>
+
+            {/* Performance Dashboard Button */}
+            <div className="w-full max-w-sm px-4">
+                <button
+                    onClick={() => setShowDashboard(true)}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg text-left text-white transition-all flex items-center justify-between shadow-md hover:shadow-lg"
+                >
+                    <span className="flex items-center gap-2.5">
+                        <BarChart3 size={18} />
+                        <span className="font-semibold text-sm">Performance Dashboard</span>
+                    </span>
+                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded-md">View →</span>
                 </button>
             </div>
 
@@ -111,18 +129,18 @@ export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: Gl
                                     key={r.id}
                                     onClick={() => onRoleSelect(r.Name)}
                                     className={`w-full text-left flex items-center justify-between px-4 py-3 transition-colors ${selectedRole === r.Name
-                                            ? 'bg-blue-50/50 dark:bg-blue-900/10'
-                                            : 'hover:bg-gray-50 dark:hover:bg-zinc-700/50'
+                                        ? 'bg-blue-50/50 dark:bg-blue-900/10'
+                                        : 'hover:bg-gray-50 dark:hover:bg-zinc-700/50'
                                         }`}
                                 >
                                     <div className="flex items-center space-x-3">
                                         <div className={`w-2.5 h-2.5 rounded-full ${selectedRole === r.Name
-                                                ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
-                                                : 'bg-gray-300 dark:bg-zinc-600'
+                                            ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
+                                            : 'bg-gray-300 dark:bg-zinc-600'
                                             }`}></div>
                                         <span className={`text-sm ${selectedRole === r.Name
-                                                ? 'font-medium text-blue-700 dark:text-blue-400'
-                                                : 'text-gray-600 dark:text-gray-400'
+                                            ? 'font-medium text-blue-700 dark:text-blue-400'
+                                            : 'text-gray-600 dark:text-gray-400'
                                             }`}>
                                             {r.Name}
                                         </span>
@@ -154,6 +172,12 @@ export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: Gl
                     </div>
                 </div>
             )}
+
+            {/* Performance Dashboard Sidebar */}
+            <PerformanceDashboard
+                isOpen={showDashboard}
+                onClose={() => setShowDashboard(false)}
+            />
         </div>
     )
 }
