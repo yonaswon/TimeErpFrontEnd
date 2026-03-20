@@ -11,7 +11,7 @@ import {
 import api from "@/api";
 import OrderContainerDetail from "./OrderContainerDetail";
 
-type TopTab = "today" | "delivered" | "production" | "delayed";
+type TopTab = "today" | "delivered" | "production" | "delayed" | "all";
 type DatePreset = "today" | "yesterday" | "this_week" | "this_month" | "all" | "custom";
 
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
@@ -130,6 +130,12 @@ const OrdersContent = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedContainer, setSelectedContainer] = useState<any>(null);
 
+    // Pagination for "All" tab
+    const [allContainers, setAllContainers] = useState<any[]>([]);
+    const [allNextPage, setAllNextPage] = useState<string | null>(null);
+    const [allLoading, setAllLoading] = useState(false);
+    const [allTotalCount, setAllTotalCount] = useState(0);
+
     useEffect(() => { fetchAll(); }, []);
 
     const fetchAll = async () => {
@@ -138,11 +144,26 @@ const OrdersContent = () => {
         try {
             const res = await api.get("/api/order-container/?ordering=-created_at");
             setContainers(res.data.results || res.data);
+            // Also init the "All" paginated list
+            setAllContainers(res.data.results || res.data);
+            setAllNextPage(res.data.next || null);
+            setAllTotalCount(res.data.count || 0);
         } catch (err: any) {
             setError(err.message || "Failed to load");
         } finally {
             setLoading(false);
         }
+    };
+
+    const loadMoreAll = async () => {
+        if (!allNextPage || allLoading) return;
+        setAllLoading(true);
+        try {
+            const res = await api.get(allNextPage);
+            setAllContainers(prev => [...prev, ...(res.data.results || [])]);
+            setAllNextPage(res.data.next || null);
+        } catch { }
+        setAllLoading(false);
     };
 
     // Unique sales users
@@ -195,9 +216,11 @@ const OrdersContent = () => {
             case "delayed":
                 data = data.filter(isContainerDelayed);
                 break;
+            case "all":
+                break; // no filter, show all
         }
 
-        // Date filter (applied only in production/delayed tabs)
+        // Date filter (applied in production/delayed/all tabs)
         if (topTab !== "today" && topTab !== "delivered" && datePreset !== "all") {
             data = data.filter(c => isInDateRange(c.created_at, datePreset, customFrom, customTo));
         }
@@ -393,6 +416,7 @@ const OrdersContent = () => {
                             { id: "delivered" as TopTab, label: "Delivered", count: tabCounts.delivered },
                             { id: "production" as TopTab, label: "Production", count: tabCounts.production },
                             { id: "delayed" as TopTab, label: "Delayed", count: tabCounts.delayed },
+                            { id: "all" as TopTab, label: "All", count: allTotalCount },
                         ]).map(tab => {
                             const isActive = topTab === tab.id;
                             return (
@@ -415,7 +439,7 @@ const OrdersContent = () => {
                     </div>
 
                     {/* Date + Sales Filters (Not for Today tab) */}
-                    {topTab !== "today" && topTab !== "delivered" && (
+                    {topTab !== "today" && topTab !== "delivered" && topTab !== "all" && (
                         <div className="space-y-2">
                             <div className="flex flex-wrap gap-1.5">
                                 {DATE_PRESETS.map(p => (
@@ -476,6 +500,25 @@ const OrdersContent = () => {
                         <p className="text-sm">No orders found</p>
                         <p className="text-xs opacity-70 mt-1">Try a different filter</p>
                     </div>
+                ) : topTab === "all" ? (
+                    <>
+                        {allContainers.map(c => renderCard(c))}
+                        {allNextPage && (
+                            <button
+                                onClick={loadMoreAll}
+                                disabled={allLoading}
+                                className="w-full py-3 rounded-xl bg-[#2563EB] dark:bg-[#3B82F6] text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-[0.98]"
+                            >
+                                {allLoading ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
+                                {allLoading ? "Loading..." : `Load More (${allContainers.length} of ${allTotalCount})`}
+                            </button>
+                        )}
+                        {!allNextPage && allContainers.length > 0 && (
+                            <p className="text-center text-xs text-[#6B7280] dark:text-[#94A3B8] py-4">
+                                Showing all {allContainers.length} containers
+                            </p>
+                        )}
+                    </>
                 ) : (
                     filteredContainers.map(c => renderCard(c))
                 )}
