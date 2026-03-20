@@ -3,12 +3,16 @@ import { useEffect, useState } from 'react'
 import {
     Truck,
     TrendingUp,
+    Palette,
+    ShoppingCart,
 } from 'lucide-react'
 import DandIContent from './DandI/DandIContent'
 import ProgressContent from './ProgressContent'
+import MockupsContent from './Mockups/MockupsContent'
+import OrdersContent from './Orders/OrdersContent'
 import { GlobalProfile } from '../GlobalComponents/GlobalProfile/GlobalProfile'
 
-type TabType = 'dandi' | 'progress' | 'profile'
+type TabType = 'dandi' | 'mockups' | 'orders' | 'progress' | 'profile'
 
 const OperationManagerApp = ({ userData, selectedRole, onRoleSelect }: any) => {
     const [activeTab, setActiveTab] = useState<TabType>('dandi')
@@ -48,6 +52,8 @@ const OperationManagerApp = ({ userData, selectedRole, onRoleSelect }: any) => {
 
     const tabs = [
         { id: 'dandi' as TabType, label: 'D and I', icon: Truck },
+        { id: 'mockups' as TabType, label: 'Mockups', icon: Palette },
+        { id: 'orders' as TabType, label: 'Orders', icon: ShoppingCart },
         { id: 'progress' as TabType, label: 'Progress', icon: TrendingUp },
         { id: 'profile' as TabType, label: 'Profile', icon: null },
     ]
@@ -56,6 +62,10 @@ const OperationManagerApp = ({ userData, selectedRole, onRoleSelect }: any) => {
         switch (activeTab) {
             case 'dandi':
                 return <DandIContent />
+            case 'mockups':
+                return <MockupsContent />
+            case 'orders':
+                return <OrdersContent />
             case 'progress':
                 return <ProgressContent />
             case 'profile':
