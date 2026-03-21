@@ -85,30 +85,17 @@ const MaintenanceCard = ({
                     </div>
                     {/* Actions and Badges */}
                     <div className="flex items-center gap-2 shrink-0">
-                        {maintenance.status === 'NA' && onDelete && (
-                            (!maintenance.payment || maintenance.payment.status !== 'C') ? (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete(e, maintenance);
-                                    }}
-                                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                                    title="Delete Maintenance"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        alert("Please ask the admin to delete the confirmed payment first.");
-                                    }}
-                                    className="p-1.5 text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-md transition-colors cursor-not-allowed"
-                                    title="Confirmed payment exists. Ask admin to delete."
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            )
+                        {maintenance.status !== 'D' && onDelete && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(e, maintenance);
+                                }}
+                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                title="Delete Maintenance"
+                            >
+                                <Trash2 size={14} />
+                            </button>
                         )}
                         <div className="flex items-center gap-1.5">
                             <div
