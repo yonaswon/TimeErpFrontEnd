@@ -1,11 +1,16 @@
 'use client';
-import React from 'react';
-import { DollarSign, CreditCard, ShoppingBag, AlertTriangle, Wallet, FileText, FileX, ArrowDownCircle, CheckCircle, Tag, Wrench } from 'lucide-react';
+import React, { useState } from 'react';
+import { DollarSign, CreditCard, ShoppingBag, AlertTriangle, Wallet, FileText, FileX, ArrowDownCircle, CheckCircle, Tag, Wrench, ChevronRight } from 'lucide-react';
 import { DashboardData } from './types';
+import FinanceDetailPanel from './FinanceDetailPanel';
+import FinanceCashFlow from './FinanceCashFlow';
+import ExpectedRemainingOverlay from './ExpectedRemainingOverlay';
 
 interface Props {
     data: DashboardData;
     onPurchaseClick: (id: number) => void;
+    onSelectContainer?: (id: number) => void;
+    onSelectOrder?: (order: any) => void;
 }
 
 function formatBirr(n: number): string {
@@ -25,108 +30,170 @@ const STATUS_COLORS: Record<string, string> = {
     P: 'var(--admin-warning)', C: 'var(--admin-success)', R: 'var(--admin-danger)'
 };
 
-export default function FinanceStats({ data, onPurchaseClick }: Props) {
+interface DetailFilter {
+    key: string;
+    title: string;
+    filters: Record<string, string>;
+}
+
+export default function FinanceStats({ data, onPurchaseClick, onSelectContainer, onSelectOrder }: Props) {
     const { finance } = data;
     const totalPayments = finance.payment_by_status.reduce((a, b) => a + b.count, 0);
+    const [activeDetail, setActiveDetail] = useState<DetailFilter | null>(null);
+
+    const openDetail = (key: string, title: string, filters: Record<string, string>) => {
+        if (activeDetail?.key === key) {
+            setActiveDetail(null);
+        } else {
+            setActiveDetail({ key, title, filters });
+        }
+    };
+
+    const getStatusData = (status: string) => finance.payment_by_status.find(p => p.status === status);
 
     return (
         <>
-            {/* KPI Cards */}
+            {/* KPI Cards — Clickable */}
             <div className="admin-kpi-grid">
-                <div className="admin-kpi-card kpi-success">
-                    <div className="kpi-label"><DollarSign /> Confirmed</div>
+                {/* Confirmed */}
+                <div
+                    className={`admin-kpi-card kpi-success fin-kpi-clickable ${activeDetail?.key?.startsWith('confirmed') ? 'fin-kpi-active' : ''}`}
+                    onClick={() => openDetail('confirmed', 'Confirmed Payments', { status: 'C' })}
+                >
+                    <div className="kpi-label"><DollarSign /> Confirmed <ChevronRight size={14} className="fin-kpi-arrow" /></div>
                     <div className="kpi-value">{formatBirr(finance.total_confirmed)}</div>
                     <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 500 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-success, #10b981)' }}>
-                                <FileText size={16} /> <span>Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.invoice_total || 0)}</span>
+                            <div
+                                className="fin-kpi-subitem"
+                                onClick={e => { e.stopPropagation(); openDetail('confirmed-inv', 'Confirmed — Invoice', { status: 'C', invoice: 'true' }); }}
+                            >
+                                <FileText size={16} style={{ color: 'var(--admin-success)' }} />
+                                <span>Inv: {formatBirr(getStatusData('C')?.invoice_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning, #f59e0b)' }}>
-                                <FileX size={16} /> <span>Non-Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.non_invoice_total || 0)}</span>
+                            <div
+                                className="fin-kpi-subitem"
+                                onClick={e => { e.stopPropagation(); openDetail('confirmed-noninv', 'Confirmed — Non-Invoice', { status: 'C', invoice: 'false' }); }}
+                            >
+                                <FileX size={16} style={{ color: 'var(--admin-warning)' }} />
+                                <span>Non-Inv: {formatBirr(getStatusData('C')?.non_invoice_total || 0)}</span>
                             </div>
                         </div>
                         <div style={{ height: '1px', background: 'var(--admin-border)', opacity: 0.5, margin: '2px 0' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--admin-text)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ArrowDownCircle size={14} style={{ color: 'var(--admin-primary, #3b82f6)' }} /> <span>Pre: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.pre_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('confirmed-pre', 'Confirmed — Pre-Payments', { status: 'C', reason: 'PRE' }); }}>
+                                <ArrowDownCircle size={14} style={{ color: 'var(--admin-primary)' }} /> <span>Pre: {formatBirr(getStatusData('C')?.pre_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <CheckCircle size={14} style={{ color: 'var(--admin-success, #10b981)' }} /> <span>Rem: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.rem_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('confirmed-rem', 'Confirmed — Remaining', { status: 'C', reason: 'REM' }); }}>
+                                <CheckCircle size={14} style={{ color: 'var(--admin-success)' }} /> <span>Rem: {formatBirr(getStatusData('C')?.rem_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Tag size={14} style={{ color: '#8b5cf6' }} /> <span>Sales: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.sales_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('confirmed-sales', 'Confirmed — Sales', { status: 'C', reason: 'SALES' }); }}>
+                                <Tag size={14} style={{ color: '#8b5cf6' }} /> <span>Sales: {formatBirr(getStatusData('C')?.sales_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Wrench size={14} style={{ color: '#64748b' }} /> <span>Maint: {formatBirr(finance.payment_by_status.find(p => p.status === 'C')?.maint_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('confirmed-maint', 'Confirmed — Maintenance', { status: 'C', reason: 'MAINTENANCE' }); }}>
+                                <Wrench size={14} style={{ color: '#64748b' }} /> <span>Maint: {formatBirr(getStatusData('C')?.maint_total || 0)}</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="admin-kpi-card kpi-warning">
-                    <div className="kpi-label"><DollarSign /> Pending</div>
+
+                {/* Pending */}
+                <div
+                    className={`admin-kpi-card kpi-warning fin-kpi-clickable ${activeDetail?.key?.startsWith('pending') ? 'fin-kpi-active' : ''}`}
+                    onClick={() => openDetail('pending', 'Pending Payments', { status: 'P' })}
+                >
+                    <div className="kpi-label"><DollarSign /> Pending <ChevronRight size={14} className="fin-kpi-arrow" /></div>
                     <div className="kpi-value">{formatBirr(finance.total_pending)}</div>
                     <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 500 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-success, #10b981)' }}>
-                                <FileText size={16} /> <span>Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.invoice_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('pending-inv', 'Pending — Invoice', { status: 'P', invoice: 'true' }); }}>
+                                <FileText size={16} style={{ color: 'var(--admin-success)' }} /> <span>Inv: {formatBirr(getStatusData('P')?.invoice_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning, #f59e0b)' }}>
-                                <FileX size={16} /> <span>Non-Inv: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.non_invoice_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('pending-noninv', 'Pending — Non-Invoice', { status: 'P', invoice: 'false' }); }}>
+                                <FileX size={16} style={{ color: 'var(--admin-warning)' }} /> <span>Non-Inv: {formatBirr(getStatusData('P')?.non_invoice_total || 0)}</span>
                             </div>
                         </div>
                         <div style={{ height: '1px', background: 'var(--admin-border)', opacity: 0.5, margin: '2px 0' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px', color: 'var(--admin-text)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ArrowDownCircle size={14} style={{ color: 'var(--admin-primary, #3b82f6)' }} /> <span>Pre: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.pre_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('pending-pre', 'Pending — Pre', { status: 'P', reason: 'PRE' }); }}>
+                                <ArrowDownCircle size={14} style={{ color: 'var(--admin-primary)' }} /> <span>Pre: {formatBirr(getStatusData('P')?.pre_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <CheckCircle size={14} style={{ color: 'var(--admin-success, #10b981)' }} /> <span>Rem: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.rem_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('pending-rem', 'Pending — Remaining', { status: 'P', reason: 'REM' }); }}>
+                                <CheckCircle size={14} style={{ color: 'var(--admin-success)' }} /> <span>Rem: {formatBirr(getStatusData('P')?.rem_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Tag size={14} style={{ color: '#8b5cf6' }} /> <span>Sales: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.sales_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('pending-sales', 'Pending — Sales', { status: 'P', reason: 'SALES' }); }}>
+                                <Tag size={14} style={{ color: '#8b5cf6' }} /> <span>Sales: {formatBirr(getStatusData('P')?.sales_total || 0)}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Wrench size={14} style={{ color: '#64748b' }} /> <span>Maint: {formatBirr(finance.payment_by_status.find(p => p.status === 'P')?.maint_total || 0)}</span>
+                            <div className="fin-kpi-subitem" onClick={e => { e.stopPropagation(); openDetail('pending-maint', 'Pending — Maintenance', { status: 'P', reason: 'MAINTENANCE' }); }}>
+                                <Wrench size={14} style={{ color: '#64748b' }} /> <span>Maint: {formatBirr(getStatusData('P')?.maint_total || 0)}</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div className="admin-kpi-card kpi-primary">
-                    <div className="kpi-label"><Wallet /> Expected Remaining</div>
+
+                {/* Expected Remaining */}
+                <div
+                    className={`admin-kpi-card kpi-primary fin-kpi-clickable ${activeDetail?.key === 'expected-remaining' ? 'fin-kpi-active' : ''}`}
+                    onClick={() => openDetail('expected-remaining', 'Expected Remaining Orders', {})}
+                >
+                    <div className="kpi-label"><Wallet /> Expected Remaining <ChevronRight size={14} className="fin-kpi-arrow" /></div>
                     <div className="kpi-value">{formatBirr(finance.expected_remaining || 0)}</div>
                     <div className="kpi-sub">From active orders</div>
                 </div>
+
+                {/* Expenses */}
                 <div className="admin-kpi-card kpi-danger">
                     <div className="kpi-label"><ShoppingBag /> Expenses</div>
                     <div className="kpi-value">{formatBirr(finance.expenses?.total || 0)}</div>
                     <div className="kpi-sub" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', fontSize: '13px', fontWeight: 500 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-danger, #ef4444)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-danger)' }}>
                             <FileText size={16} /> <span>Inv: {formatBirr(finance.expenses?.invoice_total || 0)}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning, #f59e0b)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-warning)' }}>
                             <FileX size={16} /> <span>Non-Inv: {formatBirr(finance.expenses?.non_invoice_total || 0)}</span>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Detail Panel Overlay — appears when a KPI card is clicked */}
+            {activeDetail && activeDetail.key !== 'expected-remaining' && (
+                <FinanceDetailPanel
+                    initialFilters={activeDetail.filters}
+                    title={activeDetail.title}
+                    onSelectContainer={onSelectContainer}
+                    onSelectOrder={onSelectOrder}
+                    onClose={() => setActiveDetail(null)}
+                />
+            )}
+
+            {activeDetail?.key === 'expected-remaining' && (
+                <ExpectedRemainingOverlay
+                    onClose={() => setActiveDetail(null)}
+                    onSelectContainer={onSelectContainer}
+                    onSelectOrder={onSelectOrder}
+                />
+            )}
+
+            {/* Cash Flow Section */}
+            <FinanceCashFlow onSelectContainer={onSelectContainer} />
+
+            {/* Existing tables */}
             <div className="admin-stats-grid">
                 {/* Payments by Reason */}
                 <div className="admin-section-card">
                     <h3><CreditCard /> Payments by Reason</h3>
                     <table className="admin-table">
                         <thead>
-                            <tr>
-                                <th>Reason</th>
-                                <th>Count</th>
-                                <th>Amount</th>
-                            </tr>
+                            <tr><th>Reason</th><th>Count</th><th>Amount</th><th></th></tr>
                         </thead>
                         <tbody>
                             {finance.payment_by_reason.map((p) => (
-                                <tr key={p.reason}>
+                                <tr key={p.reason} className="clickable-row" onClick={() => openDetail(`reason-${p.reason}`, REASON_LABELS[p.reason] || p.reason, { reason: p.reason })}>
                                     <td>{REASON_LABELS[p.reason] || p.reason}</td>
                                     <td>{p.count}</td>
                                     <td>{formatBirr(p.total || 0)}</td>
+                                    <td><ChevronRight size={14} /></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -139,11 +206,7 @@ export default function FinanceStats({ data, onPurchaseClick }: Props) {
                     <h3><ShoppingBag /> Expenses by Category</h3>
                     <table className="admin-table">
                         <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th>Count</th>
-                                <th>Amount</th>
-                            </tr>
+                            <tr><th>Category</th><th>Count</th><th>Amount</th></tr>
                         </thead>
                         <tbody>
                             {(finance.expenses?.by_category || []).map((cat) => (
@@ -164,7 +227,11 @@ export default function FinanceStats({ data, onPurchaseClick }: Props) {
                     {finance.payment_by_status.map((p) => {
                         const max = Math.max(...finance.payment_by_status.map(x => x.count), 1);
                         return (
-                            <div key={p.status} className="admin-progress-row">
+                            <div
+                                key={p.status}
+                                className="admin-progress-row clickable-row"
+                                onClick={() => openDetail(`status-${p.status}`, STATUS_LABELS[p.status] || p.status, { status: p.status })}
+                            >
                                 <span className="admin-progress-label" style={{ color: STATUS_COLORS[p.status] }}>
                                     {STATUS_LABELS[p.status] || p.status}
                                 </span>
@@ -192,22 +259,17 @@ export default function FinanceStats({ data, onPurchaseClick }: Props) {
                     </div>
                     <div className="admin-detail-row">
                         <span className="admin-detail-label">In Progress</span>
-                        <span className="admin-detail-value" style={{ color: 'var(--admin-warning)' }}>
-                            {finance.purchases.in_progress}
-                        </span>
+                        <span className="admin-detail-value" style={{ color: 'var(--admin-warning)' }}>{finance.purchases.in_progress}</span>
                     </div>
                     <div className="admin-detail-row">
                         <span className="admin-detail-label">Done</span>
-                        <span className="admin-detail-value" style={{ color: 'var(--admin-success)' }}>
-                            {finance.purchases.done}
-                        </span>
+                        <span className="admin-detail-value" style={{ color: 'var(--admin-success)' }}>{finance.purchases.done}</span>
                     </div>
                     <div className="admin-detail-row">
                         <span className="admin-detail-label">Total Amount</span>
                         <span className="admin-detail-value">{formatBirr(finance.purchases.total_amount)}</span>
                     </div>
 
-                    {/* Recent Purchases List */}
                     {finance.purchases.recent_list && finance.purchases.recent_list.length > 0 && (
                         <div style={{ marginTop: '16px', borderTop: '1px solid var(--admin-border)', paddingTop: '12px' }}>
                             <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--admin-text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -255,39 +317,6 @@ export default function FinanceStats({ data, onPurchaseClick }: Props) {
                         );
                     })}
                     {finance.pity_costs.by_category.length === 0 && <div className="admin-empty">No pity costs</div>}
-                </div>
-
-                {/* Wallets */}
-                <div className="admin-section-card">
-                    <h3><Wallet /> Wallet Balances</h3>
-                    {finance.wallets.map((w) => (
-                        <div key={w.id} style={{
-                            padding: '12px',
-                            background: 'var(--admin-bg)',
-                            borderRadius: 'var(--admin-radius-sm)',
-                            marginBottom: 8,
-                            border: '1px solid var(--admin-border)'
-                        }}>
-                            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: 'var(--admin-text)' }}>
-                                {w.name}
-                            </div>
-                            <div style={{ display: 'flex', gap: 24 }}>
-                                <div>
-                                    <div style={{ fontSize: 11, color: 'var(--admin-text-muted)', textTransform: 'uppercase' }}>Invoice</div>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--admin-success)' }}>
-                                        {formatBirr(w.invoice_balance || 0)}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: 11, color: 'var(--admin-text-muted)', textTransform: 'uppercase' }}>Non-Invoice</div>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--admin-primary)' }}>
-                                        {formatBirr(w.non_invoice_balance || 0)}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {finance.wallets.length === 0 && <div className="admin-empty">No wallets</div>}
                 </div>
             </div>
         </>

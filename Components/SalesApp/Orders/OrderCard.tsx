@@ -69,7 +69,7 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
                 ?.slice(0, 3)
                 .map((item: any) => (
                   <span key={item.order_code} className="font-mono whitespace-nowrap">
-                    ORD-{item.order_code}
+                    ORD-{item.order_code}{item.order_name ? ` - ${item.order_name}` : ""}
                   </span>
                 ))
                 .reduce(
@@ -152,7 +152,7 @@ const OrderCard = ({ order, onViewDetails, onMenuClick }: OrderCardProps) => {
               key={item.order_code}
               className="font-mono text-xs bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-1 rounded border border-gray-200 dark:border-zinc-700"
             >
-              ORD-{item.order_code}
+              ORD-{item.order_code}{item.order_name ? ` - ${item.order_name}` : ""}
             </span>
           ))}
 

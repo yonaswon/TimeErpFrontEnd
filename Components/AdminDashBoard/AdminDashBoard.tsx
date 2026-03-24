@@ -120,7 +120,7 @@ export default function AdminDashBoard() {
             case 'production':
                 return <ProductionStats data={data} />;
             case 'finance':
-                return <FinanceStats data={data} onPurchaseClick={setSelectedPurchase} />;
+                return <FinanceStats data={data} onPurchaseClick={setSelectedPurchase} onSelectContainer={setSelectedContainer} onSelectOrder={setSelectedOrder} />;
             case 'stock':
                 return <StockOverview data={data} onMaterialClick={setSelectedMaterial} />;
             case 'stock-records':
@@ -151,7 +151,7 @@ export default function AdminDashBoard() {
                         </div>
                     </div>
                 )}
-                {activeSection !== 'ai' && (
+                {activeSection !== 'ai' && activeSection !== 'orders' && (
                     <FilterBar
                         filters={filters}
                         onApply={handleApplyFilters}

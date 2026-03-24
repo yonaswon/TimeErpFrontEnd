@@ -34,6 +34,8 @@ import api from "@/api";
 import OrderContainerEdit from "./OrderContainerEdit";
 import OrderEdit from "./OrderEdit";
 import ContainerMerge from "./ContainerMerge";
+import ContainerPricingSuggestionModal from "./ContainerPricingSuggestionModal";
+import PaymentSuggestionModal from "./PaymentSuggestionModal";
 
 interface OrderDetailProps {
   order: any;
@@ -48,6 +50,11 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   const [payments, setPayments] = useState<any[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+
   const [editingContainer, setEditingContainer] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [showMerge, setShowMerge] = useState(false);
@@ -57,6 +64,11 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   const [sendingFinance, setSendingFinance] = useState(false);
   const [showFinanceConfirm, setShowFinanceConfirm] = useState(false);
   const [financeSendSuccess, setFinanceSendSuccess] = useState(false);
+
+  // Suggestion Modals State
+  const [editingPricing, setEditingPricing] = useState(false);
+  const [suggestPayment, setSuggestPayment] = useState<any>(null);
+  const [showNewPayment, setShowNewPayment] = useState(false);
 
   const [designTypes, setDesignTypes] = useState<any[]>([]);
   const [loadingDesignTypes, setLoadingDesignTypes] = useState(false);
@@ -112,6 +124,22 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
     }
   };
 
+  const fetchSuggestions = async () => {
+    try {
+      setSuggestionsLoading(true);
+      setSuggestionsError(null);
+      const response = await api.get(
+        `/finance/payment-edit-suggestion/?order_container=${order.id}`
+      );
+      setSuggestions(response.data.results || response.data || []);
+    } catch (error: any) {
+      console.error("Failed to fetch suggestions:", error);
+      setSuggestionsError("Failed to load suggestion history");
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
   // Add import at the top
 
   // Update the tabs array to include pity-costs
@@ -121,6 +149,7 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   useEffect(() => {
     if (activeTab === "payments") {
       fetchPayments();
+      fetchSuggestions();
     }
   }, [order.id, activeTab]);
 
@@ -327,7 +356,7 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                         key={item.order_code}
                         className="font-mono text-[10px] sm:text-xs bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded whitespace-nowrap"
                       >
-                        ORD-{item.order_code}
+                        ORD-{item.order_code}{item.order_name ? ` - ${item.order_name}` : ""}
                       </span>
                     ))
                     .reduce(
@@ -381,7 +410,7 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto bg-gray-50/30 dark:bg-zinc-950/30 p-6">
+        <div className="flex-1 overflow-y-auto bg-gray-50/30 dark:bg-zinc-950/30 p-4 sm:p-6 pb-24 sm:pb-8">
           {/* --- TAB: OVERVIEW --- */}
           {activeTab === "overview" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-300">
@@ -546,173 +575,6 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
 
           {/* --- TAB: ORDERS --- */}
           {activeTab === "orders" && (
-            <div className="space-y-4 animate-in fade-in duration-300">
-              {!order.orders?.length ? (
-                <div className="text-center py-12 text-gray-500">
-                  No sub-orders found.
-                </div>
-              ) : (
-                order.orders.map((item: any) => (
-                  <div
-                    key={item.order_code}
-                    className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
-                  >
-                    {/* Item Header */}
-                    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-zinc-800">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500">
-                          <Package size={20} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-gray-900 dark:text-white">
-                              ORD-{item.order_code}
-                            </h4>
-                            <button
-                              onClick={() => setEditingOrder(item)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
-                              title="Edit order"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {/* Handle design_type whether it's object or string */}
-                            {typeof item.design_type === "object"
-                              ? item.design_type?.name
-                              : typeof item.design_type === "string"
-                                ? item.design_type
-                                : `Design Type ID: ${item.design_type}`}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-mono font-medium text-gray-900 dark:text-gray-200">
-                          {formatCurrency(item.price)}
-                        </span>
-                        <span
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getOrderStatusColor(
-                            item.order_status
-                          )}`}
-                        >
-                          {item.order_status.replace(/-/g, " ")}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Item Details */}
-                    <div className="p-4 bg-gray-50/50 dark:bg-zinc-900/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs text-gray-500">
-                          Components
-                        </span>
-                        <div className="flex gap-2 text-gray-700 dark:text-gray-300">
-                          <span className="bg-white dark:bg-zinc-800 px-2 py-1 rounded border border-gray-200 dark:border-zinc-700">
-                            BOM: {item.boms?.length || 0}
-                          </span>
-                          <span className="bg-white dark:bg-zinc-800 px-2 py-1 rounded border border-gray-200 dark:border-zinc-700">
-                            Files: {item.cutting_files?.length || 0}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Design Type Display */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                          <Type
-                            size={18}
-                            className="text-blue-600 dark:text-blue-400"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-900 dark:text-white">
-                            Design Type
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            {typeof item.design_type === "object"
-                              ? item.design_type?.name
-                              : typeof item.design_type === "string"
-                                ? item.design_type
-                                : `ID: ${item.design_type}`}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Mockup Preview - Check multiple possible image locations */}
-                      {(item.mockup_image || item.mockup?.mockup_image) && (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.mockup_image || item.mockup?.mockup_image}
-                            alt="Mockup"
-                            onClick={() =>
-                              window.open(
-                                item.mockup_image || item.mockup?.mockup_image,
-                                "_blank"
-                              )
-                            }
-                            className="w-12 h-12 object-cover rounded bg-white border border-gray-200 dark:border-zinc-700 cursor-pointer hover:scale-105 transition-transform"
-                          />
-                          <div>
-                            <p className="text-xs font-medium text-gray-900 dark:text-white">
-                              Mockup
-                            </p>
-                            <p
-                              className="text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                              onClick={() =>
-                                window.open(
-                                  item.mockup_image ||
-                                  item.mockup?.mockup_image,
-                                  "_blank"
-                                )
-                              }
-                            >
-                              View Image
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Modification Preview */}
-                      {item.mockup_modification?.mockup_image && (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.mockup_modification.mockup_image}
-                            alt="Modification"
-                            onClick={() =>
-                              window.open(
-                                item.mockup_modification.mockup_image,
-                                "_blank"
-                              )
-                            }
-                            className="w-12 h-12 object-cover rounded bg-white border border-amber-200 dark:border-amber-900 cursor-pointer hover:scale-105 transition-transform"
-                          />
-                          <div>
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-500">
-                              Modified
-                            </p>
-                            <p
-                              className="text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
-                              onClick={() =>
-                                window.open(
-                                  item.mockup_modification.mockup_image,
-                                  "_blank"
-                                )
-                              }
-                            >
-                              View Change
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* --- TAB: ORDERS --- */}
-          {activeTab === "orders" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {!order.orders?.length ? (
                 <div className="text-center py-12 text-gray-500">
@@ -733,11 +595,11 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-gray-900 dark:text-white">
-                              ORD-{item.order_code}
+                              ORD-{item.order_code}{item.order_name ? ` - ${item.order_name}` : ""}
                             </h4>
                             <button
                               onClick={() => setEditingOrder(item)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
+                              className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 sm:p-1 text-gray-500 sm:text-gray-400 bg-gray-100 sm:bg-transparent dark:bg-zinc-800 sm:dark:bg-transparent hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                               title="Edit order"
                             >
                               <Pencil size={14} />
@@ -888,6 +750,78 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
           {/* --- TAB: PAYMENTS --- */}
           {activeTab === "payments" && (
             <div className="max-w-3xl mx-auto animate-in fade-in duration-300">
+              <div className="flex justify-end gap-2 mb-4">
+                <button
+                  onClick={() => setEditingPricing(true)}
+                  className="px-3 py-1.5 text-sm font-medium border border-blue-200 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg flex items-center gap-1 transition-colors"
+                >
+                  <Pencil size={14} /> Edit Pricing
+                </button>
+                <button
+                  onClick={() => setShowNewPayment(true)}
+                  className="px-3 py-1.5 text-sm font-medium border border-emerald-200 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg flex items-center gap-1 transition-colors"
+                >
+                  <CreditCard size={14} /> Add Payment
+                </button>
+              </div>
+
+              {/* --- Suggestion History --- */}
+              {suggestionsLoading && <div className="flex justify-center my-6"><Loader className="animate-spin text-blue-500" size={24} /></div>}
+              {!suggestionsLoading && suggestionsError && <p className="text-sm text-red-500 my-4 text-center">{suggestionsError}</p>}
+              {!suggestionsLoading && suggestions.length > 0 && (
+                <div className="mb-8 space-y-4">
+                  <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 border-b border-gray-200 dark:border-zinc-800 pb-2">
+                    Pending & Recent Edit Suggestions
+                  </h4>
+                  {suggestions.map((s: any) => (
+                    <div key={s.id} className="bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg p-4 flex flex-col md:flex-row gap-4 relative overflow-hidden group">
+                      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${s.status === "P" ? "bg-amber-500" : s.status === "C" ? "bg-emerald-500" : "bg-red-500"}`} />
+                      <div className="flex-1 pl-2">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h4 className="font-bold text-gray-900 dark:text-white text-base">
+                            {s.edit_type === "CONTAINER" ? "Container Pricing Edit" : s.edit_type === "PAYMENT_EDIT" ? "Payment Edit" : "New Payment Request"}
+                          </h4>
+                          <span className={`px-2 py-0.5 text-xs font-bold rounded-lg ${s.status === "P" ? "bg-amber-100 text-amber-700" : s.status === "C" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                            {s.status === "P" ? "PENDING" : s.status === "C" ? "CONFIRMED" : "REJECTED"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 flex items-center gap-2 mb-3">
+                          <Clock size={12} /> {new Date(s.created_at).toLocaleDateString()}
+                          <span className="mx-1">•</span>
+                          <User size={12} /> {s.suggested_by?.telegram_user_name || s.suggested_by?.first_name || "Sales Rep"}
+                        </p>
+
+                        {s.edit_type === "CONTAINER" && (
+                          <div className="grid grid-cols-3 gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Full Payment</span> {s.suggested_full_payment} Birr</div>
+                            <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Advance</span> {s.suggested_advance_payment} Birr</div>
+                            <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Remaining</span> {s.suggested_remaining_payment} Birr</div>
+                          </div>
+                        )}
+                        {(s.edit_type === "PAYMENT_ADD" || s.edit_type === "PAYMENT_EDIT") && (
+                          <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-gray-700 dark:text-gray-300 mt-2">
+                            <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Amount</span> {s.suggested_amount} Birr</div>
+                            <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Method</span> {s.suggested_method}</div>
+                            <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Reason</span> {s.suggested_reason}</div>
+                            {s.status !== 'P' && s.confirmed_by && (
+                              <div><span className="text-gray-500 text-xs block mb-0.5 uppercase tracking-wide">Processed By</span> {s.confirmed_by.telegram_user_name || s.confirmed_by.first_name || "Admin"}</div>
+                            )}
+                          </div>
+                        )}
+                        {s.suggested_confirmation_image && (
+                          <a href={s.suggested_confirmation_image} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 mt-3 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors">
+                            <Image size={14} /> View Receipt
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mt-6 mb-4 border-b border-gray-200 dark:border-zinc-800 pb-2">
+                Confirmed Payments Ledger
+              </h4>
               {paymentsLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                   <Loader className="animate-spin h-8 w-8 mb-4 text-blue-500" />
@@ -934,6 +868,13 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                             {getReasonText(payment.reason)}
                           </h4>
                           {getStatusIcon(payment.status)}
+                          <button
+                            onClick={() => setSuggestPayment(payment)}
+                            className="ml-auto text-gray-400 hover:text-blue-500 transition-colors"
+                            title="Suggest Payment Edit"
+                          >
+                            <Pencil size={16} />
+                          </button>
                         </div>
                         <p className="text-sm text-gray-500 flex items-center gap-2">
                           <Calendar size={14} />{" "}
@@ -1019,6 +960,35 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
           onMergeComplete={() => {
             setShowMerge(false);
             onClose();
+          }}
+        />
+      )}
+
+      {/* Pricing Suggestion Overlay */}
+      {editingPricing && (
+        <ContainerPricingSuggestionModal
+          orderContainer={order}
+          onClose={() => setEditingPricing(false)}
+          onSuccess={() => {
+            setEditingPricing(false);
+            fetchSuggestions();
+          }}
+        />
+      )}
+
+      {/* Payment Edit/Add Suggestion Overlay */}
+      {(suggestPayment || showNewPayment) && (
+        <PaymentSuggestionModal
+          orderContainer={order}
+          payment={suggestPayment}
+          onClose={() => {
+            setSuggestPayment(null);
+            setShowNewPayment(false);
+          }}
+          onSuccess={() => {
+            setSuggestPayment(null);
+            setShowNewPayment(false);
+            fetchSuggestions();
           }}
         />
       )}

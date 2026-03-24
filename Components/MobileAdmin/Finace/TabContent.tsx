@@ -3,6 +3,7 @@ import { TabType } from '@/types/finance'
 import RequestsContent from './Purchase Requests/PurchaseRequests'
 import ActionsContent from './ActionContent'
 import { PaymentConfirmations } from './PaymentRequests/PaymentConfirmations'
+import PaymentSuggestionsList from './PaymentRequests/PaymentSuggestionsList'
 
 interface TabContentProps {
   activeTab: TabType
@@ -18,6 +19,8 @@ export const TabContent = ({ activeTab }: TabContentProps) => {
         return <RequestsContent />
       case 'actions':
         return <ActionsContent />
+      case 'edits':
+        return <PaymentSuggestionsList />
       default:
         return <PaymentConfirmations />
     }

@@ -35,7 +35,7 @@ export interface User {
   first_name: string
 }
 
-export type TabType = 'payments' | 'requests' | 'actions'
+export type TabType = 'payments' | 'requests' | 'actions' | 'edits'
 
 
 export interface PurchaseListResponse {

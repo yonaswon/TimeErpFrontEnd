@@ -1,4 +1,4 @@
-import { CheckCircle, FileText, Zap } from 'lucide-react'
+import { CheckCircle, FileText, Zap, Edit3 } from 'lucide-react'
 import { TabType } from '@/types/finance'
 
 interface FinanceNavigationProps {
@@ -41,6 +41,17 @@ export const FinanceNavigation = ({ activeTab, onTabChange }: FinanceNavigationP
         >
           <Zap className="w-4 h-4" />
           <span className="text-sm font-medium">Actions</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange('edits')}
+          className={`flex-1 flex items-center justify-center gap-2 py-4 transition-colors ${activeTab === 'edits'
+            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-b-2 border-blue-500'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+        >
+          <Edit3 className="w-4 h-4" />
+          <span className="text-sm font-medium">Edits</span>
         </button>
       </div>
     </div>

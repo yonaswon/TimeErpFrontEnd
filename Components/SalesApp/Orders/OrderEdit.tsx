@@ -25,6 +25,7 @@ interface DesignType {
 
 const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
   const [formData, setFormData] = useState({
+    order_name: order.order_name || "",
     mockup_image: null as File | null,
     remove_mockup_image: false,
     design_type: order.design_type || null, // always ID
@@ -127,6 +128,10 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
         formDataToSend.append("design_type", String(formData.design_type));
       }
 
+      if (formData.order_name !== (order.order_name || "")) {
+        formDataToSend.append("order_name", formData.order_name);
+      }
+
       const response = await api.patch(
         `/api/orders/${order.order_code}/`,
         formDataToSend,
@@ -213,6 +218,22 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
             </div>
           )}
 
+          {/* Order Name */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <Type size={18} className="inline mr-2 text-blue-600" />
+              Order Name
+            </label>
+            <input
+              type="text"
+              name="order_name"
+              value={formData.order_name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, order_name: e.target.value }))}
+              placeholder="e.g. Living Room TV Unit"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+            />
+          </div>
+
           {/* Design Type */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -255,24 +276,31 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
 
             <div className="space-y-4">
               {previewUrl ? (
-                <div className="relative group">
+                <div className="space-y-3">
                   <img
                     src={previewUrl}
                     alt="mockup"
-                    className="w-full h-48 object-contain rounded-lg border-2 border-gray-200 dark:border-zinc-700"
+                    className="w-full h-48 object-contain rounded-lg border-2 border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
                   />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 bg-gray-50 dark:bg-zinc-800/50 p-2 rounded-lg border border-gray-200 dark:border-zinc-700 justify-end">
                     <button
                       type="button"
                       onClick={() => window.open(previewUrl, "_blank")}
-                      className="p-2 bg-white text-gray-800 rounded-lg"
+                      className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
                     >
                       View
                     </button>
                     <button
                       type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleRemoveImage}
-                      className="p-2 bg-red-500 text-white rounded-lg"
+                      className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                     >
                       Remove
                     </button>
@@ -315,7 +343,8 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
                 loading ||
                 (!formData.mockup_image &&
                   !formData.remove_mockup_image &&
-                  formData.design_type === order.design_type)
+                  formData.design_type === order.design_type &&
+                  formData.order_name === (order.order_name || ""))
               }
               className="px-5 py-2.5 bg-blue-600 text-white rounded-lg flex items-center gap-2"
             >
