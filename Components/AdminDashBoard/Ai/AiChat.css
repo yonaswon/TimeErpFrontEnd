@@ -1,5 +1,5 @@
 /* ─── AI Chat Component Styles ─────────────────────────────────────────────── */
-/* Follows design_gaied.md: 8px spacing system, design tokens, mobile-first */
+/* ChatGPT-matching design: Söhne font, clean spacing, minimal borders */
 
 .ai-chat-layout {
     display: flex;
@@ -7,6 +7,7 @@
     background: var(--admin-bg);
     overflow: hidden;
     position: relative;
+    font-family: Söhne, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
 }
 
 .ai-chat-container {
@@ -32,7 +33,6 @@
 .ai-chat-sidebar.closed {
     width: 0;
     margin-left: -1px;
-    /* hide border */
     overflow: hidden;
 }
 
@@ -72,7 +72,6 @@
     cursor: pointer;
     padding: 4px;
     display: none;
-    /* Only show on mobile */
 }
 
 .ai-chat-session-list {
@@ -159,7 +158,6 @@
 .ai-chat-header-icon,
 .ai-chat-header-info {
     display: none;
-    /* Hide these to look like ChatGPT header (just model selector & menu) */
 }
 
 .ai-chat-status-dot {
@@ -209,8 +207,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 60px 16px 100px 16px;
-    /* Add padding for header and input */
+    padding: 60px 16px 180px 16px;
     display: flex;
     flex-direction: column;
     scroll-behavior: smooth;
@@ -232,21 +229,19 @@
     border-radius: 4px;
 }
 
-/* ─── Message Bubbles ────────────────────────────────────────────────────── */
-/* ─── Message Bubbles matching ChatGPT ───────────────────────────────────── */
+/* ─── Message Layout — ChatGPT Style ─────────────────────────────────────── */
 .ai-message-row {
     width: 100%;
     display: flex;
     justify-content: center;
-    padding: 12px 0;
+    padding: 8px 0;
 }
 
 .ai-message-wrapper {
     display: flex;
     gap: 16px;
     width: 100%;
-    max-width: 800px;
-    /* ChatGPT width */
+    max-width: 768px;
     align-items: flex-start;
 }
 
@@ -259,15 +254,15 @@
 }
 
 .ai-message-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     font-size: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    margin-top: 2px;
 }
 
 .ai-message-wrapper.assistant .ai-message-avatar {
@@ -280,23 +275,22 @@
     display: none;
 }
 
+/* ─── Message Bubble ─────────────────────────────────────────────────────── */
 .ai-message-bubble {
     max-width: calc(100% - 48px);
     word-wrap: break-word;
     overflow-wrap: break-word;
-    line-height: 1.6;
-    font-size: 16px;
-    font-family: Söhne, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+    font-family: Söhne, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
 }
 
-/* ChatGPT Assistant text has no background bubble */
+/* Assistant: no background, just text */
 .ai-message-wrapper.assistant .ai-message-bubble {
     background: transparent;
     color: var(--admin-text);
-    padding: 2px 0;
+    padding: 0;
 }
 
-/* ChatGPT User text has a modern subtle gray pill layout */
+/* User: subtle gray pill */
 .ai-message-wrapper.user .ai-message-bubble {
     background: #f4f4f4;
     color: #0d0d0d;
@@ -316,115 +310,341 @@
         color: #ececec;
         border-color: rgba(255, 255, 255, 0.1);
     }
+
+    /* Dark mode tables */
+    .ai-table-wrapper {
+        background: #1a1a1a;
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .ai-message-content thead th {
+        background: #222;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .ai-message-content tbody td {
+        border-bottom-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .ai-message-content tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .ai-message-content tbody tr:hover {
+        background: rgba(59, 130, 246, 0.08);
+    }
 }
 
-/* ─── Message Content — Markdown Rendering ───────────────────────────────── */
-.ai-message-content h1,
-.ai-message-content h2,
-.ai-message-content h3,
-.ai-message-content h4 {
-    margin: 6px 0 2px 0;
-    font-weight: 600;
-    color: inherit;
+/* ─── Collapsible Tool Calls ─────────────────────────────────────────────── */
+.ai-tools-details {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-.ai-message-content h1 {
-    font-size: 18px;
+.ai-tools-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--admin-text-secondary);
+    border-radius: 8px;
+    transition: background 0.15s;
+    list-style: none;
+    user-select: none;
 }
 
-.ai-message-content h2 {
-    font-size: 16px;
-}
-
-.ai-message-content h3 {
-    font-size: 15px;
-}
-
-.ai-message-content p {
-    margin: 0 0 1px 0;
-}
-
-.ai-message-content p:empty {
+.ai-tools-summary::-webkit-details-marker {
     display: none;
+}
+
+.ai-tools-summary:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.ai-tools-chevron {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.ai-tools-details[open] .ai-tools-chevron {
+    transform: rotate(180deg);
+}
+
+.ai-tools-list {
+    padding: 6px 0 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-tool-item {
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--admin-bg);
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 12px;
+}
+
+.ai-tool-name {
+    font-weight: 600;
+    color: var(--admin-text);
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.ai-tool-args {
+    color: var(--admin-text-muted);
+    white-space: pre-wrap;
+    overflow-x: auto;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* ─── Message Content — Clean Typography ─────────────────────────────────── */
+.ai-message-content {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--admin-text);
+    font-family: Söhne, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+    letter-spacing: -0.01em;
+}
+
+/* Also style the wrapper div */
+.ai-markdown {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--admin-text);
+}
+
+/* ─── Headings ────────────────────────────────────────────────────────────── */
+.ai-message-content h1,
+.ai-markdown h1 {
+    font-size: 1.4em;
+    font-weight: 700;
+    margin: 1.25em 0 0.75em 0;
+    line-height: 1.3;
+    color: var(--admin-text);
+}
+
+.ai-message-content h2,
+.ai-markdown h2 {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 1em 0 0.5em 0;
+    line-height: 1.35;
+    color: var(--admin-text);
+}
+
+.ai-message-content h3,
+.ai-markdown h3 {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin: 1em 0 0.4em 0;
+    line-height: 1.4;
+    color: var(--admin-text);
+}
+
+.ai-message-content h4,
+.ai-markdown h4 {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0.75em 0 0.3em 0;
+    line-height: 1.4;
+    color: var(--admin-text);
+}
+
+/* ─── Paragraphs ──────────────────────────────────────────────────────────── */
+.ai-message-content p {
+    margin: 0 0 1em 0;
+    line-height: 1.75;
 }
 
 .ai-message-content p:last-child {
     margin-bottom: 0;
 }
 
-.ai-message-content ul,
+.ai-message-content p:empty {
+    display: none;
+}
+
+/* ─── Bold / Italic ──────────────────────────────────────────────────────── */
+.ai-message-content strong {
+    font-weight: 600;
+    color: var(--admin-text);
+}
+
+.ai-message-content em {
+    font-style: italic;
+}
+
+/* ─── Lists — ChatGPT style ──────────────────────────────────────────────── */
+.ai-message-content ul {
+    list-style-type: disc;
+    padding-left: 1.625em;
+    margin: 0.5em 0 1em 0;
+}
+
 .ai-message-content ol {
-    margin: 4px 0 6px 0;
-    padding-left: 20px;
+    list-style-type: decimal;
+    padding-left: 1.625em;
+    margin: 0.5em 0 1em 0;
 }
 
 .ai-message-content li {
-    margin-bottom: 2px;
+    margin-bottom: 0.25em;
+    line-height: 1.75;
+    padding-left: 0.25em;
 }
 
-.ai-message-content strong {
-    font-weight: 600;
+.ai-message-content li>p {
+    margin: 0;
 }
 
-.ai-message-content code {
-    background: rgba(0, 0, 0, 0.08);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+.ai-message-content li>ul,
+.ai-message-content li>ol {
+    margin: 0.25em 0;
 }
 
-.ai-message-content pre {
-    background: #1e293b;
-    color: #e2e8f0;
-    padding: 12px 16px;
-    border-radius: 8px;
+/* ─── Tables — Premium Readable Style ────────────────────────────────────── */
+.ai-table-wrapper {
     overflow-x: auto;
-    margin: 8px 0;
-    font-size: 13px;
+    margin: 1em 0;
+    border-radius: 10px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-surface, #fff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.ai-message-content pre code {
-    background: none;
-    padding: 0;
-    color: inherit;
-}
-
-/* ─── Tables in AI Messages ──────────────────────────────────────────────── */
 .ai-message-content table {
     width: 100%;
     border-collapse: collapse;
-    margin: 8px 0;
     font-size: 13px;
-    border-radius: 8px;
-    overflow: hidden;
+    line-height: 1.5;
+    table-layout: auto;
 }
 
 .ai-message-content thead th {
-    background: var(--admin-primary);
-    color: #fff;
-    padding: 6px 10px;
+    background: var(--admin-bg, #f7f7f8);
+    color: var(--admin-text);
+    padding: 10px 16px;
     text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
+    font-weight: 700;
     font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 2px solid var(--admin-border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .ai-message-content tbody td {
-    padding: 5px 10px;
-    border-bottom: 1px solid var(--admin-border);
+    padding: 9px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--admin-text);
     font-size: 13px;
+    vertical-align: middle;
+    white-space: nowrap;
 }
 
+.ai-message-content tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Zebra striping */
 .ai-message-content tbody tr:nth-child(even) {
-    background: rgba(37, 99, 235, 0.03);
+    background: rgba(0, 0, 0, 0.015);
 }
 
 .ai-message-content tbody tr:hover {
-    background: rgba(37, 99, 235, 0.07);
+    background: rgba(37, 99, 235, 0.04);
 }
 
-/* ─── Images in AI Messages ──────────────────────────────────────────────── */
+/* Highlight cells containing "YES" or anomaly keywords */
+.ai-message-content td:last-child {
+    font-weight: 500;
+}
+
+/* ─── Inline Code ────────────────────────────────────────────────────────── */
+.ai-inline-code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.875em;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    color: var(--admin-text);
+}
+
+/* ─── Code Blocks ────────────────────────────────────────────────────────── */
+.ai-code-block {
+    margin: 1em 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--admin-border);
+}
+
+.ai-code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    background: #2f2f2f;
+    color: #b4b4b4;
+}
+
+.ai-code-block-body {
+    padding: 16px;
+    overflow-x: auto;
+    background: #1e1e1e;
+}
+
+.ai-code-block-body code {
+    font-size: 13px;
+    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    color: #e5e5e5;
+    line-height: 1.6;
+    background: none;
+    padding: 0;
+}
+
+/* ─── Blockquote ─────────────────────────────────────────────────────────── */
+.ai-message-content blockquote {
+    border-left: 3px solid var(--admin-border);
+    padding: 4px 0 4px 16px;
+    margin: 0.75em 0;
+    color: var(--admin-text-secondary);
+    font-style: italic;
+}
+
+/* ─── Horizontal Rule ────────────────────────────────────────────────────── */
+.ai-message-content hr {
+    border: none;
+    border-top: 1px solid var(--admin-border);
+    margin: 1.5em 0;
+}
+
+/* ─── Links ──────────────────────────────────────────────────────────────── */
+.ai-message-content a {
+    color: var(--admin-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.ai-message-content a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+/* ─── Images ─────────────────────────────────────────────────────────────── */
 .ai-message-content img {
     max-width: 100%;
     border-radius: 8px;
@@ -436,42 +656,6 @@
 
 .ai-message-content img:hover {
     transform: scale(1.02);
-}
-
-/* ─── Download Links in AI Messages ──────────────────────────────────────── */
-.ai-message-content a {
-    color: var(--admin-primary);
-    text-decoration: none;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: opacity 0.2s;
-}
-
-.ai-message-content a:hover {
-    opacity: 0.8;
-    text-decoration: underline;
-}
-
-.ai-download-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--admin-primary);
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 13px;
-    margin: 4px 0;
-    transition: background 0.2s;
-    border: 1px solid rgba(37, 99, 235, 0.2);
-}
-
-.ai-download-link:hover {
-    background: rgba(37, 99, 235, 0.15);
 }
 
 /* ─── Thinking / Loading ─────────────────────────────────────────────────── */
@@ -493,7 +677,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--admin-primary);
+    background: var(--admin-text-secondary);
     animation: ai-bounce 1.4s infinite ease-in-out both;
 }
 
@@ -524,26 +708,7 @@
     }
 }
 
-.ai-function-calls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 8px;
-}
-
-.ai-function-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: rgba(139, 92, 246, 0.1);
-    color: #8b5cf6;
-    font-size: 11px;
-    font-weight: 500;
-}
-
-/* ─── Input Area matching ChatGPT ─────────────────────────────────────────── */
+/* ─── Input Area — ChatGPT Style ──────────────────────────────────────────── */
 .ai-chat-input-area {
     padding: 16px 24px 24px 24px;
     position: absolute;
@@ -562,7 +727,7 @@
     gap: 8px;
     align-items: flex-end;
     width: 100%;
-    max-width: 800px;
+    max-width: 768px;
     background: var(--admin-surface);
     border: 1px solid var(--admin-border);
     border-radius: 26px;
@@ -691,7 +856,7 @@
     gap: 8px;
 }
 
-/* ─── Welcome Message ────────────────────────────────────────────────────── */
+/* ─── Welcome ────────────────────────────────────────────────────────────── */
 .ai-welcome {
     display: flex;
     flex-direction: column;
@@ -748,7 +913,7 @@
     text-align: right;
 }
 
-/* ─── Responsive — Mobile First ──────────────────────────────────────────── */
+/* ─── Responsive — Mobile ────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .ai-chat-layout {
         height: calc(100vh - 80px);
@@ -856,4 +1021,25 @@
 
 .ai-dt-approve-btn:hover {
     background: #7c3aed;
+}
+
+/* ─── Download Links ─────────────────────────────────────────────────────── */
+.ai-download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--admin-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    margin: 4px 0;
+    transition: background 0.2s;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.ai-download-link:hover {
+    background: rgba(37, 99, 235, 0.15);
 }

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../../../api';
-import { Bot, Send, User, AlertCircle, Sparkles, X, MessageSquare, Plus, Menu, Brain, Clock, Zap, Search, Database } from 'lucide-react';
+import { Bot, Send, User, AlertCircle, Sparkles, X, MessageSquare, Plus, Menu, Brain, Clock, Zap, Search, Database, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './AiChat.css';
@@ -23,181 +23,282 @@ interface ChatSession {
     messages: ChatMessage[];
 }
 
-// Simple markdown-to-HTML renderer
-function renderMarkdown(text: string): string {
-    let html = text;
-
-    // Code blocks (must come before inline code)
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
-        return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
-    });
-
-    // Headers
-    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
-    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-    // Tables
-    html = html.replace(
-        /^\|(.+)\|\s*\n\|[-\s|:]+\|\s*\n((?:\|.+\|\s*\n?)*)/gm,
-        (_match, headerRow, bodyRows) => {
-            const headers = headerRow.split('|').map((h: string) => h.trim()).filter(Boolean);
-            const rows = bodyRows.trim().split('\n').map((row: string) =>
-                row.split('|').map((c: string) => c.trim()).filter(Boolean)
-            );
-            let table = '<table><thead><tr>';
-            headers.forEach((h: string) => { table += `<th>${h}</th>`; });
-            table += '</tr></thead><tbody>';
-            rows.forEach((row: string[]) => {
-                table += '<tr>';
-                row.forEach((cell: string) => { table += `<td>${cell}</td>`; });
-                table += '</tr>';
-            });
-            table += '</tbody></table>';
-            return table;
-        }
-    );
-
-    // Bold
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-    // Italic
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-    // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Images — render as clickable images
-    html = html.replace(
-        /!\[([^\]]*)\]\(([^)]+)\)/g,
-        '<img src="$2" alt="$1" title="$1" loading="lazy" />'
-    );
-
-    // Links — handle download links with 📥
-    html = html.replace(
-        /\[([^\]]*)\]\(([^)]+)\)/g,
-        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-
-    // Unordered lists
-    html = html.replace(/^[\s]*[-*] (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/((?:<li>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
-
-    // Ordered lists
-    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-
-    // Cleanup whitespace around block elements to prevent double-spacing
-    html = html.replace(/(<\/?(?:h[1-6]|table|thead|tbody|tr|th|td|ul|ol|li|pre|code)>)\s+/gi, '$1');
-    html = html.replace(/\s+(<\/?(?:h[1-6]|table|thead|tbody|tr|th|td|ul|ol|li|pre|code)>)/gi, '$1');
-
-    // Compress ANY sequence of newlines into a SINGLE line break for ultra-compact view
-    html = html.replace(/\n+/g, '<br/>');
-
-    // Strip accidental leading/trailing breaks
-    html = html.replace(/^(?:<br\/>)+|(?:<br\/>)+$/g, '');
-
-    // Wrap in span to avoid default paragraph margins
-    if (!html.startsWith('<')) {
-        html = `<span>${html}</span>`;
+const ArealMaterialGallery = ({ data }: { data: any }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    if (!data || !data.cutting_sequence || data.cutting_sequence.length === 0) {
+        return <div className="p-4 border border-dashed rounded-lg text-center opacity-70">No cutting files found for this material sheet.</div>;
     }
 
-    return html;
-}
+    const sequence = data.cutting_sequence;
+    const currentCut = sequence[currentIndex];
 
-function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
+    return (
+        <div className="my-6 border rounded-xl overflow-hidden shadow-sm" style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-surface)' }}>
+            <div className="p-3 border-b flex justify-between items-center" style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-background)' }}>
+                <div>
+                    <h4 className="font-semibold text-sm m-0" style={{ color: 'var(--admin-text)' }}>
+                        {data.material_info.material_name} (Code: {data.material_info.code})
+                    </h4>
+                    <span className="text-xs" style={{ color: 'var(--admin-text-secondary)' }}>
+                        {data.material_info.started ? 'Started' : 'New'} • Cut {currentIndex + 1} of {sequence.length}
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentIndex === 0}
+                        className="p-1 rounded hover:bg-black/5 disabled:opacity-30 transition-colors"
+                        style={{ color: 'var(--admin-text)' }}
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+                    <button
+                        onClick={() => setCurrentIndex(prev => Math.min(sequence.length - 1, prev + 1))}
+                        disabled={currentIndex === sequence.length - 1}
+                        className="p-1 rounded hover:bg-black/5 disabled:opacity-30 transition-colors"
+                        style={{ color: 'var(--admin-text)' }}
+                    >
+                        <ChevronRight size={18} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="p-4 flex flex-col items-center justify-center min-h-[300px] bg-black/5">
+                {currentCut.image_url ? (
+                    <img
+                        src={currentCut.image_url}
+                        alt="Cutting File"
+                        className="max-h-[500px] object-contain rounded shadow-sm border"
+                        style={{ borderColor: 'var(--admin-border)' }}
+                    />
+                ) : (
+                    <div className="flex items-center justify-center h-48 w-full border border-dashed rounded-lg opacity-50">
+                        No image available
+                    </div>
+                )}
+            </div>
+
+            <div className="p-4 border-t text-sm" style={{ borderColor: 'var(--admin-border)' }}>
+                <div className="flex justify-between items-start mb-2">
+                    <span className="font-medium" style={{ color: 'var(--admin-text)' }}>Orders Cut in this Session:</span>
+                    <span className="text-xs" style={{ color: 'var(--admin-text-secondary)' }}>
+                        Cut Date: {new Date(currentCut.date).toLocaleDateString()}
+                    </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {currentCut.orders_cut && currentCut.orders_cut.length > 0 ? (
+                        currentCut.orders_cut.map((ord: string, i: number) => (
+                            <span key={i} className="px-2 py-1 text-xs rounded-full border bg-opacity-50 font-medium"
+                                style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-background)', color: 'var(--admin-text)' }}>
+                                {ord}
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-xs italic" style={{ color: 'var(--admin-text-secondary)' }}>No orders linked</span>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const BatchReportWidget = ({ data }: { data: any }) => {
+    if (!data) return null;
+    return (
+        <div className="my-6 border rounded-xl shadow-sm p-5" style={{ borderColor: 'var(--admin-border)', backgroundColor: 'var(--admin-surface)' }}>
+            <h4 className="font-semibold text-lg mb-4 flex items-center gap-2" style={{ color: 'var(--admin-text)' }}>
+                <Database size={20} className="text-blue-500" />
+                {data.batch_name || 'Material Batch Report'}
+            </h4>
+
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-6 relative">
+                <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-gray-800 -z-10 hidden md:block rounded-full"></div>
+
+                <div className="flex flex-col items-center p-3 bg-white dark:bg-gray-900 border rounded-lg shadow-sm min-w-[140px] z-10">
+                    <span className="text-xs uppercase font-bold text-gray-400 mb-1">Source</span>
+                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{data.total_acquired}</span>
+                    <span className="text-xs text-gray-500 font-medium text-center">{data.source_type || 'Purchased'} Units</span>
+                </div>
+
+                <div className="flex flex-col items-center p-3 bg-white dark:bg-gray-900 border rounded-lg shadow-sm min-w-[140px] z-10">
+                    <span className="text-xs uppercase font-bold text-gray-400 mb-1">Consumed</span>
+                    <span className="text-2xl font-black text-green-600 dark:text-green-400">{data.total_used}</span>
+                    <span className="text-xs text-gray-500 font-medium text-center">In Orders</span>
+                </div>
+
+                <div className="flex flex-col items-center p-3 bg-white dark:bg-gray-900 border rounded-lg shadow-sm min-w-[140px] z-10 border-red-200 dark:border-red-900">
+                    <span className="text-xs uppercase font-bold text-gray-400 mb-1">Waste / Variance</span>
+                    <span className={`text-2xl font-black ${data.waste_percent > 15 ? 'text-red-600 dark:text-red-400' : 'text-orange-500'}`}>
+                        {data.total_waste}
+                    </span>
+                    <span className="text-xs font-medium text-center px-2 py-0.5 rounded-full mt-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                        {data.waste_percent}% Loss
+                    </span>
+                </div>
+            </div>
+
+            {data.anomaly_flag && (
+                <div className="mt-5 p-3 rounded-lg flex items-start gap-3 text-sm bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800/30">
+                    <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
+                    <div>
+                        <strong>Anomaly Detected: </strong>
+                        {data.anomaly_reason || 'Waste ratio significantly exceeds historical average'}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const SurveillanceAlertWidget = ({ data }: { data: any }) => {
+    if (!data) return null;
+
+    let severityClass = 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300';
+    let Icon = AlertCircle;
+
+    if (data.severity === 'CRITICAL') {
+        severityClass = 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200';
+        Icon = Sparkles;
+    } else if (data.severity === 'HIGH' || data.severity === 'WARNING' || data.severity === 'warning') {
+        severityClass = 'bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-200';
+    } else if (data.severity === 'NORMAL' || data.severity === 'SUCCESS') {
+        severityClass = 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200';
+    }
+
+    return (
+        <div className={`my-4 border rounded-xl shadow-sm p-4 flex gap-4 items-start ${severityClass}`}>
+            <div className="p-2 rounded-full bg-white dark:bg-black/20 shadow-sm shrink-0">
+                <Icon size={24} />
+            </div>
+            <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-bold text-sm uppercase tracking-wider opacity-80">{data.alert_type || 'System Alert'}</h4>
+                    <span className="text-xs font-bold uppercase py-0.5 px-2 rounded-full bg-white dark:bg-black/20 shadow-sm">{data.severity || 'INFO'}</span>
+                </div>
+                <h3 className="text-lg font-bold mb-1">{data.entity_name}</h3>
+                <p className="text-sm font-medium opacity-90 mb-2">{data.metric}</p>
+                {data.deviation && (
+                    <div className="inline-block mt-1 text-xs font-bold italic bg-white dark:bg-black/20 px-2 py-1 rounded shadow-sm">
+                        {"\u25b2"} Deviation: {data.deviation}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const SUGGESTION_ITEMS = [
+    { icon: '🔎', text: 'Check for duplicate payments' },
+    { icon: '📊', text: 'Analyze material usage for recent orders — any anomalies?' },
     { icon: '🚨', text: 'Show me alerts and what needs attention' },
-    { icon: '📊', text: 'Compare this month\'s revenue vs last month' },
-    { icon: '📈', text: 'Show the order trend over the last 6 months' },
-    { icon: '🏭', text: 'Where are our production bottlenecks?' },
-    { icon: '📦', text: 'Which materials will run out soon?' },
-    { icon: '💰', text: 'Show financial summary for this month' },
-    { icon: '🔍', text: 'Search everything about client ABC' },
+    { icon: '🔍', text: 'Detect payment or purchase price outliers' },
+    { icon: '🧠', text: 'What do you remember about our business rules?' },
     { icon: '🚀', text: 'Show lead conversion analytics' },
 ];
 
 const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
-    const [displayed, setDisplayed] = useState('');
+    const [displayedContent, setDisplayedContent] = useState('');
 
     useEffect(() => {
         if (!isStreaming) {
-            setDisplayed(content);
+            setDisplayedContent(content);
             return;
         }
 
-        const interval = setInterval(() => {
-            setDisplayed(prev => {
-                if (prev.length >= content.length) return content;
-                // Add between 1 to 4 characters per tick to simulate natural fast streaming
-                const nextChunkSizes = [1, 2, 3, 4];
-                const jump = nextChunkSizes[Math.floor(Math.random() * nextChunkSizes.length)];
-                return content.substring(0, prev.length + jump);
-            });
-        }, 15); // ~15ms tick
-
-        return () => clearInterval(interval);
+        // When streaming, immediately reflect changes (streaming typing effect is handled by AiChat appending chars)
+        setDisplayedContent(content);
     }, [content, isStreaming]);
 
     return (
-        <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-                table: ({ node, ...props }) => <div className="overflow-x-auto my-4 rounded-xl border shadow-sm" style={{ borderColor: 'var(--admin-border)' }}><table className="min-w-full divide-y" style={{ borderColor: 'var(--admin-border)' }} {...props} /></div>,
-                thead: ({ node, ...props }) => <thead style={{ background: 'var(--admin-bg)' }} {...props} />,
-                th: ({ node, ...props }) => <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--admin-text-secondary)', background: 'var(--admin-bg)' }} {...props} />,
-                td: ({ node, ...props }) => <td className="px-4 py-3 whitespace-nowrap text-sm border-t" style={{ color: 'var(--admin-text)', borderColor: 'var(--admin-border)' }} {...props} />,
-                a: ({ node, ...props }) => <a className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium inline-flex items-center gap-1" target="_blank" rel="noopener noreferrer" {...props} />,
-                code: ({ node, inline, ...props }: any) =>
-                    inline ? (
-                        <code className="px-1.5 py-0.5 rounded text-sm font-mono border" style={{ background: 'var(--admin-bg)', color: 'var(--admin-text)', borderColor: 'var(--admin-border)' }} {...props} />
-                    ) : (
-                        <div className="my-4 rounded-xl overflow-hidden border shadow-sm" style={{ borderColor: 'var(--admin-border)' }}>
-                            <div className="flex justify-between items-center px-4 py-2 text-xs font-mono" style={{ background: 'var(--admin-sidebar-bg)', color: 'var(--admin-sidebar-text)' }}>
-                                <span>{props.className?.replace('language-', '') || 'code'}</span>
+        <div className="ai-markdown prose dark:prose-invert max-w-none break-words">
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                    table: ({ node, ...props }) => <div className="ai-table-wrapper"><table {...props} /></div>,
+                    thead: ({ node, ...props }) => <thead {...props} />,
+                    th: ({ node, ...props }) => <th {...props} />,
+                    td: ({ node, ...props }) => <td {...props} />,
+                    tr: ({ node, ...props }) => <tr {...props} />,
+                    a: ({ node, ...props }) => <a target="_blank" rel="noopener noreferrer" className="ai-link" {...props} />,
+                    code: ({ node, inline, ...props }: any) => {
+                        const match = /language-(\w+)/.exec(props.className || '');
+                        const isGallery = match && match[1] === 'json' && String(props.children).includes('AREAL_MATERIAL_GALLERY');
+                        const isBatchReport = match && match[1] === 'json' && String(props.children).includes('BATCH_REPORT');
+                        const isSurveillance = match && match[1] === 'json' && String(props.children).includes('SURVEILLANCE_ALERT');
+
+                        if (isGallery) {
+                            try {
+                                const data = JSON.parse(String(props.children));
+                                return <ArealMaterialGallery data={data} />;
+                            } catch (e) {
+                                console.error("Failed to parse gallery JSON", e);
+                            }
+                        }
+                        if (isBatchReport) {
+                            try {
+                                const data = JSON.parse(String(props.children));
+                                return <BatchReportWidget data={data} />;
+                            } catch (e) {
+                                console.error("Failed to parse batch report JSON", e);
+                            }
+                        }
+                        if (isSurveillance) {
+                            try {
+                                const data = JSON.parse(String(props.children));
+                                return <SurveillanceAlertWidget data={data} />;
+                            } catch (e) {
+                                console.error("Failed to parse surveillance alert JSON", e);
+                            }
+                        }
+
+                        return inline ? (
+                            <code className="ai-inline-code" {...props} />
+                        ) : (
+                            <div className="ai-code-block">
+                                <div className="ai-code-block-header">
+                                    <span>{props.className?.replace('language-', '') || 'code'}</span>
+                                </div>
+                                <div className="ai-code-block-body">
+                                    <code {...props} />
+                                </div>
                             </div>
-                            <div className="p-4 overflow-x-auto" style={{ background: 'var(--admin-surface)' }}>
-                                <code className="text-sm font-mono" style={{ color: 'var(--admin-text)' }} {...props} />
-                            </div>
-                        </div>
-                    ),
-                img: ({ node, ...props }) => {
-                    let src = props.src;
-                    if (typeof src === 'string' && src.startsWith('/media/')) {
-                        const baseURL = api.defaults.baseURL?.replace(/\/+$/, '') || '';
-                        src = `${baseURL}${src}`;
-                    }
-                    return (
-                        <span className="block my-4">
-                            <img
-                                className="rounded-xl shadow-md cursor-zoom-in hover:opacity-95 transition-opacity max-h-96 object-contain bg-gray-50 w-full"
-                                loading="lazy"
-                                {...props}
-                                src={src as string}
-                                alt={props.alt || 'AI generated image'}
-                            />
-                            {props.alt && <span className="block text-center text-xs text-gray-500 mt-2 font-medium">{props.alt}</span>}
-                        </span>
-                    );
-                },
-                ul: ({ node, ...props }) => <ul className="list-disc pl-5 my-2 space-y-1" {...props} />,
-                ol: ({ node, ...props }) => <ol className="list-decimal pl-5 my-2 space-y-1" {...props} />,
-                li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />,
-                h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-2 text-gray-900 flex items-center gap-2" {...props} />,
-                h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-gray-800" {...props} />,
-                p: ({ node, ...props }) => <p className="my-2" {...props} />,
-                blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-gray-300 bg-gray-50/50 pl-4 py-2 italic my-3 rounded-r-lg" {...props} />,
-            }}
-        >
-            {displayed}
-        </ReactMarkdown>
+                        );
+                    },
+                    img: ({ node, ...props }) => {
+                        let src = props.src;
+                        if (typeof src === 'string' && src.startsWith('/media/')) {
+                            const baseURL = api.defaults.baseURL?.replace(/\/+$/, '') || '';
+                            src = `${baseURL}${src}`;
+                        }
+                        return (
+                            <span className="block my-4">
+                                <img
+                                    className="rounded-xl shadow-md cursor-zoom-in hover:opacity-95 transition-opacity max-h-96 object-contain w-full"
+                                    loading="lazy"
+                                    {...props}
+                                    src={src as string}
+                                    alt={props.alt || 'AI generated image'}
+                                />
+                                {props.alt && <span className="block text-center text-xs mt-2" style={{ color: 'var(--admin-text-muted)' }}>{props.alt}</span>}
+                            </span>
+                        );
+                    },
+                    ul: ({ node, ...props }) => <ul {...props} />,
+                    ol: ({ node, ...props }) => <ol {...props} />,
+                    li: ({ node, ...props }) => <li {...props} />,
+                    h1: ({ node, ...props }) => <h1 {...props} />,
+                    h2: ({ node, ...props }) => <h2 {...props} />,
+                    h3: ({ node, ...props }) => <h3 {...props} />,
+                    p: ({ node, ...props }) => <p {...props} />,
+                    blockquote: ({ node, ...props }) => <blockquote {...props} />,
+                    strong: ({ node, ...props }) => <strong {...props} />,
+                    em: ({ node, ...props }) => <em {...props} />,
+                    hr: ({ node, ...props }) => <hr {...props} />,
+                }}
+            >
+                {displayedContent}
+            </ReactMarkdown>
+        </div>
     );
 };
 
@@ -207,7 +308,7 @@ export default function AiChat() {
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
-    const [modelProvider, setModelProvider] = useState('openai');
+    const [modelProvider, setModelProvider] = useState('o3-mini');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imageModal, setImageModal] = useState<string | null>(null);
@@ -568,22 +669,28 @@ export default function AiChat() {
                     </div>
 
                     <div className="flex items-center gap-2 p-1.5 rounded-lg border" style={{ background: 'var(--admin-bg)', borderColor: 'var(--admin-border)' }}>
-                        <Zap className="w-4 h-4" style={{ color: modelProvider === 'openai' ? 'var(--admin-primary)' : 'var(--admin-text-muted)' }} />
+                        <Zap className="w-4 h-4" style={{ color: 'var(--admin-primary)' }} />
                         <select
                             value={modelProvider}
                             onChange={(e) => setModelProvider(e.target.value as any)}
                             className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer"
                             style={{ color: 'var(--admin-text)' }}
                         >
-                            <option value="gemini" disabled style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>Gemini 2.0 Flash</option>
-                            <option value="openai" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>GPT-4o</option>
-                            <option value="anthropic" disabled style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>Claude 3.5</option>
+                            <option value="o3-mini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>🧠 o3-mini (Reasoning)</option>
+                            <option value="o3" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>🧠 o3 (Full Reasoning)</option>
+                            <option value="o4" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>⚡ o4 (Latest)</option>
+                            <option value="o4-mini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>💨 o4 Mini</option>
+                            <option value="openai" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>⚡ GPT-4o</option>
+                            <option value="openai-mini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>💨 GPT-4o Mini</option>
+                            <option value="anthropic" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>🟣 Claude Sonnet 4</option>
+                            <option value="gemini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>✨ Gemini 2.5 Flash</option>
+                            <option value="gemini-pro" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>✨ Gemini 2.5 Pro</option>
                         </select>
                     </div>
                 </div>
 
                 {/* Chat Messages */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6" ref={chatRef}>
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6" style={{ paddingBottom: '220px' }} ref={chatRef}>
                     {messages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center space-y-4 fade-in">
                             <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--admin-border)' }}>
@@ -618,22 +725,26 @@ export default function AiChat() {
                                         <div className="ai-message-bubble">
 
                                             {msg.functionCalls && msg.functionCalls.length > 0 && (
-                                                <div className="mb-3">
-                                                    {msg.functionCalls.map((fc, fIdx) => (
-                                                        <div key={fIdx} className="mb-2 border rounded-lg p-2.5 text-xs font-mono flex flex-col gap-1.5 shadow-inner" style={{ background: 'var(--admin-bg)', borderColor: 'var(--admin-border)', color: 'var(--admin-text-secondary)' }}>
-                                                            <div className="flex items-center gap-2 font-bold border-b pb-1.5" style={{ color: 'var(--admin-primary)', borderColor: 'var(--admin-border)' }}>
-                                                                <Database className="w-3.5 h-3.5" />
-                                                                ⚙️ Executing: {fc.function}
+                                                <details className="ai-tools-details">
+                                                    <summary className="ai-tools-summary">
+                                                        <Database className="w-3.5 h-3.5" />
+                                                        <span>Used {msg.functionCalls.length} tool{msg.functionCalls.length > 1 ? 's' : ''}</span>
+                                                        <ChevronDown className="w-3.5 h-3.5 ai-tools-chevron" />
+                                                    </summary>
+                                                    <div className="ai-tools-list">
+                                                        {msg.functionCalls.map((fc, fIdx) => (
+                                                            <div key={fIdx} className="ai-tool-item">
+                                                                <div className="ai-tool-name">⚙️ {fc.function}</div>
+                                                                <div className="ai-tool-args">
+                                                                    {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
+                                                                </div>
                                                             </div>
-                                                            <div className="pl-1 overflow-x-auto whitespace-pre-wrap" style={{ color: 'var(--admin-text-muted)' }}>
-                                                                {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                        ))}
+                                                    </div>
+                                                </details>
                                             )}
 
-                                            <div className="text-[16px] leading-[28px] break-words ai-message-content" style={msg.role === 'user' ? {} : { color: 'var(--admin-text)', fontFamily: 'Söhne, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif' }}>
+                                            <div className="break-words ai-message-content">
                                                 {msg.role === 'user' ? (
                                                     msg.content
                                                 ) : (
