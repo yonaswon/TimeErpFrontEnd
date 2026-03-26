@@ -210,7 +210,7 @@ const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStrea
     }, [content, isStreaming]);
 
     return (
-        <div className="ai-markdown prose dark:prose-invert max-w-none break-words">
+        <div className="ai-markdown">
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{

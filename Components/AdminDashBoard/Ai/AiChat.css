@@ -298,41 +298,51 @@
     border-radius: 20px;
 }
 
-/* Dark mode overrides for user bubble */
-@media (prefers-color-scheme: dark) {
-    .ai-message-wrapper.user .ai-message-bubble {
-        background: #2f2f2f;
-        color: #ececec;
-    }
+/* Dark mode overrides — uses .dark class (matching AdminDashBoard) */
+.dark .ai-message-wrapper.user .ai-message-bubble {
+    background: #2f2f2f;
+    color: #ececec;
+}
 
-    .ai-message-wrapper.assistant .ai-message-avatar {
-        background: transparent;
-        color: #ececec;
-        border-color: rgba(255, 255, 255, 0.1);
-    }
+.dark .ai-message-wrapper.assistant .ai-message-avatar {
+    background: transparent;
+    color: #ececec;
+    border-color: rgba(255, 255, 255, 0.1);
+}
 
-    /* Dark mode tables */
-    .ai-table-wrapper {
-        background: #1a1a1a;
-        border-color: rgba(255, 255, 255, 0.08);
-    }
+/* Dark mode tables */
+.dark .ai-table-wrapper {
+    background: #1a1a1a;
+    border-color: rgba(255, 255, 255, 0.08);
+}
 
-    .ai-message-content thead th {
-        background: #222;
-        border-bottom-color: rgba(255, 255, 255, 0.1);
-    }
+.dark .ai-message-content thead th {
+    background: #222;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
 
-    .ai-message-content tbody td {
-        border-bottom-color: rgba(255, 255, 255, 0.04);
-    }
+.dark .ai-message-content tbody td {
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+}
 
-    .ai-message-content tbody tr:nth-child(even) {
-        background: rgba(255, 255, 255, 0.02);
-    }
+.dark .ai-message-content tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
 
-    .ai-message-content tbody tr:hover {
-        background: rgba(59, 130, 246, 0.08);
-    }
+.dark .ai-message-content tbody tr:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* Dark mode inline code */
+.dark .ai-inline-code {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e5e5e5;
+}
+
+/* Dark mode blockquote */
+.dark .ai-message-content blockquote {
+    border-left-color: rgba(255, 255, 255, 0.15);
+    color: #94a3b8;
 }
 
 /* ─── Collapsible Tool Calls ─────────────────────────────────────────────── */
