@@ -939,40 +939,148 @@
 
 /* ─── Responsive — Mobile ────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+
+    /* Full-screen layout — no gaps, no borders */
     .ai-chat-layout {
-        height: calc(100vh - 80px);
+        height: 100dvh;
+        height: 100vh;
         border-radius: 0;
-        border-left: none;
-        border-right: none;
+        border: none;
     }
 
+    /* Sidebar: full-screen overlay with dark backdrop */
     .ai-chat-sidebar {
-        position: absolute;
+        position: fixed;
         top: 0;
         bottom: 0;
         left: 0;
-        z-index: 100;
-        box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
+        width: 280px;
+        z-index: 200;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .ai-chat-sidebar.closed {
+        width: 0;
+        box-shadow: none;
     }
 
     .ai-close-sidebar-btn {
         display: block;
     }
 
+    /* Header: compact, properly spaced */
+    .ai-chat-header {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .ai-model-selector {
+        font-size: 12px;
+        padding: 5px 8px;
+        max-width: 120px;
+    }
+
+    /* Messages area: tighter padding, more room */
     .ai-chat-messages {
-        padding: 12px;
+        padding: 56px 10px 160px 10px;
     }
 
-    .ai-chat-input-area {
-        padding: 12px;
+    /* Message wrapper: use full width */
+    .ai-message-wrapper {
+        max-width: 100%;
+        gap: 10px;
     }
 
+    /* Message bubble: nearly full width */
     .ai-message-bubble {
-        max-width: calc(100% - 40px);
+        max-width: calc(100% - 24px);
     }
 
+    .ai-message-wrapper.user .ai-message-bubble {
+        padding: 8px 14px;
+        border-radius: 18px;
+        font-size: 15px;
+    }
+
+    .ai-message-wrapper.assistant .ai-message-bubble {
+        font-size: 15px;
+    }
+
+    /* Avatar: slightly smaller on mobile */
+    .ai-message-avatar {
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+    }
+
+    /* Input area: safe-area aware, full width */
+    .ai-chat-input-area {
+        padding: 10px 12px calc(env(safe-area-inset-bottom, 8px) + 12px) 12px;
+    }
+
+    .ai-chat-input-wrapper {
+        max-width: 100%;
+        border-radius: 22px;
+        padding: 6px 10px 6px 14px;
+    }
+
+    .ai-chat-input {
+        font-size: 16px;
+        /* prevents iOS zoom on focus */
+        min-height: 36px;
+    }
+
+    /* Suggestions: single column */
     .ai-suggestions-grid {
         grid-template-columns: 1fr;
+        padding: 0 8px;
+    }
+
+    .ai-suggestion-card {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+
+    /* Empty state: smaller on mobile */
+    .ai-chat-empty h2 {
+        font-size: 20px;
+    }
+
+    .ai-chat-empty p {
+        font-size: 13px;
+    }
+
+    /* Prevent tables and code blocks from breaking layout */
+    .ai-message-content table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+        font-size: 12px;
+    }
+
+    .ai-message-content pre {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+        font-size: 13px;
+    }
+
+    /* Tool execution blocks: compact on mobile */
+    .ai-tool-execution {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    /* Deep think toggle: smaller */
+    .ai-deep-think-toggle {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    /* Back button styling */
+    .ai-menu-btn {
+        padding: 6px;
     }
 }
 
