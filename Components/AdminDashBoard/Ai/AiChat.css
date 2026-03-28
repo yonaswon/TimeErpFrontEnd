@@ -1050,26 +1050,149 @@
         font-size: 13px;
     }
 
-    /* Prevent tables and code blocks from breaking layout */
+    /* ─── MESSAGE CONTENT: Tighter typography on mobile ─── */
+    .ai-message-content,
+    .ai-markdown {
+        font-size: 14px;
+        line-height: 1.55;
+    }
+
+    /* Paragraphs: reduce spacing */
+    .ai-message-content p {
+        margin: 0 0 0.6em 0;
+        line-height: 1.55;
+    }
+
+    /* Headings: smaller margins */
+    .ai-message-content h1,
+    .ai-markdown h1 {
+        font-size: 1.2em;
+        margin: 0.8em 0 0.4em 0;
+    }
+
+    .ai-message-content h2,
+    .ai-markdown h2 {
+        font-size: 1.1em;
+        margin: 0.7em 0 0.35em 0;
+    }
+
+    .ai-message-content h3,
+    .ai-markdown h3 {
+        font-size: 1em;
+        margin: 0.6em 0 0.3em 0;
+    }
+
+    /* Lists: reduce the excessive left padding */
+    .ai-message-content ul,
+    .ai-message-content ol {
+        padding-left: 1.2em;
+        margin: 0.3em 0 0.6em 0;
+    }
+
+    .ai-message-content li {
+        margin-bottom: 0.15em;
+        line-height: 1.5;
+        padding-left: 0.15em;
+    }
+
+    /* ─── TABLES: Mobile-friendly with wrapping ─── */
+    .ai-table-wrapper {
+        margin: 0.6em 0;
+        border-radius: 8px;
+    }
+
     .ai-message-content table {
         display: block;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         max-width: 100%;
+        font-size: 11px;
+    }
+
+    .ai-message-content thead th {
+        padding: 6px 8px;
+        font-size: 10px;
+        white-space: nowrap;
+    }
+
+    .ai-message-content tbody td {
+        padding: 5px 8px;
+        font-size: 11px;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* ─── CODE BLOCKS: Compact on mobile ─── */
+    .ai-code-block {
+        margin: 0.6em 0;
+    }
+
+    .ai-code-block-header {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+
+    .ai-code-block-body {
+        padding: 10px;
+    }
+
+    .ai-code-block-body code {
         font-size: 12px;
+        line-height: 1.4;
     }
 
     .ai-message-content pre {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         max-width: 100%;
+        font-size: 12px;
+    }
+
+    /* Inline code */
+    .ai-inline-code {
+        font-size: 0.85em;
+        padding: 1px 4px;
+    }
+
+    /* Blockquotes: less padding */
+    .ai-message-content blockquote {
+        padding: 3px 0 3px 10px;
+        margin: 0.5em 0;
         font-size: 13px;
     }
 
-    /* Tool execution blocks: compact on mobile */
-    .ai-tool-execution {
+    /* HR: less vertical space */
+    .ai-message-content hr {
+        margin: 0.8em 0;
+    }
+
+    /* Images: smaller margin */
+    .ai-message-content img {
+        margin: 4px 0;
+        border-radius: 6px;
+    }
+
+    /* ─── TOOL CALLS: Compact on mobile ─── */
+    .ai-tools-details {
+        margin-bottom: 8px;
+    }
+
+    .ai-tools-summary {
         font-size: 12px;
-        padding: 8px 12px;
+        padding: 4px 8px;
+    }
+
+    .ai-tool-item {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .ai-tool-name {
+        font-size: 11px;
+    }
+
+    .ai-tool-args {
+        font-size: 10px;
     }
 
     /* Deep think toggle: smaller */
