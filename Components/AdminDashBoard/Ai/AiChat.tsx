@@ -205,9 +205,27 @@ const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStrea
             return;
         }
 
-        // When streaming, immediately reflect changes (streaming typing effect is handled by AiChat appending chars)
-        setDisplayedContent(content);
-    }, [content, isStreaming]);
+        if (content.length > displayedContent.length) {
+            const diff = content.length - displayedContent.length;
+
+            if (diff > 500) {
+                setDisplayedContent(content);
+                return;
+            }
+
+            const timer = setTimeout(() => {
+                setDisplayedContent(prev => {
+                    // Type faster if we are far behind, minimum 1 character
+                    const charsToAdd = Math.min(diff, Math.max(1, Math.floor(diff / 5)));
+                    return content.substring(0, prev.length + charsToAdd);
+                });
+            }, 16); // ~60fps catchup
+
+            return () => clearTimeout(timer);
+        } else if (content.length < displayedContent.length) {
+            setDisplayedContent(content);
+        }
+    }, [content, displayedContent, isStreaming]);
 
     return (
         <div className="ai-markdown">
@@ -302,13 +320,13 @@ const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStrea
     );
 };
 
-export default function AiChat() {
+export default function AiChat({ onBack }: { onBack?: () => void }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
-    const [modelProvider, setModelProvider] = useState('o3-mini');
+    const [modelProvider, setModelProvider] = useState('anthropic');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [imageModal, setImageModal] = useState<string | null>(null);
@@ -595,18 +613,17 @@ export default function AiChat() {
             <div className={`ai-chat-sidebar
                 absolute md:static z-20 h-full border-r transition-transform duration-300
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-            `} style={{ background: 'var(--admin-sidebar-bg)', borderColor: 'var(--admin-border)' }}>
-                <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'var(--admin-border)' }}>
-                    <h2 className="font-semibold" style={{ color: 'var(--admin-sidebar-text)' }}>Chat History</h2>
-                    <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500 hover:text-gray-700">
-                        <X className="w-5 h-5" />
+            `} style={{ background: '#171717', borderColor: 'rgba(255,255,255,0.1)' }}>
+                <div className="flex justify-between items-center p-3 mb-2">
+                    <button onClick={() => setSidebarOpen(false)} className="text-[#ececec] hover:bg-[#2f2f2f] p-2 rounded-md transition-colors md:hidden" title="Close sidebar">
+                        <Menu className="w-5 h-5" />
                     </button>
-                    <button
-                        onClick={startNewChat}
-                        className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-full transition-colors"
-                        title="New Chat"
-                    >
-                        <Plus className="w-5 h-5" />
+                    <button onClick={startNewChat} className="flex-1 flex items-center justify-between text-[#ececec] hover:bg-[#2f2f2f] py-2 px-3 rounded-lg transition-colors font-medium text-sm" title="New Chat">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-white text-black rounded-full p-0.5"><Sparkles className="w-3.5 h-3.5" /></div>
+                            New chat
+                        </div>
+                        <Plus className="w-4 h-4" />
                     </button>
                 </div>
                 <div className="overflow-y-auto h-[calc(100%-65px)]">
@@ -614,17 +631,16 @@ export default function AiChat() {
                         <div
                             key={session.id}
                             onClick={() => loadSession(session)}
-                            className={`p-3 flex items-center gap-3 cursor-pointer border-b transition-colors`}
+                            className={`px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors rounded-lg mb-1 mx-2`}
                             style={activeSessionId === session.id
-                                ? { background: 'var(--admin-primary-light)', borderColor: 'var(--admin-border)', borderLeftWidth: '2px', borderLeftStyle: 'solid', borderLeftColor: 'var(--admin-primary)' }
-                                : { borderColor: 'var(--admin-border)', borderLeftWidth: '2px', borderLeftStyle: 'solid', borderLeftColor: 'transparent' }}
+                                ? { background: '#2f2f2f' }
+                                : { background: 'transparent' }}
                         >
-                            <MessageSquare className="w-4 h-4" style={{ color: activeSessionId === session.id ? 'var(--admin-primary)' : 'var(--admin-text-secondary)' }} />
                             <div className="flex-1 truncate text-sm">
-                                <span className={activeSessionId === session.id ? 'font-medium' : ''} style={{ color: activeSessionId === session.id ? 'var(--admin-text)' : 'var(--admin-sidebar-text)' }}>
+                                <span className={activeSessionId === session.id ? 'font-medium' : 'font-normal'} style={{ color: '#ececec' }}>
                                     {session.title || 'New Chat'}
                                 </span>
-                                <div className="text-xs" style={{ color: 'var(--admin-text-muted)' }}>{new Date(session.created_at || '').toLocaleDateString()}</div>
+                                <div className="text-xs mt-1" style={{ color: '#b4b4b4' }}>{new Date(session.created_at || '').toLocaleDateString()}</div>
                             </div>
                         </div>
                     ))}
@@ -646,45 +662,45 @@ export default function AiChat() {
             )}
 
             {/* Main chat area */}
-            <div className="ai-chat-container flex-1 flex flex-col min-w-0">
+            <div className="ai-chat-container flex-1 flex flex-col min-w-0" style={{ background: '#212121' }}>
                 {/* Header */}
-                <div className="px-6 py-4 border-b flex justify-between items-center z-10 ai-chat-header-bg" style={{ background: 'var(--admin-surface)', borderColor: 'var(--admin-border)' }}>
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setSidebarOpen(true)} className="md:hidden hover:opacity-80 transition-opacity" style={{ color: 'var(--admin-text-secondary)' }}>
+                <div className="px-4 py-3 flex justify-between items-center z-10 ai-chat-header-bg">
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setSidebarOpen(true)} className="md:hidden hover:opacity-80 transition-opacity p-2 text-[#b4b4b4]">
                             <Menu className="w-5 h-5" />
                         </button>
-                        <div className="p-2 rounded-lg shadow-sm" style={{ background: 'linear-gradient(135deg, var(--admin-primary), #8b5cf6)' }}>
-                            <Bot className="w-5 h-5" style={{ color: '#fff' }} />
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-bold tracking-tight" style={{ color: 'var(--admin-text)' }}>TimeERP Business Brain</h1>
-                            <div className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--admin-text-secondary)' }}>
-                                <span className="flex h-2 w-2 relative">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                </span>
-                                Agent Active
-                            </div>
+                        <div className="flex items-center gap-1 cursor-pointer hover:bg-[#2f2f2f] px-3 py-2 rounded-lg transition-colors">
+                            <span className="text-lg font-semibold text-[#ececec]">TimeERP AI</span>
+                            <span className="text-lg font-semibold text-[#b4b4b4]">v</span>
+                            <ChevronDown className="w-4 h-4 text-[#b4b4b4] ml-1" />
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-1.5 rounded-lg border" style={{ background: 'var(--admin-bg)', borderColor: 'var(--admin-border)' }}>
-                        <Zap className="w-4 h-4" style={{ color: 'var(--admin-primary)' }} />
+                    <div className="flex items-center gap-3">
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="text-[#ececec] text-sm font-medium hover:bg-[#2f2f2f] px-3 py-1.5 rounded-lg transition-colors border border-[rgba(255,255,255,0.1)]"
+                            >
+                                Back to Admin
+                            </button>
+                        )}
                         <select
                             value={modelProvider}
                             onChange={(e) => setModelProvider(e.target.value as any)}
-                            className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer"
-                            style={{ color: 'var(--admin-text)' }}
+                            className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
+                            style={{ backgroundImage: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                         >
-                            <option value="o3-mini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>🧠 o3-mini (Reasoning)</option>
-                            <option value="o3" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>🧠 o3 (Full Reasoning)</option>
-                            <option value="o4" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>⚡ o4 (Latest)</option>
-                            <option value="o4-mini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>💨 o4 Mini</option>
-                            <option value="openai" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>⚡ GPT-4o</option>
-                            <option value="openai-mini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>💨 GPT-4o Mini</option>
-                            <option value="anthropic" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>🟣 Claude Sonnet 4</option>
-                            <option value="gemini" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>✨ Gemini 2.5 Flash</option>
-                            <option value="gemini-pro" style={{ background: 'var(--admin-surface)', color: 'var(--admin-text)' }}>✨ Gemini 2.5 Pro</option>
+                            <option value="o3-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o3-mini</option>
+                            <option value="o3" style={{ background: '#2f2f2f', color: '#ececec' }}>o3</option>
+                            <option value="o4" style={{ background: '#2f2f2f', color: '#ececec' }}>o4</option>
+                            <option value="o4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o4 Mini</option>
+                            <option value="openai" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-4o</option>
+                            <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 (Latest)</option>
+                            <option value="openai-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-4o Mini</option>
+                            <option value="anthropic" style={{ background: '#2f2f2f', color: '#ececec' }}>Claude Sonnet 4</option>
+                            <option value="gemini" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Flash</option>
+                            <option value="gemini-pro" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Pro</option>
                         </select>
                     </div>
                 </div>
@@ -692,20 +708,19 @@ export default function AiChat() {
                 {/* Chat Messages */}
                 <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6" style={{ paddingBottom: '220px' }} ref={chatRef}>
                     {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center space-y-4 fade-in">
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: 'var(--admin-border)' }}>
-                                <Search className="w-8 h-8" style={{ color: 'var(--admin-text-secondary)' }} />
+                        <div className="h-full flex flex-col items-center justify-center space-y-4 fade-in mt-8 md:mt-16">
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white text-black mb-1">
+                                <Sparkles className="w-6 h-6" />
                             </div>
-                            <p className="text-lg font-medium" style={{ color: 'var(--admin-text)' }}>How can I help you analyze today?</p>
-                            <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-xl">
+                            <h2 className="text-2xl font-semibold text-[#ececec] mb-6">What can I help with?</h2>
+                            <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-2xl px-4">
                                 {SUGGESTION_ITEMS.map((suggestion, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => handleSuggestionClick(suggestion.text)}
-                                        className="text-xs border px-3 py-1.5 rounded-full transition-all font-medium flex items-center gap-1.5"
-                                        style={{ borderColor: 'var(--admin-border)', color: 'var(--admin-text)' }}
+                                        className="text-[13px] border border-[rgba(255,255,255,0.1)] bg-[#212121] hover:bg-[#2f2f2f] px-4 py-2 rounded-xl transition-all font-medium flex items-center gap-2 text-[#ececec]"
                                     >
-                                        <span>{suggestion.icon}</span>
+                                        <span className="opacity-70 text-lg">{suggestion.icon}</span>
                                         {suggestion.text}
                                     </button>
                                 ))}
@@ -751,16 +766,16 @@ export default function AiChat() {
                                                     (msg.content === '' && isStreamingMessage) ? (
                                                         <div className="ai-thinking">
                                                             <div className="ai-thinking-dots">
-                                                                <span style={{ backgroundColor: 'var(--admin-text)' }}></span>
-                                                                <span style={{ backgroundColor: 'var(--admin-text)' }}></span>
-                                                                <span style={{ backgroundColor: 'var(--admin-text)' }}></span>
+                                                                <span style={{ backgroundColor: '#ececec' }}></span>
+                                                                <span style={{ backgroundColor: '#ececec' }}></span>
+                                                                <span style={{ backgroundColor: '#ececec' }}></span>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <>
                                                             <TypewriterMarkdown content={msg.content} isStreaming={isStreamingMessage} />
                                                             {isStreamingMessage && (
-                                                                <span className="inline-block w-3 h-3 ml-1 rounded-full animate-bounce align-middle" style={{ backgroundColor: 'var(--admin-text-secondary)', animationDuration: '0.8s' }}></span>
+                                                                <span className="inline-block w-3 h-3 ml-2 rounded-full bg-[#ececec] align-middle" style={{ animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}></span>
                                                             )}
                                                         </>
                                                     )
@@ -776,7 +791,7 @@ export default function AiChat() {
                 </div>
 
                 {/* Input */}
-                <div className="ai-chat-input-area">
+                <div className="ai-chat-input-area" style={{ background: 'linear-gradient(180deg, transparent, #212121 20%)', paddingTop: '32px' }}>
                     {deepThinkState === 'awaiting_approval' && (
                         <div className="ai-deep-think-prompt">
                             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -792,18 +807,21 @@ export default function AiChat() {
                         </div>
                     )}
                     {error && (
-                        <div className="w-full max-w-800px mb-4">
+                        <div className="w-full max-w-[800px] mb-4">
                             <div className="ai-error-msg">
                                 <AlertCircle size={16} />
                                 {error}
                             </div>
                         </div>
                     )}
-                    <div className="ai-chat-input-wrapper">
+                    <div className="ai-chat-input-wrapper flex items-end w-full max-w-[800px] bg-[#2f2f2f] rounded-3xl border-none p-3 shadow-none focus-within:shadow-none mx-auto relative">
+                        <button className="text-[#b4b4b4] hover:text-[#ececec] p-1 ml-1 mr-2 transition-colors mb-1">
+                            <Plus size={24} strokeWidth={2.5} />
+                        </button>
                         <textarea
                             ref={textareaRef}
-                            className="ai-chat-input"
-                            placeholder="Ask about orders, finance, stock, leads..."
+                            className="flex-1 bg-transparent text-[#ececec] placeholder-[#b4b4b4] border-none focus:ring-0 resize-none max-h-[200px] outline-none my-1"
+                            placeholder="Message TimeERP AI"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
@@ -811,12 +829,15 @@ export default function AiChat() {
                             disabled={loading}
                         />
                         <button
-                            className="ai-chat-send-btn"
+                            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors mb-0.5 ml-2 ${input.trim() && !loading ? 'bg-white text-black hover:bg-gray-200' : 'bg-[#676767] text-[#2f2f2f]'}`}
                             onClick={() => sendMessage(input)}
                             disabled={!input.trim() || loading}
                         >
-                            <Send size={18} />
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="w-5 h-5 ml-0.5"><path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
                         </button>
+                    </div>
+                    <div className="text-xs text-[#b4b4b4] mt-3 text-center w-full pb-2">
+                        TimeERP AI can make mistakes. Check important info.
                     </div>
                 </div>
 

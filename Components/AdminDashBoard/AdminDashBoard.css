@@ -71,9 +71,11 @@
 
 .admin-content.ai-full-screen {
   padding: 0;
+  margin-left: 0;
   height: 100vh;
+  width: 100vw;
   overflow: hidden;
-  /* Prevent scrolling on body since AiChat handles it */
+  background-color: #212121;
 }
 
 .admin-content-header {

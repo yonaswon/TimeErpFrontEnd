@@ -4,7 +4,7 @@
 .ai-chat-layout {
     display: flex;
     height: 100vh;
-    background: var(--admin-bg);
+    background: #212121;
     overflow: hidden;
     position: relative;
     font-family: Söhne, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
@@ -15,19 +15,32 @@
     flex-direction: column;
     flex: 1;
     overflow: hidden;
-    background: var(--admin-bg);
+    background: #212121;
     position: relative;
 }
 
 /* ─── Sidebar ──────────────────────────────────────────────────────────────── */
 .ai-chat-sidebar {
     width: 260px;
-    background: var(--admin-bg);
-    border-right: 1px solid var(--admin-border);
+    background: #171717;
+    border-right: none;
     display: flex;
     flex-direction: column;
     transition: width 0.3s ease, margin-left 0.3s ease;
     flex-shrink: 0;
+}
+
+.ai-chat-sidebar ::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ai-chat-sidebar ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ai-chat-sidebar ::-webkit-scrollbar-thumb {
+    background: #3f3f3f;
+    border-radius: 6px;
 }
 
 .ai-chat-sidebar.closed {
@@ -95,13 +108,13 @@
 }
 
 .ai-chat-session-item:hover {
-    background: rgba(0, 0, 0, 0.04);
-    color: var(--admin-text);
+    background: #2f2f2f;
+    color: #ececec;
 }
 
 .ai-chat-session-item.active {
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--admin-primary);
+    background: #2f2f2f;
+    color: #ececec;
     font-weight: 500;
 }
 
@@ -213,11 +226,11 @@
     scroll-behavior: smooth;
     -ms-overflow-style: none;
     scrollbar-width: thin;
-    scrollbar-color: var(--admin-border) transparent;
+    scrollbar-color: #3f3f3f transparent;
 }
 
 .ai-chat-messages::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
 }
 
 .ai-chat-messages::-webkit-scrollbar-track {
@@ -225,8 +238,8 @@
 }
 
 .ai-chat-messages::-webkit-scrollbar-thumb {
-    background: var(--admin-border);
-    border-radius: 4px;
+    background: #3f3f3f;
+    border-radius: 6px;
 }
 
 /* ─── Message Layout — ChatGPT Style ─────────────────────────────────────── */
@@ -286,16 +299,16 @@
 /* Assistant: no background, just text */
 .ai-message-wrapper.assistant .ai-message-bubble {
     background: transparent;
-    color: var(--admin-text);
+    color: #ececec;
     padding: 0;
 }
 
 /* User: subtle gray pill */
 .ai-message-wrapper.user .ai-message-bubble {
-    background: #f4f4f4;
-    color: #0d0d0d;
+    background: #2f2f2f;
+    color: #ececec;
     padding: 10px 18px;
-    border-radius: 20px;
+    border-radius: 24px;
 }
 
 /* Dark mode overrides — uses .dark class (matching AdminDashBoard) */
@@ -360,7 +373,7 @@
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    color: var(--admin-text-secondary);
+    color: #b4b4b4;
     border-radius: 8px;
     transition: background 0.15s;
     list-style: none;
@@ -372,7 +385,7 @@
 }
 
 .ai-tools-summary:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: #2f2f2f;
 }
 
 .ai-tools-chevron {
@@ -392,17 +405,18 @@
 }
 
 .ai-tool-item {
-    border: 1px solid var(--admin-border);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 8px 10px;
-    background: var(--admin-bg);
+    background: #212121;
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     font-size: 12px;
+    color: #b4b4b4;
 }
 
 .ai-tool-name {
     font-weight: 600;
-    color: var(--admin-text);
+    color: #ececec;
     margin-bottom: 4px;
     font-size: 12px;
 }
@@ -419,7 +433,7 @@
 .ai-message-content {
     font-size: 15px;
     line-height: 1.8;
-    color: var(--admin-text);
+    color: #ececec;
     font-family: Söhne, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
     letter-spacing: -0.01em;
 }
@@ -428,7 +442,7 @@
 .ai-markdown {
     font-size: 15px;
     line-height: 1.8;
-    color: var(--admin-text);
+    color: #ececec;
 }
 
 /* ─── Headings ────────────────────────────────────────────────────────────── */
@@ -438,7 +452,7 @@
     font-weight: 700;
     margin: 1.25em 0 0.75em 0;
     line-height: 1.3;
-    color: var(--admin-text);
+    color: #ececec;
 }
 
 .ai-message-content h2,
@@ -447,7 +461,7 @@
     font-weight: 600;
     margin: 1em 0 0.5em 0;
     line-height: 1.35;
-    color: var(--admin-text);
+    color: #ececec;
 }
 
 .ai-message-content h3,
@@ -456,7 +470,7 @@
     font-weight: 600;
     margin: 1em 0 0.4em 0;
     line-height: 1.4;
-    color: var(--admin-text);
+    color: #ececec;
 }
 
 .ai-message-content h4,
@@ -465,7 +479,7 @@
     font-weight: 600;
     margin: 0.75em 0 0.3em 0;
     line-height: 1.4;
-    color: var(--admin-text);
+    color: #ececec;
 }
 
 /* ─── Paragraphs ──────────────────────────────────────────────────────────── */
@@ -485,7 +499,7 @@
 /* ─── Bold / Italic ──────────────────────────────────────────────────────── */
 .ai-message-content strong {
     font-weight: 600;
-    color: var(--admin-text);
+    color: #ececec;
 }
 
 .ai-message-content em {
@@ -728,7 +742,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: linear-gradient(180deg, transparent, var(--admin-bg) 40%);
+    background: linear-gradient(180deg, transparent, #212121 40%);
     z-index: 10;
 }
 
@@ -738,16 +752,16 @@
     align-items: flex-end;
     width: 100%;
     max-width: 768px;
-    background: var(--admin-surface);
-    border: 1px solid var(--admin-border);
+    background: #2f2f2f !important;
+    border: none !important;
     border-radius: 26px;
     padding: 8px 12px 8px 16px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s;
+    box-shadow: none !important;
+    transition: none;
 }
 
 .ai-chat-input-wrapper:focus-within {
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
+    box-shadow: none !important;
 }
 
 .ai-chat-input {

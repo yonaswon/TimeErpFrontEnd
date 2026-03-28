@@ -91,7 +91,7 @@ export default function AdminDashBoard() {
         if (activeSection === 'stock-records') return <StockRecord />;
         if (activeSection === 'material-usage') return <MaterialUsageProgress />;
         if (activeSection === 'call-logs') return <CallLogList />;
-        if (activeSection === 'ai') return <AiChat />;
+        if (activeSection === 'ai') return <AiChat onBack={() => setActiveSection('overview')} />;
 
         if (loading) {
             return (
@@ -126,21 +126,23 @@ export default function AdminDashBoard() {
             case 'stock-records':
                 return <StockRecord />;
             case 'ai':
-                return <AiChat />;
+                return <AiChat onBack={() => setActiveSection('overview')} />;
             default:
                 return <DashboardOverview data={data} />;
         }
     };
 
     return (
-        <div className="admin-dashboard">
-            <AdminSidebar
-                activeSection={activeSection}
-                onSectionChange={setActiveSection}
-                isOpen={isSidebarOpen}
-                setIsOpen={setIsSidebarOpen}
-            />
-            <main className={`admin-content ${!isSidebarOpen ? 'sidebar-collapsed' : ''} ${activeSection === 'ai' ? 'ai-full-screen' : ''}`}>
+        <div className={`admin-dashboard ${activeSection === 'ai' ? 'ai-active' : ''}`}>
+            {activeSection !== 'ai' && (
+                <AdminSidebar
+                    activeSection={activeSection}
+                    onSectionChange={setActiveSection}
+                    isOpen={isSidebarOpen}
+                    setIsOpen={setIsSidebarOpen}
+                />
+            )}
+            <main className={`admin-content ${!isSidebarOpen && activeSection !== 'ai' ? 'sidebar-collapsed' : ''} ${activeSection === 'ai' ? 'ai-full-screen' : ''}`}>
                 {activeSection !== 'ai' && (
                     <div className="admin-content-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
