@@ -48,7 +48,7 @@ const AdminMobile = ({ userData, selectedRole, onRoleSelect }: any) => {
       case "analytics":
         return <MobileAnalyticsContent />;
       case "ai":
-        return <AiChat />;
+        return <AiChat onClose={() => setActiveTab("finance")} />;
       case "profile":
         return (
           <GlobalProfile
@@ -64,11 +64,11 @@ const AdminMobile = ({ userData, selectedRole, onRoleSelect }: any) => {
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-zinc-900 flex flex-col pb-16 transition-colors duration-300 ${activeTab === 'ai' ? 'overflow-hidden h-screen' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 dark:bg-zinc-900 flex flex-col transition-colors duration-300 ${activeTab === 'ai' ? 'overflow-hidden h-screen pb-0' : 'pb-16'}`}>
       <div className={`flex-1 ${activeTab === 'ai' ? 'p-0 h-full' : 'p-3'}`}>{renderContent()}</div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 flex justify-around py-2 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-none">
+      <nav className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 flex justify-around py-2 z-20 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-none ${activeTab === 'ai' ? 'hidden' : ''}`}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;

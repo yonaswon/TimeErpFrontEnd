@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import api, { base_url } from "@/api";
-import { ChevronRight, ChevronLeft, ArrowLeft, Layers, Download, Image as ImageIcon, Activity, Package, LayoutList, LayoutGrid } from "lucide-react";
+import { ChevronRight, ChevronLeft, ArrowLeft, Layers, Download, Image as ImageIcon, Activity, Package, LayoutList, LayoutGrid, RefreshCw, BarChart3, Shapes } from "lucide-react";
 import "./ArealTimelineContent.css";
 
 // Assuming types based on existing components
@@ -23,6 +23,25 @@ interface Piece {
     cutting_files: CuttingFile[];
 }
 
+interface OrderAnalysis {
+    order_code: number;
+    accuracy: number | null;
+    shape_similarity: number | null;
+    usage: number | null;
+    dxf_width: number | null;
+    dxf_height: number | null;
+    detected_width: number | null;
+    detected_height: number | null;
+    dxf_actual_area: number | null;
+    detected_actual_area: number | null;
+    area_delta: number | null;
+    dxf_preview: string | null;
+    status: string;
+    sheet_count: number;
+    other_sheets: number[];
+    coverage_percent?: number;
+}
+
 interface CuttingFile {
     id: number;
     status: string;
@@ -30,6 +49,9 @@ interface CuttingFile {
     image: string | null;
     crv3d: string | null;
     orders: string[];
+    analysis_status?: string;
+    total_usage?: number | null;
+    order_analyses?: OrderAnalysis[];
 }
 
 interface MaterialDetail {
@@ -377,7 +399,6 @@ export default function ArealTimelineContent() {
                     <>
                         <div className="areal-timeline-scroll-area" ref={scrollAreaRef}>
                             {selectedPiece.cutting_files.map((cut, index) => {
-                                // Every cut is its own portrait card now, sliding horizontally.
                                 const isLatest = index === 0;
                                 return (
                                     <div key={cut.id} className="areal-piece-column">
@@ -436,6 +457,95 @@ export default function ArealTimelineContent() {
                                                         <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--admin-text-muted)', marginTop: 8 }}>No explicit orders.</div>
                                                     )}
                                                 </div>
+
+                                                {/* V6 Analysis Results */}
+                                                {cut.order_analyses && cut.order_analyses.length > 0 && (
+                                                    <div className="analysis-section">
+                                                        <div className="analysis-section-title">
+                                                            <BarChart3 size={12} />
+                                                            Analysis
+                                                        </div>
+                                                        {cut.order_analyses.map((oa) => (
+                                                            <div key={oa.order_code} className="analysis-order-row">
+                                                                <div className="analysis-order-header">
+                                                                    <span className="analysis-order-code">ORD-{oa.order_code}</span>
+                                                                    {oa.accuracy !== null && (
+                                                                        <span className={`analysis-accuracy-badge ${oa.accuracy >= 95 ? 'acc-excellent' :
+                                                                            oa.accuracy >= 80 ? 'acc-good' :
+                                                                                oa.accuracy >= 60 ? 'acc-fair' : 'acc-poor'
+                                                                            }`}>
+                                                                            {oa.accuracy.toFixed(1)}%
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="analysis-order-details">
+                                                                    {oa.dxf_actual_area !== null && (
+                                                                        <span className="analysis-metric">
+                                                                            <Shapes size={10} />
+                                                                            DXF: {oa.dxf_actual_area.toFixed(4)}m²
+                                                                        </span>
+                                                                    )}
+                                                                    {oa.detected_actual_area !== null && (
+                                                                        <span className="analysis-metric">
+                                                                            Det: {oa.detected_actual_area.toFixed(4)}m²
+                                                                        </span>
+                                                                    )}
+                                                                    {oa.area_delta !== null && (
+                                                                        <span className={`analysis-metric ${oa.area_delta >= 0 ? 'delta-positive' : 'delta-negative'}`}
+                                                                            style={{
+                                                                                color: oa.area_delta >= 0 ? '#22c55e' : '#ef4444',
+                                                                                fontWeight: 700
+                                                                            }}
+                                                                        >
+                                                                            {oa.area_delta >= 0 ? '+' : ''}{oa.area_delta.toFixed(4)}m²
+                                                                        </span>
+                                                                    )}
+                                                                    {oa.sheet_count > 1 && (
+                                                                        <span className="analysis-metric" style={{ color: '#3b82f6', fontWeight: 600 }}>
+                                                                            📋 In {oa.sheet_count} sheets {oa.coverage_percent !== undefined ? `(${oa.coverage_percent}% here)` : ''}
+                                                                        </span>
+                                                                    )}
+                                                                    {oa.shape_similarity !== null && (
+                                                                        <span className="analysis-metric">
+                                                                            Shape: {oa.shape_similarity.toFixed(0)}%
+                                                                        </span>
+                                                                    )}
+                                                                    {oa.usage !== null && (
+                                                                        <span className="analysis-metric">
+                                                                            Usage: {oa.usage.toFixed(1)}%
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {oa.dxf_preview && (
+                                                                    <img
+                                                                        src={resolveMediaUrl(oa.dxf_preview)}
+                                                                        alt={`DXF ORD-${oa.order_code}`}
+                                                                        className="analysis-dxf-preview"
+                                                                        onClick={() => window.open(resolveMediaUrl(oa.dxf_preview), '_blank')}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Reanalyze Button */}
+                                                <button
+                                                    className="reanalyze-btn"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            await api.post(`/api/production/cutting-files/${cut.id}/reanalyze/`);
+                                                            alert('Reanalysis triggered! Refresh in a few seconds.');
+                                                        } catch (err) {
+                                                            console.error('Reanalyze failed:', err);
+                                                            alert('Reanalysis failed.');
+                                                        }
+                                                    }}
+                                                >
+                                                    <RefreshCw size={12} />
+                                                    Reanalyze
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -443,7 +553,26 @@ export default function ArealTimelineContent() {
                             })}
                         </div>
 
-                        {/* Simple Navigation Arrows for Timeline */}
+                        {/* Average Accuracy Bar */}
+                        {(() => {
+                            const allAccuracies = selectedPiece.cutting_files
+                                .flatMap(cf => (cf.order_analyses || []).map(oa => oa.accuracy))
+                                .filter((a): a is number => a !== null);
+                            if (allAccuracies.length === 0) return null;
+                            const avg = allAccuracies.reduce((s, v) => s + v, 0) / allAccuracies.length;
+                            return (
+                                <div className="average-accuracy-bar">
+                                    <div className="avg-accuracy-label">Average Accuracy</div>
+                                    <div className="avg-accuracy-track">
+                                        <div className="avg-accuracy-fill" style={{ width: `${Math.min(avg, 100)}%` }} />
+                                    </div>
+                                    <div className={`avg-accuracy-value ${avg >= 95 ? 'acc-excellent' : avg >= 80 ? 'acc-good' : avg >= 60 ? 'acc-fair' : 'acc-poor'
+                                        }`}>{avg.toFixed(1)}%</div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Navigation Arrows */}
                         <div className="areal-timeline-nav">
                             <button className="timeline-nav-arrow" onClick={() => scrollTimeline('left')}>
                                 <ChevronLeft size={24} />

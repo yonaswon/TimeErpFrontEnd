@@ -1,6 +1,8 @@
 // CuttingFileDetailOverlay.tsx
-import { X, Download, Package, Ruler, Calendar, User, DollarSign, Clock, Play, CheckCircle, UserCheck } from 'lucide-react';
-import { CuttingFile } from '@/types/cutting';
+import { useState, useEffect } from 'react';
+import { X, Download, Package, Ruler, Calendar, User, DollarSign, Clock, Play, CheckCircle, UserCheck, BarChart3, RefreshCw, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CuttingFile, CuttingFileOrderDxf, SheetAnalysisResponse } from '@/types/cutting';
+import api from '@/api';
 
 interface CuttingFileDetailOverlayProps {
   file: CuttingFile;
@@ -10,18 +12,47 @@ interface CuttingFileDetailOverlayProps {
 
 export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingFileDetailOverlayProps) => {
   const fileName = file.crv3d.split('/').pop() || 'file.crv3d';
+  const [analysisData, setAnalysisData] = useState<SheetAnalysisResponse | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+
+  // Fetch sheet analysis data
+  useEffect(() => {
+    fetchAnalysis();
+  }, [file.id]);
+
+  const fetchAnalysis = async () => {
+    try {
+      setAnalysisLoading(true);
+      const response = await api.get(`/api/cuttingfiles/${file.id}/sheet_analysis/`);
+      setAnalysisData(response.data);
+    } catch (err) {
+      console.error('Failed to fetch analysis:', err);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const handleReanalyze = async () => {
+    try {
+      setReanalyzing(true);
+      await api.post(`/api/cuttingfiles/${file.id}/reanalyze/`);
+      // Poll for completion
+      setTimeout(fetchAnalysis, 3000);
+      setTimeout(fetchAnalysis, 8000);
+      setTimeout(fetchAnalysis, 15000);
+    } catch (err) {
+      console.error('Failed to reanalyze:', err);
+    } finally {
+      setReanalyzing(false);
+    }
+  };
 
   const handleDownload = () => {
     onDownload(file.crv3d, fileName);
   };
 
   const getStatusBadge = (status: string) => {
-    // Colors updated based on design guide:
-    // BG: #F9FAFB / #0F172A (Default)
-    // Warning (Started): #F59E0B / #FBBF24
-    // Success (Completed): #16A34A / #22C55E
-    // Primary (Assigned): #2563EB / #3B82F6
-
     const statusConfig = {
       'NOT-ASSIGNED': { bg: 'bg-[#F9FAFB] dark:bg-[#1E293B]', text: 'text-[#6B7280] dark:text-[#94A3B8]', border: 'border-[#E5E7EB] dark:border-[#334155]', label: 'Not Assigned' },
       'ASSIGNED': { bg: 'bg-[#EFF6FF] dark:bg-blue-900/30', text: 'text-[#2563EB] dark:text-[#3B82F6]', border: 'border-blue-200 dark:border-blue-800/50', label: 'Assigned' },
@@ -44,7 +75,7 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-[#FFFFFF] dark:bg-[#0F172A] rounded-[12px] max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto relative flex flex-col">
+      <div className="bg-[#FFFFFF] dark:bg-[#0F172A] rounded-[12px] max-w-5xl w-full my-8 max-h-[90vh] overflow-y-auto relative flex flex-col">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[#FFFFFF] dark:bg-[#0F172A] flex items-center justify-between p-[24px] border-b border-[#E5E7EB] dark:border-[#334155]">
           <div>
@@ -170,6 +201,17 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
             )}
           </Section>
 
+          {/* ============================================================ */}
+          {/* SHEET USAGE ANALYSIS SECTION */}
+          {/* ============================================================ */}
+          <SheetUsageAnalysis
+            file={file}
+            analysisData={analysisData}
+            analysisLoading={analysisLoading}
+            reanalyzing={reanalyzing}
+            onReanalyze={handleReanalyze}
+          />
+
           {/* Preview Image */}
           <Section title="Design Preview">
             <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
@@ -248,7 +290,378 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
   );
 };
 
-// Helper Components
+
+// ============================================================
+// SHEET USAGE ANALYSIS COMPONENT
+// ============================================================
+
+interface SheetUsageAnalysisProps {
+  file: CuttingFile;
+  analysisData: SheetAnalysisResponse | null;
+  analysisLoading: boolean;
+  reanalyzing: boolean;
+  onReanalyze: () => void;
+}
+
+const SheetUsageAnalysis = ({ file, analysisData, analysisLoading, reanalyzing, onReanalyze }: SheetUsageAnalysisProps) => {
+  const [showPrevImage, setShowPrevImage] = useState(false);
+
+  if (analysisLoading) {
+    return (
+      <Section title="Sheet Usage Analysis">
+        <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[32px] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2563EB]"></div>
+          <span className="ml-3 text-[#6B7280] dark:text-[#94A3B8]">Loading analysis...</span>
+        </div>
+      </Section>
+    );
+  }
+
+  const status = analysisData?.analysis_status || file.analysis_status;
+  const activeSelections = analysisData?.active_selections || [];
+  const historySelections = analysisData?.history_selections || [];
+  const allSelections = [...activeSelections, ...historySelections];
+  const totalUsage = analysisData?.total_usage_percentage
+    ? parseFloat(analysisData.total_usage_percentage)
+    : file.total_usage_percentage
+      ? parseFloat(file.total_usage_percentage)
+      : null;
+
+  return (
+    <Section title="Sheet Usage Analysis">
+      <div className="space-y-[16px]">
+        {/* Analysis Status Header */}
+        <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
+          <div className="flex items-center justify-between mb-[16px]">
+            <div className="flex items-center space-x-3">
+              <BarChart3 className="w-[20px] h-[20px] text-[#2563EB] dark:text-[#3B82F6]" />
+              <span className="text-[16px] font-semibold text-[#111827] dark:text-[#F1F5F9]">
+                Analysis Status
+              </span>
+              <AnalysisStatusBadge status={status} />
+            </div>
+            <button
+              onClick={onReanalyze}
+              disabled={reanalyzing}
+              className="flex items-center space-x-2 px-3 py-2 text-[14px] bg-[#EFF6FF] dark:bg-blue-900/30 text-[#2563EB] dark:text-[#3B82F6] rounded-[8px] hover:bg-[#DBEAFE] dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${reanalyzing ? 'animate-spin' : ''}`} />
+              <span>{reanalyzing ? 'Analyzing...' : 'Re-analyze'}</span>
+            </button>
+          </div>
+
+          {/* Error Display */}
+          {(analysisData?.analysis_error || file.analysis_error) && (
+            <div className="flex items-start space-x-2 p-3 bg-[#FEF2F2] dark:bg-red-900/20 rounded-[8px] border border-red-200 dark:border-red-800/30 mb-[16px]">
+              <AlertTriangle className="w-4 h-4 text-[#DC2626] dark:text-[#EF4444] mt-0.5 shrink-0" />
+              <span className="text-[14px] text-[#DC2626] dark:text-[#EF4444]">
+                {analysisData?.analysis_error || file.analysis_error}
+              </span>
+            </div>
+          )}
+
+          {/* Sheet Dimensions */}
+          {(analysisData?.sheet_width || file.sheet_width) && (
+            <div className="grid grid-cols-3 gap-[12px] mb-[16px]">
+              <div className="bg-[#F9FAFB] dark:bg-[#0F172A] rounded-[8px] p-3 text-center">
+                <div className="text-[12px] text-[#6B7280] dark:text-[#94A3B8] mb-1">Sheet Width</div>
+                <div className="text-[18px] font-bold text-[#111827] dark:text-[#F1F5F9]">
+                  {analysisData?.sheet_width || file.sheet_width} m
+                </div>
+              </div>
+              <div className="bg-[#F9FAFB] dark:bg-[#0F172A] rounded-[8px] p-3 text-center">
+                <div className="text-[12px] text-[#6B7280] dark:text-[#94A3B8] mb-1">Sheet Height</div>
+                <div className="text-[18px] font-bold text-[#111827] dark:text-[#F1F5F9]">
+                  {analysisData?.sheet_height || file.sheet_height} m
+                </div>
+              </div>
+              <div className="bg-[#F9FAFB] dark:bg-[#0F172A] rounded-[8px] p-3 text-center">
+                <div className="text-[12px] text-[#6B7280] dark:text-[#94A3B8] mb-1">Total Orders</div>
+                <div className="text-[18px] font-bold text-[#111827] dark:text-[#F1F5F9]">
+                  {activeSelections.length}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Total Usage Percentage Bar */}
+          {totalUsage !== null && (
+            <div className="mb-[8px]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[14px] font-medium text-[#111827] dark:text-[#F1F5F9]">
+                  Total Sheet Usage
+                </span>
+                <span className={`text-[20px] font-bold ${totalUsage >= 80 ? 'text-[#16A34A] dark:text-[#22C55E]'
+                  : totalUsage >= 50 ? 'text-[#F59E0B] dark:text-[#FBBF24]'
+                    : 'text-[#DC2626] dark:text-[#EF4444]'
+                  }`}>
+                  {totalUsage.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-[#E5E7EB] dark:bg-[#334155] rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${totalUsage >= 80 ? 'bg-gradient-to-r from-[#16A34A] to-[#22C55E]'
+                    : totalUsage >= 50 ? 'bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]'
+                      : 'bg-gradient-to-r from-[#DC2626] to-[#EF4444]'
+                    }`}
+                  style={{ width: `${Math.min(totalUsage, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable Image Comparison */}
+        <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-[16px] font-semibold text-[#111827] dark:text-[#F1F5F9]">
+              {showPrevImage ? 'Previous Cutting File (History)' : 'Current Cutting File'}
+            </h4>
+            {(analysisData?.previous_cutting_file?.image || file.previous_cutting_file_image) && (
+              <button
+                onClick={() => setShowPrevImage(!showPrevImage)}
+                className="flex items-center space-x-2 px-3 py-1.5 text-[13px] bg-[#F9FAFB] dark:bg-[#0F172A] text-[#6B7280] dark:text-[#94A3B8] rounded-[8px] hover:bg-[#E5E7EB] dark:hover:bg-[#334155] transition-colors border border-[#E5E7EB] dark:border-[#334155]"
+              >
+                {showPrevImage ? (
+                  <><ChevronRight className="w-4 h-4" /><span>Show Current</span></>
+                ) : (
+                  <><ChevronLeft className="w-4 h-4" /><span>Show Previous</span></>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Scrollable image container */}
+          <div className="overflow-auto max-h-[500px] border border-[#E5E7EB] dark:border-[#334155] rounded-[8px] bg-white dark:bg-[#0F172A]">
+            <img
+              src={showPrevImage
+                ? (analysisData?.previous_cutting_file?.image || file.previous_cutting_file_image || file.image)
+                : (analysisData?.image || file.image)
+              }
+              alt={showPrevImage ? "Previous cutting file" : "Current cutting file"}
+              className="w-full h-auto"
+              style={{ minWidth: '600px' }}
+            />
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center space-x-6 mt-3 text-[13px]">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded border-2 border-[#EC4899] bg-[#EC4899]/20"></div>
+              <span className="text-[#111827] dark:text-[#F1F5F9]">Active (Current Cut)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded border-2 border-[#374151] bg-[#374151]/20"></div>
+              <span className="text-[#111827] dark:text-[#F1F5F9]">History (Previous Cut)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Per-Order DXF Analysis Cards */}
+        {activeSelections.length > 0 && (
+          <div>
+            <h4 className="text-[16px] font-semibold text-[#111827] dark:text-[#F1F5F9] mb-3">
+              Active Orders ({activeSelections.length})
+            </h4>
+            <div className="space-y-[12px] max-h-[400px] overflow-y-auto pr-1">
+              {activeSelections.map((sel) => (
+                <DxfAnalysisCard key={sel.id} selection={sel} isActive={true} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {historySelections.length > 0 && (
+          <div>
+            <h4 className="text-[16px] font-semibold text-[#6B7280] dark:text-[#94A3B8] mb-3">
+              History Orders ({historySelections.length})
+            </h4>
+            <div className="space-y-[12px] max-h-[300px] overflow-y-auto pr-1">
+              {historySelections.map((sel) => (
+                <DxfAnalysisCard key={sel.id} selection={sel} isActive={false} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {allSelections.length === 0 && status !== 'PENDING' && (
+          <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-dashed border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[32px] text-center">
+            <BarChart3 className="w-10 h-10 text-[#6B7280] dark:text-[#94A3B8] mx-auto mb-3 opacity-50" />
+            <p className="text-[#6B7280] dark:text-[#94A3B8] text-[14px]">
+              No analysis data available. Click "Re-analyze" to run the analysis.
+            </p>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+};
+
+
+// ============================================================
+// DXF ANALYSIS CARD COMPONENT
+// ============================================================
+
+const DxfAnalysisCard = ({ selection, isActive }: { selection: CuttingFileOrderDxf; isActive: boolean }) => {
+  const usagePct = selection.usage_percentage ? parseFloat(selection.usage_percentage) : null;
+  const accuracyPct = selection.size_accuracy_percentage ? parseFloat(selection.size_accuracy_percentage) : null;
+
+  const borderColor = isActive
+    ? 'border-[#EC4899] dark:border-[#F472B6]'
+    : 'border-[#374151] dark:border-[#4B5563]';
+  const bgColor = isActive
+    ? 'bg-[#FDF2F8] dark:bg-pink-900/10'
+    : 'bg-[#F9FAFB] dark:bg-[#1E293B]';
+  const accentColor = isActive
+    ? 'text-[#EC4899] dark:text-[#F472B6]'
+    : 'text-[#374151] dark:text-[#9CA3AF]';
+
+  return (
+    <div className={`${bgColor} border-l-4 ${borderColor} rounded-[12px] p-[16px] border border-[#E5E7EB] dark:border-[#334155]`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          {/* Order mockup thumbnail */}
+          {selection.mockup_image ? (
+            <img
+              src={selection.mockup_image}
+              alt="Order mockup"
+              className="w-12 h-12 rounded-[8px] object-cover border border-[#E5E7EB] dark:border-[#334155]"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-[8px] bg-[#F9FAFB] dark:bg-[#0F172A] border border-[#E5E7EB] dark:border-[#334155] flex items-center justify-center">
+              <Package className="w-6 h-6 text-[#6B7280] dark:text-[#94A3B8] opacity-50" />
+            </div>
+          )}
+          <div>
+            <div className="text-[15px] font-semibold text-[#111827] dark:text-[#F1F5F9]">
+              {selection.order_name}
+            </div>
+            <div className="text-[13px] text-[#6B7280] dark:text-[#94A3B8]">
+              ORD-{selection.order_code}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className={`px-2 py-1 rounded-[6px] text-[12px] font-semibold ${accentColor} ${isActive ? 'bg-[#FCE7F3] dark:bg-pink-900/30' : 'bg-[#E5E7EB] dark:bg-[#334155]'}`}>
+            {isActive ? '● ACTIVE' : '○ HISTORY'}
+          </span>
+          <AnalysisStatusBadge status={selection.analysis_status} small />
+        </div>
+      </div>
+
+      {/* DXF Info */}
+      {selection.dxf_file_detail && (
+        <div className="text-[13px] text-[#6B7280] dark:text-[#94A3B8] mb-3">
+          DXF: {selection.dxf_file_detail.dxf.split('/').pop()}
+        </div>
+      )}
+
+      {/* Dimensions Comparison */}
+      {(selection.dxf_width || selection.detected_width) && (
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-white dark:bg-[#0F172A] rounded-[8px] p-2.5 border border-[#E5E7EB] dark:border-[#334155]">
+            <div className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] uppercase mb-1">DXF Size</div>
+            <div className="text-[14px] font-medium text-[#111827] dark:text-[#F1F5F9]">
+              {selection.dxf_width || '—'} × {selection.dxf_height || '—'}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-[#0F172A] rounded-[8px] p-2.5 border border-[#E5E7EB] dark:border-[#334155]">
+            <div className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] uppercase mb-1">Detected Size</div>
+            <div className="text-[14px] font-medium text-[#111827] dark:text-[#F1F5F9]">
+              {selection.detected_width || '—'} × {selection.detected_height || '—'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Percentage Bars */}
+      <div className="space-y-3">
+        {/* Usage Percentage */}
+        {usagePct !== null && (
+          <PercentageBar
+            label="Sheet Usage"
+            value={usagePct}
+            colorClass={
+              usagePct >= 20 ? 'bg-gradient-to-r from-[#2563EB] to-[#3B82F6]'
+                : usagePct >= 10 ? 'bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]'
+                  : 'bg-gradient-to-r from-[#6B7280] to-[#9CA3AF]'
+            }
+          />
+        )}
+
+        {/* Size Accuracy Percentage */}
+        {accuracyPct !== null && (
+          <PercentageBar
+            label="Size Accuracy"
+            value={accuracyPct}
+            colorClass={
+              accuracyPct >= 98 ? 'bg-gradient-to-r from-[#16A34A] to-[#22C55E]'
+                : accuracyPct >= 90 ? 'bg-gradient-to-r from-[#F59E0B] to-[#FBBF24]'
+                  : 'bg-gradient-to-r from-[#DC2626] to-[#EF4444]'
+            }
+            threshold={98}
+          />
+        )}
+      </div>
+
+      {/* Analysis Notes */}
+      {selection.analysis_notes && (
+        <div className="mt-2 text-[12px] text-[#6B7280] dark:text-[#94A3B8] italic">
+          {selection.analysis_notes}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+// ============================================================
+// HELPER COMPONENTS
+// ============================================================
+
+const PercentageBar = ({
+  label, value, colorClass, threshold
+}: {
+  label: string; value: number; colorClass: string; threshold?: number
+}) => (
+  <div>
+    <div className="flex items-center justify-between mb-1">
+      <span className="text-[12px] text-[#6B7280] dark:text-[#94A3B8]">{label}</span>
+      <div className="flex items-center space-x-2">
+        {threshold && value < threshold && (
+          <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B]" />
+        )}
+        <span className={`text-[14px] font-bold ${threshold
+          ? (value >= threshold ? 'text-[#16A34A] dark:text-[#22C55E]' : 'text-[#F59E0B] dark:text-[#FBBF24]')
+          : 'text-[#111827] dark:text-[#F1F5F9]'
+          }`}>
+          {value.toFixed(1)}%
+        </span>
+      </div>
+    </div>
+    <div className="w-full bg-[#E5E7EB] dark:bg-[#334155] rounded-full h-2 overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
+        style={{ width: `${Math.min(value, 100)}%` }}
+      />
+    </div>
+  </div>
+);
+
+const AnalysisStatusBadge = ({ status, small = false }: { status: string; small?: boolean }) => {
+  const config = {
+    'PENDING': { bg: 'bg-[#FEF3C7] dark:bg-amber-900/30', text: 'text-[#F59E0B] dark:text-[#FBBF24]', label: 'Pending' },
+    'COMPLETED': { bg: 'bg-[#DCFCE7] dark:bg-green-900/30', text: 'text-[#16A34A] dark:text-[#22C55E]', label: 'Completed' },
+    'FAILED': { bg: 'bg-[#FEF2F2] dark:bg-red-900/30', text: 'text-[#DC2626] dark:text-[#EF4444]', label: 'Failed' },
+  }[status] || { bg: 'bg-[#F9FAFB]', text: 'text-[#6B7280]', label: status };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-[6px] font-medium ${config.bg} ${config.text} ${small ? 'text-[11px]' : 'text-[13px]'}`}>
+      {config.label}
+    </span>
+  );
+};
+
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="w-full">
     <h3 className="text-[18px] font-semibold text-[#111827] dark:text-[#F1F5F9] mb-[16px] leading-[1.2]">{title}</h3>
@@ -266,10 +679,6 @@ const InfoRow = ({ label, value, isLast = false }: { label: string; value: React
 const OrderCard = ({ order }: { order: any }) => {
   const bom = order.boms && order.boms.length > 0 ? order.boms[0] : null;
 
-  // Custom display name according to the priority instruction logic
-  // 1: order.order_name
-  // 2: order.mockup?.name 
-  // 3: mockup_modification.name (or nested appropriately)
   const displayOrderName = order.order_name
     || order.mockup?.name
     || order.mockup_modification?.name

@@ -19,6 +19,19 @@
     position: relative;
 }
 
+.ai-chat-layout-fullscreen {
+    height: 100vh;
+    height: 100dvh;
+}
+
+/* ─── Messages Area ──────────────────────────────────────────────────────── */
+.ai-chat-messages-area {
+    padding: 16px 24px 220px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 /* ─── Sidebar ──────────────────────────────────────────────────────────────── */
 .ai-chat-sidebar {
     width: 260px;
@@ -639,6 +652,27 @@
     padding: 0;
 }
 
+/* ─── Text Callout — plain text inside code fences rendered human-readable ── */
+.ai-text-callout {
+    margin: 0.75em 0;
+    padding: 12px 16px;
+    border-left: 3px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0 8px 8px 0;
+    background: rgba(255, 255, 255, 0.04);
+    color: #ececec;
+    font-size: 14px;
+    line-height: 1.7;
+    font-family: inherit;
+}
+
+.ai-text-callout p {
+    margin: 0 0 0.3em 0;
+}
+
+.ai-text-callout p:last-child {
+    margin-bottom: 0;
+}
+
 /* ─── Blockquote ─────────────────────────────────────────────────────────── */
 .ai-message-content blockquote {
     border-left: 3px solid var(--admin-border);
@@ -948,6 +982,11 @@
         border: none;
     }
 
+    .ai-chat-layout-fullscreen {
+        height: 100vh;
+        height: 100dvh;
+    }
+
     /* Sidebar: full-screen overlay with dark backdrop */
     .ai-chat-sidebar {
         position: fixed;
@@ -980,37 +1019,48 @@
         max-width: 120px;
     }
 
-    /* Messages area: tighter padding, more room */
-    .ai-chat-messages {
-        padding: 56px 10px 160px 10px;
+    /* Messages area: edge-to-edge for mobile reading */
+    .ai-chat-messages-area {
+        padding: 8px 10px 180px 10px;
+        gap: 12px;
     }
 
-    /* Message wrapper: use full width */
+    /* Message row: left-align on mobile (no centering) */
+    .ai-message-row {
+        justify-content: flex-start;
+        padding: 4px 0;
+    }
+
+    /* Message wrapper: full width, no gap for avatar */
     .ai-message-wrapper {
         max-width: 100%;
-        gap: 10px;
+        gap: 0;
     }
 
-    /* Message bubble: nearly full width */
+    .ai-message-wrapper.assistant {
+        flex-direction: column;
+    }
+
+    /* Message bubble: full width on mobile */
     .ai-message-bubble {
-        max-width: calc(100% - 24px);
+        max-width: 100%;
     }
 
     .ai-message-wrapper.user .ai-message-bubble {
         padding: 8px 14px;
         border-radius: 18px;
         font-size: 15px;
+        max-width: 85%;
     }
 
     .ai-message-wrapper.assistant .ai-message-bubble {
         font-size: 15px;
+        width: 100%;
     }
 
-    /* Avatar: slightly smaller on mobile */
+    /* Avatar: HIDDEN on mobile — removes the left indent */
     .ai-message-avatar {
-        width: 24px;
-        height: 24px;
-        font-size: 12px;
+        display: none !important;
     }
 
     /* Input area: safe-area aware, full width */
@@ -1026,7 +1076,6 @@
 
     .ai-chat-input {
         font-size: 16px;
-        /* prevents iOS zoom on focus */
         min-height: 36px;
     }
 
@@ -1050,55 +1099,74 @@
         font-size: 13px;
     }
 
-    /* ─── MESSAGE CONTENT: Tighter typography on mobile ─── */
+    /* ─── MESSAGE CONTENT: Optimized mobile typography ─── */
     .ai-message-content,
     .ai-markdown {
-        font-size: 14px;
-        line-height: 1.55;
+        font-size: 14.5px;
+        line-height: 1.7;
+        text-align: left;
     }
 
-    /* Paragraphs: reduce spacing */
+    /* Paragraphs: comfortable spacing */
     .ai-message-content p {
-        margin: 0 0 0.6em 0;
-        line-height: 1.55;
+        margin: 0 0 0.7em 0;
+        line-height: 1.7;
     }
 
-    /* Headings: smaller margins */
+    /* Headings: clear visual hierarchy */
     .ai-message-content h1,
     .ai-markdown h1 {
-        font-size: 1.2em;
-        margin: 0.8em 0 0.4em 0;
+        font-size: 1.25em;
+        font-weight: 700;
+        margin: 1em 0 0.5em 0;
     }
 
     .ai-message-content h2,
     .ai-markdown h2 {
-        font-size: 1.1em;
-        margin: 0.7em 0 0.35em 0;
+        font-size: 1.12em;
+        font-weight: 600;
+        margin: 0.8em 0 0.4em 0;
     }
 
     .ai-message-content h3,
     .ai-markdown h3 {
-        font-size: 1em;
-        margin: 0.6em 0 0.3em 0;
+        font-size: 1.02em;
+        font-weight: 600;
+        margin: 0.7em 0 0.35em 0;
     }
 
-    /* Lists: reduce the excessive left padding */
-    .ai-message-content ul,
+    /* Lists: proper indentation for easy reading */
+    .ai-message-content ul {
+        list-style-type: disc;
+        padding-left: 1.5em;
+        margin: 0.4em 0 0.8em 0;
+    }
+
     .ai-message-content ol {
-        padding-left: 1.2em;
-        margin: 0.3em 0 0.6em 0;
+        list-style-type: decimal;
+        padding-left: 1.5em;
+        margin: 0.4em 0 0.8em 0;
     }
 
     .ai-message-content li {
-        margin-bottom: 0.15em;
-        line-height: 1.5;
-        padding-left: 0.15em;
+        margin-bottom: 0.3em;
+        line-height: 1.65;
+        padding-left: 0.2em;
     }
 
-    /* ─── TABLES: Mobile-friendly with wrapping ─── */
+    /* Nested lists: clear indentation */
+    .ai-message-content li>ul,
+    .ai-message-content li>ol {
+        margin: 0.2em 0 0.3em 0;
+        padding-left: 1.3em;
+    }
+
+    /* ─── TABLES: Dark-themed mobile tables ─── */
     .ai-table-wrapper {
         margin: 0.6em 0;
         border-radius: 8px;
+        background: #1a1a1a;
+        border-color: rgba(255, 255, 255, 0.08);
     }
 
     .ai-message-content table {
@@ -1106,20 +1174,36 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         max-width: 100%;
-        font-size: 11px;
+        font-size: 12px;
     }
 
     .ai-message-content thead th {
-        padding: 6px 8px;
+        padding: 8px 10px;
         font-size: 10px;
         white-space: nowrap;
+        background: #222;
+        color: #b4b4b4;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .ai-message-content tbody td {
-        padding: 5px 8px;
-        font-size: 11px;
+        padding: 7px 10px;
+        font-size: 12px;
         white-space: normal;
         word-break: break-word;
+        color: #ececec;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .ai-message-content tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* First column: prevent squishing of short identifiers */
+    .ai-message-content thead th:first-child,
+    .ai-message-content tbody td:first-child {
+        white-space: nowrap;
+        min-width: 65px;
     }
 
     /* ─── CODE BLOCKS: Compact on mobile ─── */
@@ -1138,14 +1222,16 @@
 
     .ai-code-block-body code {
         font-size: 12px;
-        line-height: 1.4;
+        line-height: 1.5;
+        white-space: pre-wrap !important;
+        word-break: break-word;
     }
 
     .ai-message-content pre {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow-x: hidden;
         max-width: 100%;
         font-size: 12px;
+        white-space: pre-wrap;
     }
 
     /* Inline code */
@@ -1154,11 +1240,11 @@
         padding: 1px 4px;
     }
 
-    /* Blockquotes: less padding */
+    /* Blockquotes: proper indentation */
     .ai-message-content blockquote {
-        padding: 3px 0 3px 10px;
+        padding: 4px 0 4px 12px;
         margin: 0.5em 0;
-        font-size: 13px;
+        font-size: 13.5px;
     }
 
     /* HR: less vertical space */
@@ -1195,10 +1281,46 @@
         font-size: 10px;
     }
 
+    /* ─── WIDGET COMPONENTS: Mobile responsive ─── */
+
+    /* SurveillanceAlertWidget — stack vertically */
+    .ai-message-content .my-4 {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    /* BatchReportWidget flow — stack on narrow screens */
+    .ai-message-content .flex.flex-col.md\:flex-row {
+        flex-direction: column !important;
+        gap: 12px;
+    }
+
+    .ai-message-content .min-w-\[140px\] {
+        min-width: auto;
+        width: 100%;
+    }
+
+    /* ArealMaterialGallery — constrain height */
+    .ai-message-content .min-h-\[300px\] {
+        min-height: 200px;
+    }
+
+    .ai-message-content .max-h-\[500px\] {
+        max-height: 300px;
+    }
+
     /* Deep think toggle: smaller */
     .ai-deep-think-toggle {
         padding: 4px 8px;
         font-size: 12px;
+    }
+
+    /* Deep think prompt: stack on mobile */
+    .ai-deep-think-prompt {
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 12px;
+        font-size: 13px;
     }
 
     /* Back button styling */

@@ -1,5 +1,49 @@
 // types/cutting.ts
 // Update in types/cutting.ts
+
+export interface DxfFileType {
+  id: number;
+  dxf: string;
+  date: string;
+}
+
+export interface CuttingFileOrderDxf {
+  id: number;
+  cutting_file: number;
+  order: number;
+  order_code: number;
+  order_name: string;
+  mockup_image: string | null;
+  selected_dxf: number | null;
+  dxf_file_detail: DxfFileType | null;
+  usage_percentage: string | null;
+  size_accuracy_percentage: string | null;
+  dxf_width: string | null;
+  dxf_height: string | null;
+  detected_width: string | null;
+  detected_height: string | null;
+  is_active: boolean;
+  analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  analysis_notes: string | null;
+  date: string;
+}
+
+export interface SheetAnalysisResponse {
+  cutting_file_id: number;
+  image: string | null;
+  sheet_width: string | null;
+  sheet_height: string | null;
+  total_usage_percentage: string | null;
+  analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  analysis_error: string | null;
+  previous_cutting_file: {
+    id: number;
+    image: string | null;
+  } | null;
+  active_selections: CuttingFileOrderDxf[];
+  history_selections: CuttingFileOrderDxf[];
+}
+
 export interface CuttingFile {
   id: number;
   orders: Order[];
@@ -21,6 +65,16 @@ export interface CuttingFile {
   start_date: string | null;
   complate_date: string | null;
   date: string;
+  // Sheet usage analysis fields
+  sheet_width: string | null;
+  sheet_height: string | null;
+  total_usage_percentage: string | null;
+  analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  analysis_error: string | null;
+  previous_cutting_file: number | null;
+  previous_cutting_file_image: string | null;
+  previous_cutting_file_id: number | null;
+  order_dxf_selections: CuttingFileOrderDxf[];
 }
 export interface Order {
   order_code: number;

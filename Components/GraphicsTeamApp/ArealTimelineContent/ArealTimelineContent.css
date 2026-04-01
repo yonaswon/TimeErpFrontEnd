@@ -388,14 +388,14 @@
 .areal-timeline-scroll-area {
     flex: 1;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     padding: 24px 0;
     display: flex;
     gap: 16px;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    flex-wrap: nowrap;
+    align-items: flex-start;
 }
 
 .areal-timeline-scroll-area::-webkit-scrollbar {
@@ -443,11 +443,12 @@
     background: var(--admin-surface);
     border: 1px solid var(--admin-border);
     border-radius: var(--admin-radius);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: var(--admin-shadow-sm);
     display: flex;
     flex-direction: column;
-    flex: 1;
+    max-height: calc(100vh - 200px);
 }
 
 .areal-cut-image-wrapper {
@@ -582,4 +583,162 @@
     background: var(--admin-primary-light);
     color: var(--admin-primary);
     transform: scale(0.95);
+}
+/* ==================================
+   V6 Analysis UI Styles
+   ================================== */
+
+.analysis-section {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--admin-border);
+}
+
+.analysis-section-title {
+    font-size: 11px;
+    color: var(--admin-text-secondary);
+    font-weight: 700;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.analysis-order-row {
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius-sm);
+    padding: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analysis-order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.analysis-order-code {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--admin-text);
+}
+
+.analysis-accuracy-badge {
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.acc-excellent { background: var(--admin-success); }
+.acc-good { background: var(--admin-info); }
+.acc-fair { background: var(--admin-warning); }
+.acc-poor { background: #ef4444; }
+
+.analysis-order-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: 11px;
+    color: var(--admin-text-secondary);
+}
+
+.analysis-metric {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.analysis-dxf-preview {
+    margin-top: 4px;
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    background: white;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius-sm);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.analysis-dxf-preview:hover {
+    transform: scale(1.1);
+}
+
+.reanalyze-btn {
+    margin-top: 12px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    background: var(--admin-bg);
+    border: 1px solid var(--admin-border);
+    color: var(--admin-text-secondary);
+    border-radius: var(--admin-radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reanalyze-btn:hover {
+    background: var(--admin-primary-light);
+    color: var(--admin-primary);
+    border-color: var(--admin-primary);
+}
+
+/* Average Accuracy Bar */
+.average-accuracy-bar {
+    margin: 0 16px 24px;
+    padding: 12px 16px;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    box-shadow: var(--admin-shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avg-accuracy-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--admin-text-secondary);
+    white-space: nowrap;
+}
+
+.avg-accuracy-track {
+    flex: 1;
+    height: 8px;
+    background: var(--admin-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.avg-accuracy-fill {
+    height: 100%;
+    background: var(--admin-primary);
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+.avg-accuracy-value {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--admin-radius-sm);
+    color: white;
 }

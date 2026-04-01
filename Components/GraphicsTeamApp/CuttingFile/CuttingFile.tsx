@@ -1,6 +1,6 @@
 // CuttingFile.tsx
 import { useState, useEffect } from 'react';
-import { Download, Plus, FileText, Package, Calendar, Ruler, Edit, User, Play, CheckCircle, Scissors, FileUp } from 'lucide-react';
+import { Download, Plus, FileText, Package, Calendar, Ruler, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2 } from 'lucide-react';
 import { CuttingFile, CuttingFileResponse } from '@/types/cutting';
 import api from '@/api';
 import { CuttingFileDetailOverlay } from './CuttingFileDetailOverlay';
@@ -13,27 +13,46 @@ type TopTab = 'cutting_files' | 'dxf_orders'
 export const CuttingFileComponent = () => {
   const [activeTab, setActiveTab] = useState<TopTab>('cutting_files')
   const [cuttingFiles, setCuttingFiles] = useState<CuttingFile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<CuttingFile | null>(null);
   const [editingFile, setEditingFile] = useState<CuttingFile | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
 
-  const fetchCuttingFiles = async (page: number = 1) => {
+  const fetchCuttingFiles = async (url?: string) => {
+    const isLoadMore = !!url;
     try {
-      setLoading(true);
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setInitialLoading(true);
+      }
       setError(null);
-      const response = await api.get<CuttingFileResponse>(`/api/cuttingfiles/?ordering=-date&page=${page}`);
-      setCuttingFiles(response.data.results);
-      setTotalPages(Math.ceil(response.data.count / 10));
-      setCurrentPage(page);
+      // For load-more, extract the path from the full next URL; for initial, use the default endpoint
+      let requestUrl = '/api/cuttingfiles/?ordering=-date';
+      if (url) {
+        try {
+          const parsedUrl = new URL(url);
+          requestUrl = parsedUrl.pathname + parsedUrl.search;
+        } catch {
+          requestUrl = url;
+        }
+      }
+      const response = await api.get<CuttingFileResponse>(requestUrl);
+      if (isLoadMore) {
+        setCuttingFiles(prev => [...prev, ...response.data.results]);
+      } else {
+        setCuttingFiles(response.data.results);
+      }
+      setNextPageUrl(response.data.next);
     } catch (err) {
       setError('Failed to fetch cutting files');
       console.error('Error fetching cutting files:', err);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -55,8 +74,10 @@ export const CuttingFileComponent = () => {
     }
   };
 
-  const handlePageChange = (page: number) => {
-    fetchCuttingFiles(page);
+  const handleLoadMore = () => {
+    if (nextPageUrl && !loadingMore) {
+      fetchCuttingFiles(nextPageUrl);
+    }
   };
 
   return (
@@ -105,7 +126,13 @@ export const CuttingFileComponent = () => {
             </button>
           </div>
 
-          {cuttingFiles.length === 0 ? (
+          {/* Initial Loading State */}
+          {initialLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading cutting files...</p>
+            </div>
+          ) : cuttingFiles.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -136,21 +163,23 @@ export const CuttingFileComponent = () => {
                 ))}
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center space-x-2 mt-8">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-1 rounded-lg ${currentPage === page
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+              {/* Load More Button */}
+              {nextPageUrl && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed border border-gray-200 dark:border-zinc-700"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More'
+                    )}
+                  </button>
                 </div>
               )}
             </>

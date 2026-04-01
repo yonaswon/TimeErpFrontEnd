@@ -23,7 +23,7 @@ interface ChatSession {
     messages: ChatMessage[];
 }
 
-const ArealMaterialGallery = ({ data }: { data: any }) => {
+const ArealMaterialGallery = ({ data, onImageClick }: { data: any, onImageClick?: (url: string) => void }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     if (!data || !data.cutting_sequence || data.cutting_sequence.length === 0) {
         return <div className="p-4 border border-dashed rounded-lg text-center opacity-70">No cutting files found for this material sheet.</div>;
@@ -68,7 +68,8 @@ const ArealMaterialGallery = ({ data }: { data: any }) => {
                     <img
                         src={currentCut.image_url}
                         alt="Cutting File"
-                        className="max-h-[500px] object-contain rounded shadow-sm border"
+                        className={`max-h-[500px] object-contain rounded-lg shadow-sm border ${onImageClick ? 'cursor-pointer' : ''}`}
+                        onClick={() => onImageClick && onImageClick(currentCut.image_url)}
                         style={{ borderColor: 'var(--admin-border)' }}
                     />
                 ) : (
@@ -166,19 +167,19 @@ const SurveillanceAlertWidget = ({ data }: { data: any }) => {
     }
 
     return (
-        <div className={`my-4 border rounded-xl shadow-sm p-4 flex gap-4 items-start ${severityClass}`}>
+        <div className={`my-4 border rounded-xl shadow-sm p-3 md:p-4 flex flex-col md:flex-row gap-3 md:gap-4 items-start w-full overflow-hidden break-words ${severityClass}`}>
             <div className="p-2 rounded-full bg-white dark:bg-black/20 shadow-sm shrink-0">
-                <Icon size={24} />
+                <Icon size={22} className="md:w-6 md:h-6" />
             </div>
-            <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-bold text-sm uppercase tracking-wider opacity-80">{data.alert_type || 'System Alert'}</h4>
-                    <span className="text-xs font-bold uppercase py-0.5 px-2 rounded-full bg-white dark:bg-black/20 shadow-sm">{data.severity || 'INFO'}</span>
+            <div className="flex-1 min-w-0 w-full">
+                <div className="flex flex-wrap items-center justify-between mb-1 gap-2">
+                    <h4 className="font-bold text-xs md:text-sm uppercase tracking-wider opacity-80 truncate">{data.alert_type || 'System Alert'}</h4>
+                    <span className="text-[10px] md:text-xs font-bold uppercase py-0.5 px-2 rounded-full bg-white dark:bg-black/20 shadow-sm whitespace-nowrap">{data.severity || 'INFO'}</span>
                 </div>
-                <h3 className="text-lg font-bold mb-1">{data.entity_name}</h3>
-                <p className="text-sm font-medium opacity-90 mb-2">{data.metric}</p>
+                <h3 className="text-base md:text-lg font-bold mb-1 break-words leading-tight">{data.entity_name}</h3>
+                <p className="text-xs md:text-sm font-medium opacity-90 mb-2 break-words leading-snug">{data.metric}</p>
                 {data.deviation && (
-                    <div className="inline-block mt-1 text-xs font-bold italic bg-white dark:bg-black/20 px-2 py-1 rounded shadow-sm">
+                    <div className="inline-block mt-1 text-[11px] md:text-xs font-bold italic bg-white dark:bg-black/20 px-2 py-1 rounded shadow-sm break-words max-w-full">
                         {"\u25b2"} Deviation: {data.deviation}
                     </div>
                 )}
@@ -196,7 +197,71 @@ const SUGGESTION_ITEMS = [
     { icon: '🚀', text: 'Show lead conversion analytics' },
 ];
 
-const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
+// Extract a balanced JSON object starting from a given position
+const extractJsonObject = (text: string, startIdx: number): string | null => {
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = startIdx; i < text.length; i++) {
+        const ch = text[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\' && inString) { escape = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (ch === '{') depth++;
+        if (ch === '}') { depth--; if (depth === 0) return text.substring(startIdx, i + 1); }
+    }
+    return null;
+};
+
+const preprocessWidgetJson = (content: string): string => {
+    if (!content) return content;
+
+    // Find all occurrences of {"_widget" that are NOT already inside code fences
+    const codeFenceRegex = /```[\s\S]*?```/g;
+    const fencedRanges: Array<[number, number]> = [];
+    let fenceMatch;
+    while ((fenceMatch = codeFenceRegex.exec(content)) !== null) {
+        fencedRanges.push([fenceMatch.index, fenceMatch.index + fenceMatch[0].length]);
+    }
+
+    const isInsideFence = (idx: number) => fencedRanges.some(([s, e]) => idx >= s && idx < e);
+
+    // Search for raw widget JSON objects
+    const widgetPattern = /\{\s*"(?:_widget|frontend_render_type)"\s*:/g;
+    let result = content;
+    let offset = 0;
+    let widgetMatch;
+
+    while ((widgetMatch = widgetPattern.exec(content)) !== null) {
+        if (isInsideFence(widgetMatch.index)) continue;
+
+        const jsonStr = extractJsonObject(content, widgetMatch.index);
+        if (!jsonStr) continue;
+
+        // Verify it's a valid widget JSON
+        try {
+            const parsed = JSON.parse(jsonStr);
+            if (!parsed._widget && !parsed.frontend_render_type) continue;
+        } catch { continue; }
+
+        const before = widgetMatch.index + offset;
+        const after = before + jsonStr.length;
+        const wrapped = `\n\n\`\`\`json\n${jsonStr}\n\`\`\`\n\n`;
+        result = result.substring(0, before) + wrapped + result.substring(after);
+        offset += wrapped.length - jsonStr.length;
+    }
+
+    return result;
+};
+
+// Check if content looks like actual programming code vs plain text
+const looksLikeCode = (text: string): boolean => {
+    const codeIndicators = /[{};=><\/]|function |const |let |var |import |class |def |return |if\s*\(|for\s*\(|while\s*\(|SELECT |INSERT |UPDATE |CREATE |DROP /;
+    return codeIndicators.test(text);
+};
+
+const TypewriterMarkdown = ({ content, isStreaming, onImageClick }: { content: string, isStreaming: boolean, onImageClick?: (url: string) => void }) => {
     const [displayedContent, setDisplayedContent] = useState('');
 
     useEffect(() => {
@@ -227,6 +292,8 @@ const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStrea
         }
     }, [content, displayedContent, isStreaming]);
 
+    const processedContent = preprocessWidgetJson(displayedContent);
+
     return (
         <div className="ai-markdown">
             <ReactMarkdown
@@ -239,42 +306,71 @@ const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStrea
                     tr: ({ node, ...props }) => <tr {...props} />,
                     a: ({ node, ...props }) => <a target="_blank" rel="noopener noreferrer" className="ai-link" {...props} />,
                     code: ({ node, inline, ...props }: any) => {
-                        const match = /language-(\w+)/.exec(props.className || '');
-                        const isGallery = match && match[1] === 'json' && String(props.children).includes('AREAL_MATERIAL_GALLERY');
-                        const isBatchReport = match && match[1] === 'json' && String(props.children).includes('BATCH_REPORT');
-                        const isSurveillance = match && match[1] === 'json' && String(props.children).includes('SURVEILLANCE_ALERT');
+                        const childStr = String(props.children);
+                        const langClass = props.className || '';
+                        const match = /language-(\w+)/.exec(langClass);
+                        const lang = match ? match[1] : '';
 
-                        if (isGallery) {
-                            try {
-                                const data = JSON.parse(String(props.children));
-                                return <ArealMaterialGallery data={data} />;
-                            } catch (e) {
-                                console.error("Failed to parse gallery JSON", e);
+                        // Check for widget JSON — works with or without language-json class
+                        const hasWidgetKey = childStr.includes('"_widget"') || childStr.includes('"frontend_render_type"');
+                        const isGallery = hasWidgetKey && childStr.includes('AREAL_MATERIAL_GALLERY');
+                        const isBatchReport = hasWidgetKey && childStr.includes('BATCH_REPORT');
+                        const isSurveillance = hasWidgetKey && childStr.includes('SURVEILLANCE_ALERT');
+
+                        // Try to parse widget JSON with smart extraction
+                        if (hasWidgetKey && (isGallery || isBatchReport || isSurveillance)) {
+                            // Try to extract just the JSON object from the content
+                            const matchObj = /\{\s*"(?:_widget|frontend_render_type)"\s*:/.exec(childStr);
+                            const startIdx = matchObj ? matchObj.index : -1;
+
+                            if (startIdx >= 0) {
+                                const jsonStr = extractJsonObject(childStr, startIdx);
+                                if (jsonStr) {
+                                    try {
+                                        const data = JSON.parse(jsonStr);
+                                        if (isGallery) return <ArealMaterialGallery data={data} onImageClick={onImageClick} />;
+                                        if (isBatchReport) return <BatchReportWidget data={data} />;
+                                        if (isSurveillance) return <SurveillanceAlertWidget data={data} />;
+                                    } catch (e) {
+                                        console.error("Failed to parse widget JSON", e);
+                                    }
+                                }
                             }
-                        }
-                        if (isBatchReport) {
+
+                            // Fallback: try parsing the entire string
                             try {
-                                const data = JSON.parse(String(props.children));
-                                return <BatchReportWidget data={data} />;
+                                const data = JSON.parse(childStr);
+                                if (isGallery) return <ArealMaterialGallery data={data} onImageClick={onImageClick} />;
+                                if (isBatchReport) return <BatchReportWidget data={data} />;
+                                if (isSurveillance) return <SurveillanceAlertWidget data={data} />;
                             } catch (e) {
-                                console.error("Failed to parse batch report JSON", e);
-                            }
-                        }
-                        if (isSurveillance) {
-                            try {
-                                const data = JSON.parse(String(props.children));
-                                return <SurveillanceAlertWidget data={data} />;
-                            } catch (e) {
-                                console.error("Failed to parse surveillance alert JSON", e);
+                                // Widget JSON is unrecoverable — silently hide it
+                                console.error("Widget JSON unrecoverable", e);
+                                return null;
                             }
                         }
 
-                        return inline ? (
-                            <code className="ai-inline-code" {...props} />
-                        ) : (
+                        if (inline) {
+                            return <code className="ai-inline-code" {...props} />;
+                        }
+
+                        // If the "language" is generic (code, text, empty) and content is plain text,
+                        // render as a styled callout instead of ugly monospace code block
+                        const isGenericLang = !lang || lang === 'code' || lang === 'text' || lang === 'plaintext';
+                        if (isGenericLang && !looksLikeCode(childStr)) {
+                            return (
+                                <div className="ai-text-callout">
+                                    {childStr.split('\n').map((line: string, i: number) => (
+                                        <p key={i} className={line.trim() === '' ? 'my-2' : ''}>{line}</p>
+                                    ))}
+                                </div>
+                            );
+                        }
+
+                        return (
                             <div className="ai-code-block">
                                 <div className="ai-code-block-header">
-                                    <span>{props.className?.replace('language-', '') || 'code'}</span>
+                                    <span>{lang || 'code'}</span>
                                 </div>
                                 <div className="ai-code-block-body">
                                     <code {...props} />
@@ -314,13 +410,13 @@ const TypewriterMarkdown = ({ content, isStreaming }: { content: string, isStrea
                     hr: ({ node, ...props }) => <hr {...props} />,
                 }}
             >
-                {displayedContent}
+                {processedContent}
             </ReactMarkdown>
         </div>
     );
 };
 
-export default function AiChat({ onBack }: { onBack?: () => void }) {
+export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClose?: () => void }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -328,6 +424,7 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
     const [input, setInput] = useState('');
     const [modelProvider, setModelProvider] = useState('gpt-5');
     const [loading, setLoading] = useState(false);
+    const [sessionsLoading, setSessionsLoading] = useState(true);
     const [error, setError] = useState('');
     const [imageModal, setImageModal] = useState<string | null>(null);
     const [isDeepThink, setIsDeepThink] = useState(false);
@@ -346,11 +443,14 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
 
     // Fetch sessions on mount
     const fetchSessions = async () => {
+        setSessionsLoading(true);
         try {
             const res = await api.get('/ai-agent/chat-sessions/');
             setSessions(res.data.results || res.data);
         } catch (err) {
             console.error('Failed to fetch sessions', err);
+        } finally {
+            setSessionsLoading(false);
         }
     };
 
@@ -608,7 +708,7 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
     };
 
     return (
-        <div className="ai-chat-layout h-[calc(100vh-100px)]">
+        <div className="ai-chat-layout ai-chat-layout-fullscreen">
             {/* Sidebar for chat sessions */}
             <div className={`ai-chat-sidebar
                 absolute md:static z-20 h-full border-r transition-transform duration-300
@@ -627,28 +727,37 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
                     </button>
                 </div>
                 <div className="overflow-y-auto h-[calc(100%-65px)]">
-                    {sessions.map(session => (
-                        <div
-                            key={session.id}
-                            onClick={() => loadSession(session)}
-                            className={`px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors rounded-lg mb-1 mx-2`}
-                            style={activeSessionId === session.id
-                                ? { background: '#2f2f2f' }
-                                : { background: 'transparent' }}
-                        >
-                            <div className="flex-1 truncate text-sm">
-                                <span className={activeSessionId === session.id ? 'font-medium' : 'font-normal'} style={{ color: '#ececec' }}>
-                                    {session.title || 'New Chat'}
-                                </span>
-                                <div className="text-xs mt-1" style={{ color: '#b4b4b4' }}>{new Date(session.created_at || '').toLocaleDateString()}</div>
-                            </div>
+                    {sessionsLoading ? (
+                        <div className="p-4 flex flex-col items-center gap-3">
+                            <div className="w-5 h-5 border-2 border-[#b4b4b4] border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-xs text-[#b4b4b4]">Loading chats...</span>
                         </div>
-                    ))}
-                    {sessions.length === 0 && (
-                        <div className="p-4 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
-                            <Clock className="w-5 h-5 text-gray-300" />
-                            No history yet
-                        </div>
+                    ) : (
+                        <>
+                            {sessions.map(session => (
+                                <div
+                                    key={session.id}
+                                    onClick={() => loadSession(session)}
+                                    className={`px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors rounded-lg mb-1 mx-2`}
+                                    style={activeSessionId === session.id
+                                        ? { background: '#2f2f2f' }
+                                        : { background: 'transparent' }}
+                                >
+                                    <div className="flex-1 truncate text-sm">
+                                        <span className={activeSessionId === session.id ? 'font-medium' : 'font-normal'} style={{ color: '#ececec' }}>
+                                            {session.title || 'New Chat'}
+                                        </span>
+                                        <div className="text-xs mt-1" style={{ color: '#b4b4b4' }}>{new Date(session.created_at || '').toLocaleDateString()}</div>
+                                    </div>
+                                </div>
+                            ))}
+                            {sessions.length === 0 && (
+                                <div className="p-4 text-center text-sm text-gray-500 flex flex-col items-center gap-2">
+                                    <Clock className="w-5 h-5 text-gray-300" />
+                                    No history yet
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
@@ -665,18 +774,28 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
             <div className="ai-chat-container flex-1 flex flex-col min-w-0" style={{ background: '#212121' }}>
                 {/* Header */}
                 <div className="px-4 py-3 flex justify-between items-center z-10 ai-chat-header-bg">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setSidebarOpen(true)} className="md:hidden hover:opacity-80 transition-opacity p-2 text-[#b4b4b4]">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <button onClick={() => setSidebarOpen(true)} className="md:hidden hover:opacity-80 transition-opacity p-2 text-[#b4b4b4] flex-shrink-0">
                             <Menu className="w-5 h-5" />
                         </button>
-                        <div className="flex items-center gap-1 cursor-pointer hover:bg-[#2f2f2f] px-3 py-2 rounded-lg transition-colors">
-                            <span className="text-lg font-semibold text-[#ececec]">TimeERP AI</span>
-                            <span className="text-lg font-semibold text-[#b4b4b4]">v</span>
-                            <ChevronDown className="w-4 h-4 text-[#b4b4b4] ml-1" />
+                        <div className="flex items-center gap-1 cursor-pointer hover:bg-[#2f2f2f] px-2 md:px-3 py-2 rounded-lg transition-colors min-w-0">
+                            <span className="text-base md:text-lg font-semibold text-[#ececec] truncate">TimeERP AI</span>
+                            <span className="text-base md:text-lg font-semibold text-[#b4b4b4]">v</span>
+                            <ChevronDown className="w-4 h-4 text-[#b4b4b4] ml-1 flex-shrink-0" />
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Mobile close button */}
+                        {onClose && (
+                            <button
+                                onClick={onClose}
+                                className="md:hidden text-[#ececec] hover:bg-[#2f2f2f] p-2 rounded-lg transition-colors"
+                                title="Close AI Chat"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        )}
                         {onBack && (
                             <button
                                 onClick={onBack}
@@ -688,7 +807,7 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
                         <select
                             value={modelProvider}
                             onChange={(e) => setModelProvider(e.target.value as any)}
-                            className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
+                            className="hidden md:block bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
                             style={{ backgroundImage: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                         >
                             <option value="o3-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o3-mini</option>
@@ -706,7 +825,7 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
                 </div>
 
                 {/* Chat Messages */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6" style={{ paddingBottom: '220px' }} ref={chatRef}>
+                <div className="flex-1 overflow-y-auto ai-chat-messages-area" ref={chatRef}>
                     {messages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center space-y-4 fade-in mt-8 md:mt-16">
                             <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white text-black mb-1">
@@ -836,7 +955,7 @@ export default function AiChat({ onBack }: { onBack?: () => void }) {
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="w-5 h-5 ml-0.5"><path d="M7 11L12 6L17 11M12 18V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path></svg>
                         </button>
                     </div>
-                    <div className="text-xs text-[#b4b4b4] mt-3 text-center w-full pb-2">
+                    <div className="text-xs text-[#b4b4b4] mt-3 text-center w-full pb-2 hidden md:block">
                         TimeERP AI can make mistakes. Check important info.
                     </div>
                 </div>
