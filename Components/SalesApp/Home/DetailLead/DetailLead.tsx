@@ -174,7 +174,7 @@ export default function DetailLead({ leadId, onClose }: DetailLeadProps) {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {lead.status != "CONVERTED" && <CreateOrderButton leadId={leadId} leadData={lead} />}
+            <CreateOrderButton leadId={leadId} leadData={lead} />
 
             <button
               onClick={onClose}
