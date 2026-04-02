@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes'
 import { BarChart3 } from 'lucide-react'
 import { AdminUserManager } from '../../Admin/AdminUserManager/AdminUserManager'
 import PerformanceDashboard from './PerformanceDashboard'
+import AttendanceDashboard from './AttendanceDashboard'
 
 interface GlobalProfileProps {
     user: any;
@@ -16,6 +17,7 @@ interface GlobalProfileProps {
 export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: GlobalProfileProps) => {
     const { theme, setTheme } = useTheme()
     const [showDashboard, setShowDashboard] = useState(false)
+    const [showAttendance, setShowAttendance] = useState(false)
 
     const handleLogout = () => {
         localStorage.removeItem('access_token')
@@ -75,6 +77,20 @@ export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: Gl
                     <span className="flex items-center gap-2.5">
                         <BarChart3 size={18} />
                         <span className="font-semibold text-sm">Performance Dashboard</span>
+                    </span>
+                    <span className="text-xs bg-white/20 px-2.5 py-1 rounded-md">View →</span>
+                </button>
+            </div>
+
+            {/* Attendance Dashboard Button */}
+            <div className="w-full max-w-sm px-4">
+                <button
+                    onClick={() => setShowAttendance(true)}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 rounded-lg text-left text-white transition-all flex items-center justify-between shadow-md hover:shadow-lg"
+                >
+                    <span className="flex items-center gap-2.5">
+                        <BarChart3 size={18} />
+                        <span className="font-semibold text-sm">Attendance Dashboard</span>
                     </span>
                     <span className="text-xs bg-white/20 px-2.5 py-1 rounded-md">View →</span>
                 </button>
@@ -177,6 +193,12 @@ export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: Gl
             <PerformanceDashboard
                 isOpen={showDashboard}
                 onClose={() => setShowDashboard(false)}
+            />
+
+            {/* Attendance Dashboard Sidebar */}
+            <AttendanceDashboard
+                isOpen={showAttendance}
+                onClose={() => setShowAttendance(false)}
             />
         </div>
     )

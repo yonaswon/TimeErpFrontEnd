@@ -206,7 +206,8 @@ const PerformanceDashboard = ({ isOpen, onClose }: PerformanceDashboardProps) =>
                 <div className="flex flex-wrap gap-1.5">
                     <StatPill icon={Users} value={item.total_leads} label="Leads" color="purple" />
                     <StatPill icon={Palette} value={item.mockup_requests} label="Mockups" color="blue" />
-                    <StatPill icon={Target} value={item.orders_converted} label="Converted" color="green" />
+                    <StatPill icon={Target} value={item.clients_converted} label="Client Converted" color="amber" />
+                    <StatPill icon={Target} value={item.orders_converted} label="Order Converted" color="green" />
                 </div>
                 <ScoreBar score={item.score} maxScore={maxScore} />
             </div>
@@ -371,8 +372,8 @@ const PerformanceDashboard = ({ isOpen, onClose }: PerformanceDashboardProps) =>
                                 key={p}
                                 onClick={() => handlePresetChange(p)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${preset === p
-                                        ? "bg-blue-600 text-white shadow-md"
-                                        : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-700"
+                                    ? "bg-blue-600 text-white shadow-md"
+                                    : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-700"
                                     }`}
                             >
                                 {p === "custom" && <Calendar size={10} className="inline mr-1" />}
