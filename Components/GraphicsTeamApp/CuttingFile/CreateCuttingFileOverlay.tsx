@@ -28,6 +28,18 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
     orders: false
   });
 
+  const [orderTab, setOrderTab] = useState<'Active' | 'All'>('Active');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [debouncedOrderSearchQuery, setDebouncedOrderSearchQuery] = useState('');
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedOrderSearchQuery(orderSearchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [orderSearchQuery]);
+
   // Fetch materials
   useEffect(() => {
     const fetchMaterials = async () => {
@@ -69,9 +81,18 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
       const fetchOrders = async () => {
         try {
           setLoadingStates(prev => ({ ...prev, orders: true }));
-          const response = await api.get(`/api/orders/?material=${selectedMaterial.id}&order_status=PRE-ACCEPTED,PRE-CONFIRMED&ordering=-created_at`);
+          let url = `/api/orders/?material=${selectedMaterial.id}&ordering=-created_at`;
+
+          if (orderTab === 'Active') {
+            url += `&order_status=PRE-ACCEPTED,PRE-CONFIRMED`;
+          }
+
+          if (orderTab === 'All' && debouncedOrderSearchQuery.trim() !== '') {
+            url += `&search=${encodeURIComponent(debouncedOrderSearchQuery.trim())}`;
+          }
+
+          const response = await api.get(url);
           setOrders(response.data.results);
-          setSelectedOrders([]);
         } catch (err) {
           setError('Failed to fetch orders');
         } finally {
@@ -80,6 +101,11 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
       };
       fetchOrders();
     }
+  }, [selectedEachArealMaterial, oldMaterialNumber, selectedMaterial, orderTab, debouncedOrderSearchQuery]);
+
+  // Reset selectedOrders when material changes
+  useEffect(() => {
+    setSelectedOrders([]);
   }, [selectedEachArealMaterial, oldMaterialNumber, selectedMaterial]);
 
   const handleCrv3dFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -399,16 +425,54 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
 
           {/* Step 4: Order Selection */}
           {step === 4 && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                Select Orders ({selectedOrders.length} selected)
-              </h3>
+            <div className="flex flex-col h-full">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-3 sm:space-y-0">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                  Select Orders <span className="text-sm font-normal text-gray-500">({selectedOrders.length} selected)</span>
+                </h3>
+
+                <div className="flex w-full sm:w-auto space-x-2">
+                  <div className="flex space-x-2 bg-gray-100 dark:bg-zinc-800 p-1 rounded-lg">
+                    <button
+                      onClick={() => setOrderTab('Active')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${orderTab === 'Active'
+                          ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      onClick={() => setOrderTab('All')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${orderTab === 'All'
+                          ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {orderTab === 'All' && (
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search by order code or name..."
+                    value={orderSearchQuery}
+                    onChange={(e) => setOrderSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-gray-400 dark:text-gray-200"
+                  />
+                </div>
+              )}
+
               {loadingStates.orders ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                   {orders.map((order) => {
                     const bom = order.boms[0];
                     return (
