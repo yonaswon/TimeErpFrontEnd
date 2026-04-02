@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import api from '../../../api';
 import { Bot, Send, User, AlertCircle, Sparkles, X, MessageSquare, Plus, Menu, Brain, Clock, Zap, Search, Database, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -261,7 +261,7 @@ const looksLikeCode = (text: string): boolean => {
     return codeIndicators.test(text);
 };
 
-const TypewriterMarkdown = ({ content, isStreaming, onImageClick }: { content: string, isStreaming: boolean, onImageClick?: (url: string) => void }) => {
+const TypewriterMarkdown = React.memo(({ content, isStreaming, onImageClick }: { content: string, isStreaming: boolean, onImageClick?: (url: string) => void }) => {
     const [displayedContent, setDisplayedContent] = useState('');
 
     useEffect(() => {
@@ -292,7 +292,7 @@ const TypewriterMarkdown = ({ content, isStreaming, onImageClick }: { content: s
         }
     }, [content, displayedContent, isStreaming]);
 
-    const processedContent = preprocessWidgetJson(displayedContent);
+    const processedContent = useMemo(() => preprocessWidgetJson(displayedContent), [displayedContent]);
 
     return (
         <div className="ai-markdown">
@@ -414,7 +414,69 @@ const TypewriterMarkdown = ({ content, isStreaming, onImageClick }: { content: s
             </ReactMarkdown>
         </div>
     );
-};
+});
+
+// Memoized message row — prevents re-rendering completed messages when typing
+const MessageRow = React.memo(({ msg, idx, isLastMessage, loading }: {
+    msg: ChatMessage, idx: number, isLastMessage: boolean, loading: boolean
+}) => {
+    const isStreamingMessage = isLastMessage && msg.role === 'assistant' && loading;
+
+    return (
+        <div key={idx} className="ai-message-row animate-in slide-in-from-bottom-2 duration-300">
+            <div className={`ai-message-wrapper ${msg.role}`}>
+                <div className="ai-message-avatar">
+                    {msg.role === 'assistant' && <Sparkles className="w-5 h-5" />}
+                </div>
+                <div className="ai-message-bubble">
+
+                    {msg.functionCalls && msg.functionCalls.length > 0 && (
+                        <details className="ai-tools-details">
+                            <summary className="ai-tools-summary">
+                                <Database className="w-3.5 h-3.5" />
+                                <span>Used {msg.functionCalls.length} tool{msg.functionCalls.length > 1 ? 's' : ''}</span>
+                                <ChevronDown className="w-3.5 h-3.5 ai-tools-chevron" />
+                            </summary>
+                            <div className="ai-tools-list">
+                                {msg.functionCalls.map((fc, fIdx) => (
+                                    <div key={fIdx} className="ai-tool-item">
+                                        <div className="ai-tool-name">⚙️ {fc.function}</div>
+                                        <div className="ai-tool-args">
+                                            {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </details>
+                    )}
+
+                    <div className="break-words ai-message-content">
+                        {msg.role === 'user' ? (
+                            msg.content
+                        ) : (
+                            (msg.content === '' && isStreamingMessage) ? (
+                                <div className="ai-thinking">
+                                    <div className="ai-thinking-dots">
+                                        <span style={{ backgroundColor: '#ececec' }}></span>
+                                        <span style={{ backgroundColor: '#ececec' }}></span>
+                                        <span style={{ backgroundColor: '#ececec' }}></span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <TypewriterMarkdown content={msg.content} isStreaming={isStreamingMessage} />
+                                    {isStreamingMessage && (
+                                        <span className="inline-block w-3 h-3 ml-2 rounded-full bg-[#ececec] align-middle" style={{ animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}></span>
+                                    )}
+                                </>
+                            )
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
 
 export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClose?: () => void }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -810,13 +872,13 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
                             className="hidden md:block bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
                             style={{ backgroundImage: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                         >
+                            <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4 (Default)</option>
+                            <option value="gpt-5.4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4 Mini</option>
+                            <option value="gpt-5-reasoning" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 Reasoning (Slow)</option>
+                            <option value="o4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o4 Mini</option>
+                            <option value="o4" style={{ background: '#2f2f2f', color: '#ececec' }}>o4</option>
                             <option value="o3-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o3-mini</option>
                             <option value="o3" style={{ background: '#2f2f2f', color: '#ececec' }}>o3</option>
-                            <option value="o4" style={{ background: '#2f2f2f', color: '#ececec' }}>o4</option>
-                            <option value="o4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o4 Mini</option>
-                            <option value="openai" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-4o</option>
-                            <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 (Latest)</option>
-                            <option value="openai-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-4o Mini</option>
                             <option value="anthropic" style={{ background: '#2f2f2f', color: '#ececec' }}>Claude Sonnet 4</option>
                             <option value="gemini" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Flash</option>
                             <option value="gemini-pro" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Pro</option>
@@ -846,65 +908,15 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
                             </div>
                         </div>
                     ) : (
-                        messages.map((msg, idx) => {
-                            const isLastMessage = idx === messages.length - 1;
-                            const isStreamingMessage = isLastMessage && msg.role === 'assistant' && loading;
-
-                            return (
-                                <div key={idx} className="ai-message-row animate-in slide-in-from-bottom-2 duration-300">
-                                    <div className={`ai-message-wrapper ${msg.role}`}>
-                                        <div className="ai-message-avatar">
-                                            {msg.role === 'assistant' && <Sparkles className="w-5 h-5" />}
-                                        </div>
-                                        <div className="ai-message-bubble">
-
-                                            {msg.functionCalls && msg.functionCalls.length > 0 && (
-                                                <details className="ai-tools-details">
-                                                    <summary className="ai-tools-summary">
-                                                        <Database className="w-3.5 h-3.5" />
-                                                        <span>Used {msg.functionCalls.length} tool{msg.functionCalls.length > 1 ? 's' : ''}</span>
-                                                        <ChevronDown className="w-3.5 h-3.5 ai-tools-chevron" />
-                                                    </summary>
-                                                    <div className="ai-tools-list">
-                                                        {msg.functionCalls.map((fc, fIdx) => (
-                                                            <div key={fIdx} className="ai-tool-item">
-                                                                <div className="ai-tool-name">⚙️ {fc.function}</div>
-                                                                <div className="ai-tool-args">
-                                                                    {typeof fc.args === 'object' ? JSON.stringify(fc.args, null, 2) : fc.args}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </details>
-                                            )}
-
-                                            <div className="break-words ai-message-content">
-                                                {msg.role === 'user' ? (
-                                                    msg.content
-                                                ) : (
-                                                    (msg.content === '' && isStreamingMessage) ? (
-                                                        <div className="ai-thinking">
-                                                            <div className="ai-thinking-dots">
-                                                                <span style={{ backgroundColor: '#ececec' }}></span>
-                                                                <span style={{ backgroundColor: '#ececec' }}></span>
-                                                                <span style={{ backgroundColor: '#ececec' }}></span>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <TypewriterMarkdown content={msg.content} isStreaming={isStreamingMessage} />
-                                                            {isStreamingMessage && (
-                                                                <span className="inline-block w-3 h-3 ml-2 rounded-full bg-[#ececec] align-middle" style={{ animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}></span>
-                                                            )}
-                                                        </>
-                                                    )
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })
+                        messages.map((msg, idx) => (
+                            <MessageRow
+                                key={idx}
+                                msg={msg}
+                                idx={idx}
+                                isLastMessage={idx === messages.length - 1}
+                                loading={loading}
+                            />
+                        ))
                     )}
                     <div ref={messagesEndRef} />
                 </div>
