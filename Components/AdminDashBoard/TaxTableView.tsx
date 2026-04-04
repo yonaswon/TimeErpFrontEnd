@@ -19,10 +19,12 @@ function formatDate(d: string | null) {
 
 export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurchaseClick }: Props) {
     const [rows, setRows] = useState<any[]>([]);
-    const [totals, setTotals] = useState({ income: 0, deductions: 0, withholding_tax: 0, breakdown: { purchases: 0, expenses: 0, pity_costs: 0 } });
+    const [totals, setTotals] = useState({ income: 0, expected_revenue: 0, deductions: 0, withholding_tax: 0, breakdown: { purchases: 0, expenses: 0, pity_costs: 0 } });
     const [nextPage, setNextPage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState<FinanceTableFiltersState>({ ...EMPTY_FINANCE_FILTERS, reason: 'all' }); // Using reason field to track 'type'
+    const [viewMode, setViewMode] = useState<'classic' | 'modern'>('classic');
+    const [includeExpected, setIncludeExpected] = useState(false);
+    const [filters, setFilters] = useState<FinanceTableFiltersState>({ ...EMPTY_FINANCE_FILTERS, reason: 'all' });
     const [vatPercent, setVatPercent] = useState<number>(15);
     const [isEditingVat, setIsEditingVat] = useState(false);
     const [vatInput, setVatInput] = useState('15');
@@ -73,12 +75,14 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
     const handleApply = (f: FinanceTableFiltersState) => { setFilters(f); fetchData('/api/admin/finance-tax/', f); };
     const handleReset = () => { const e = { ...EMPTY_FINANCE_FILTERS, reason: 'all' }; setFilters(e); fetchData('/api/admin/finance-tax/', e); };
 
-    const grossRevenue = totals.income;
+    const expectedRev = totals.expected_revenue || 0;
+    const grossRevenue = totals.income + (includeExpected ? expectedRev : 0);
     const baseRevenue = grossRevenue / (1 + (vatPercent / 100));
     const vatAmount = grossRevenue - baseRevenue;
     const netAmount = baseRevenue - totals.deductions;
     const profitTaxAmount = (netAmount > 0 ? netAmount : 0) * (profitTaxPercent / 100);
-    const finalProfitTaxPayable = profitTaxAmount - totals.withholding_tax;
+    const withholdingTax = totals.withholding_tax || 0;
+    const totalTaxDue = vatAmount + profitTaxAmount - withholdingTax;
 
     const saveVat = () => {
         const val = parseFloat(vatInput);
@@ -97,94 +101,201 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
     let globalIdx = 0;
 
     return (
-        <div className="orders-table-section">
-            <div style={{ padding: '0 16px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                <div className="admin-kpi-card" style={{ margin: 0 }}>
-                    <div className="kpi-label"><ArrowUpRight size={16} /> Gross Revenue</div>
-                    <div className="kpi-value">{formatBirr(grossRevenue)}</div>
-                    <div className="kpi-sub">Total Payments (Includes VAT)</div>
-                </div>
-                <div className="admin-kpi-card kpi-success" style={{ margin: 0 }}>
-                    <div className="kpi-label"><FileText size={16} /> Base Excl. VAT</div>
-                    <div className="kpi-value">{formatBirr(baseRevenue)}</div>
-                    <div className="kpi-sub">Gross Revenue ÷ (1 + VAT%)</div>
-                </div>
-                <div className="admin-kpi-card kpi-danger" style={{ margin: 0 }}>
-                    <div className="kpi-label"><ArrowDownRight size={16} /> Total Deductions</div>
-                    <div className="kpi-value">{formatBirr(totals.deductions)}</div>
-                    <div className="kpi-sub">Purchases, Expenses, Pity Costs</div>
-                </div>
-                <div className="admin-kpi-card kpi-primary" style={{ margin: 0 }}>
-                    <div className="kpi-label"><FileText size={16} /> Net Profit</div>
-                    <div className="kpi-value">{formatBirr(netAmount)}</div>
-                    <div className="kpi-sub">Base Revenue - Deductions</div>
-                </div>
-
-                <div className="admin-kpi-card kpi-warning" style={{ margin: 0 }}>
-                    <div className="kpi-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span><Calculator size={16} /> Extracted VAT</span>
-                        {!isEditingVat ? (
-                            <button onClick={() => setIsEditingVat(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.7 }}>
-                                <Edit2 size={12} /> {vatPercent}%
-                            </button>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <input
-                                    type="number"
-                                    value={vatInput}
-                                    onChange={e => setVatInput(e.target.value)}
-                                    style={{ width: '40px', padding: '2px 4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc' }}
-                                    autoFocus
-                                />
-                                <button onClick={saveVat} style={{ background: 'var(--admin-warning)', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', padding: '2px' }}><Check size={12} /></button>
-                            </div>
-                        )}
-                    </div>
-                    <div className="kpi-value">{formatBirr(vatAmount)}</div>
-                    <div className="kpi-sub">Gross Revenue - Base Revenue</div>
-                </div>
-
-                <div className="admin-kpi-card kpi-success" style={{ margin: 0 }}>
-                    <div className="kpi-label"><FileText size={16} /> Withholding Tax</div>
-                    <div className="kpi-value">{formatBirr(totals.withholding_tax)}</div>
-                    <div className="kpi-sub">Collected by Clients</div>
-                </div>
-
-                <div className="admin-kpi-card kpi-danger" style={{ margin: 0 }}>
-                    <div className="kpi-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span><Calculator size={16} /> Final Profit Tax</span>
-                        {!isEditingProfitTax ? (
-                            <button onClick={() => setIsEditingProfitTax(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.7 }}>
-                                <Edit2 size={12} /> {profitTaxPercent}%
-                            </button>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <input
-                                    type="number"
-                                    value={profitTaxInput}
-                                    onChange={e => setProfitTaxInput(e.target.value)}
-                                    style={{ width: '40px', padding: '2px 4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc' }}
-                                    autoFocus
-                                />
-                                <button onClick={saveProfitTax} style={{ background: 'var(--admin-danger)', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', padding: '2px' }}><Check size={12} /></button>
-                            </div>
-                        )}
-                    </div>
-                    <div className="kpi-value">{formatBirr(finalProfitTaxPayable > 0 ? finalProfitTaxPayable : 0)}</div>
-                    <div className="kpi-sub">Calculated Profit Tax - Withholding Tax</div>
+        <div className="orders-table-section" style={{ background: viewMode === 'modern' ? '#f8fafc' : 'transparent', minHeight: '100%', paddingBottom: '40px' }}>
+            <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <div style={{ background: '#e2e8f0', borderRadius: '8px', padding: '4px', display: 'flex', gap: '4px' }}>
+                    <button
+                        onClick={() => setViewMode('classic')}
+                        style={{ padding: '6px 12px', border: 'none', background: viewMode === 'classic' ? '#fff' : 'transparent', borderRadius: '6px', fontWeight: viewMode === 'classic' ? 600 : 400, boxShadow: viewMode === 'classic' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', transition: 'all 0.2s', fontSize: '13px' }}
+                    >Classic Cards</button>
+                    <button
+                        onClick={() => setViewMode('modern')}
+                        style={{ padding: '6px 12px', border: 'none', background: viewMode === 'modern' ? '#fff' : 'transparent', borderRadius: '6px', fontWeight: viewMode === 'modern' ? 600 : 400, boxShadow: viewMode === 'modern' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', transition: 'all 0.2s', fontSize: '13px', color: '#3b82f6' }}
+                    >Compact Ribbon</button>
                 </div>
             </div>
 
-            <FinanceTableFilters
-                filters={filters}
-                onApply={handleApply}
-                onReset={handleReset}
-                showReason
-                reasonOptions={TYPE_OPTIONS}
-                searchPlaceholder="Search tax records..."
-                hideSearch
-                hideInvoice
-            />
+            {/* TOP STATISTICS SECTION */}
+            {viewMode === 'classic' ? (
+                <div style={{ padding: '0 16px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                    <div className="admin-kpi-card" style={{ margin: 0 }}>
+                        <div className="kpi-label"><ArrowUpRight size={16} /> Gross Revenue</div>
+                        <div className="kpi-value">{formatBirr(grossRevenue)}</div>
+                        <div className="kpi-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                            <input type="checkbox" checked={includeExpected} onChange={e => setIncludeExpected(e.target.checked)} id="expRev" />
+                            <label htmlFor="expRev" style={{ cursor: 'pointer' }}>+ Expected Rev</label>
+                        </div>
+                    </div>
+                    <div className="admin-kpi-card kpi-success" style={{ margin: 0 }}>
+                        <div className="kpi-label"><FileText size={16} /> Expected Revenue</div>
+                        <div className="kpi-value">{formatBirr(expectedRev)}</div>
+                        <div className="kpi-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                            Unpaid Invoicable Orders
+                        </div>
+                    </div>
+                    <div className="admin-kpi-card kpi-success" style={{ margin: 0 }}>
+                        <div className="kpi-label"><FileText size={16} /> Base Excl. VAT</div>
+                        <div className="kpi-value">{formatBirr(baseRevenue)}</div>
+                        <div className="kpi-sub">Gross Revenue ÷ (1 + VAT%)</div>
+                    </div>
+                    <div className="admin-kpi-card kpi-danger" style={{ margin: 0 }}>
+                        <div className="kpi-label"><ArrowDownRight size={16} /> Total Deductions</div>
+                        <div className="kpi-value">{formatBirr(totals.deductions)}</div>
+                        <div className="kpi-sub">Purchases, Expenses, Pity Costs</div>
+                    </div>
+                    <div className="admin-kpi-card kpi-primary" style={{ margin: 0 }}>
+                        <div className="kpi-label"><FileText size={16} /> Net Profit</div>
+                        <div className="kpi-value">{formatBirr(netAmount)}</div>
+                        <div className="kpi-sub">Base Revenue - Deductions</div>
+                    </div>
+
+                    <div className="admin-kpi-card kpi-warning" style={{ margin: 0 }}>
+                        <div className="kpi-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span><Calculator size={16} /> Extracted VAT</span>
+                            {!isEditingVat ? (
+                                <button onClick={() => setIsEditingVat(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.7 }}>
+                                    <Edit2 size={12} /> {vatPercent}%
+                                </button>
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="number"
+                                        value={vatInput}
+                                        onChange={e => setVatInput(e.target.value)}
+                                        style={{ width: '40px', padding: '2px 4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                        autoFocus
+                                    />
+                                    <button onClick={saveVat} style={{ background: 'var(--admin-warning)', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', padding: '2px' }}><Check size={12} /></button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="kpi-value">{formatBirr(vatAmount)}</div>
+                        <div className="kpi-sub">Gross Revenue - Base Revenue</div>
+                    </div>
+
+                    <div className="admin-kpi-card kpi-success" style={{ margin: 0 }}>
+                        <div className="kpi-label"><FileText size={16} /> Withholding Tax</div>
+                        <div className="kpi-value">{formatBirr(totals.withholding_tax)}</div>
+                        <div className="kpi-sub">Collected by Clients</div>
+                    </div>
+
+                    <div className="admin-kpi-card kpi-danger" style={{ margin: 0 }}>
+                        <div className="kpi-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span><Calculator size={16} /> Profit Tax</span>
+                            {!isEditingProfitTax ? (
+                                <button onClick={() => setIsEditingProfitTax(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.7 }}>
+                                    <Edit2 size={12} /> {profitTaxPercent}%
+                                </button>
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input
+                                        type="number"
+                                        value={profitTaxInput}
+                                        onChange={e => setProfitTaxInput(e.target.value)}
+                                        style={{ width: '40px', padding: '2px 4px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                        autoFocus
+                                    />
+                                    <button onClick={saveProfitTax} style={{ background: 'var(--admin-danger)', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', padding: '2px' }}><Check size={12} /></button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="kpi-value">{formatBirr(profitTaxAmount)}</div>
+                        <div className="kpi-sub">Calculated {profitTaxPercent}% on Net Profit</div>
+                    </div>
+
+                    {/* NEW TOTAL CARD */}
+                    <div className="admin-kpi-card" style={{ margin: 0, background: '#1e293b', color: '#fff' }}>
+                        <div className="kpi-label" style={{ color: '#cbd5e1' }}><Calculator size={16} /> Total Tax Due</div>
+                        <div className="kpi-value" style={{ color: '#fff' }}>{formatBirr(totalTaxDue)}</div>
+                        <div className="kpi-sub" style={{ color: '#94a3b8' }}>VAT + Profit Tax - Withholding</div>
+                    </div>
+                </div>
+            ) : (
+                <div style={{ padding: '0 16px 24px' }}>
+                    <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px 24px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Gross Revenue</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatBirr(grossRevenue)}</div>
+                                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <input type="checkbox" checked={includeExpected} onChange={e => setIncludeExpected(e.target.checked)} style={{ width: '12px', height: '12px' }} id="expRevM" />
+                                    <label htmlFor="expRevM" style={{ cursor: 'pointer' }}>+ Exp. ({formatBirr(expectedRev)})</label>
+                                </div>
+                            </div>
+                            <div style={{ width: '1px', height: '40px', background: '#e2e8f0' }}></div>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Base (ex VAT)</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatBirr(baseRevenue)}</div>
+                            </div>
+                            <div style={{ width: '1px', height: '40px', background: '#e2e8f0' }}></div>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Total Deductions</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#ef4444' }}>-{formatBirr(totals.deductions)}</div>
+                            </div>
+                            <div style={{ width: '1px', height: '40px', background: '#e2e8f0' }}></div>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Net Profit</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981' }}>{formatBirr(netAmount)}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                                    Extract VAT
+                                    {!isEditingVat ? (
+                                        <button onClick={() => setIsEditingVat(true)} style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: 'bold', marginLeft: '6px', cursor: 'pointer' }}>{vatPercent}% <Edit2 size={10} style={{ display: 'inline' }} /></button>
+                                    ) : (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
+                                            <input type="number" value={vatInput} onChange={e => setVatInput(e.target.value)} style={{ width: '30px', padding: '2px', fontSize: '10px', color: 'black', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                            <button onClick={saveVat} style={{ background: '#3b82f6', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '4px' }}><Check size={10} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatBirr(vatAmount)}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Withholding Tax</div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatBirr(totals.withholding_tax)}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                                    Profit Tax
+                                    {!isEditingProfitTax ? (
+                                        <button onClick={() => setIsEditingProfitTax(true)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', marginLeft: '6px', cursor: 'pointer' }}>{profitTaxPercent}% <Edit2 size={10} style={{ display: 'inline' }} /></button>
+                                    ) : (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
+                                            <input type="number" value={profitTaxInput} onChange={e => setProfitTaxInput(e.target.value)} style={{ width: '30px', padding: '2px', fontSize: '10px', color: 'black', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                                            <button onClick={saveProfitTax} style={{ background: '#ef4444', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '4px', padding: '2px' }}><Check size={10} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatBirr(profitTaxAmount)}</div>
+                            </div>
+                            <div style={{ marginLeft: 'auto', background: '#1e293b', padding: '10px 24px', borderRadius: '8px', color: '#fff' }}>
+                                <div style={{ fontSize: '11px', color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                                    Total Tax Due
+                                </div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{formatBirr(totalTaxDue)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* UNIFIED TABLE SECTION */}
+            <div style={{ padding: '0 16px', marginBottom: '24px' }}>
+                <FinanceTableFilters
+                    filters={filters}
+                    onApply={handleApply}
+                    onReset={handleReset}
+                    showReason
+                    reasonOptions={TYPE_OPTIONS}
+                    searchPlaceholder="Search tax records..."
+                    hideSearch={viewMode === 'modern'} // Clean up modern view slightly
+                    hideInvoice
+                />
+            </div>
 
             <div className="orders-table-wrap">
                 <table className="orders-excel-table">
@@ -231,19 +342,21 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
             </div>
 
             {loading && (
-                <div className="admin-loading">
-                    <div className="admin-spinner" /> Loading...
+                <div className="admin-loading" style={{ marginTop: '24px' }}>
+                    <div className="admin-spinner" /> Loading records...
                 </div>
             )}
 
             {nextPage && !loading && (
-                <div className="admin-load-more">
-                    <button onClick={() => fetchData(nextPage!, filters, true)}>Load More</button>
+                <div className="admin-load-more" style={{ marginTop: '32px' }}>
+                    <button onClick={() => fetchData(nextPage!, filters, true)} style={{ padding: '8px 24px' }}>Load More Records</button>
                 </div>
             )}
 
             {!loading && rows.length === 0 && (
-                <div className="admin-empty">No invoice-backed records found for this period</div>
+                <div className="admin-empty" style={{ marginTop: '24px' }}>
+                    No invoice-backed records found for this period
+                </div>
             )}
         </div>
     );
