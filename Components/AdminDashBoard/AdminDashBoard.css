@@ -3963,3 +3963,119 @@
     gap: 4px;
   }
 }
+
+/* ========================
+   Finance Tables Section
+   ======================== */
+.ft-section {
+  margin-top: 24px;
+}
+
+.ft-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 16px;
+  border-bottom: 2px solid var(--admin-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ft-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ft-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  font-family: var(--admin-font);
+}
+
+.ft-tab:hover {
+  color: var(--admin-text);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.ft-tab.active {
+  color: var(--admin-primary);
+  border-bottom-color: var(--admin-primary);
+}
+
+.ft-content {
+  padding-top: 8px;
+}
+
+/* Group header rows */
+.ft-group-header td {
+  padding: 8px 12px !important;
+  background: rgba(59, 130, 246, 0.06) !important;
+  border-bottom: 1px solid var(--admin-border) !important;
+}
+
+.ft-group-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--admin-text);
+  margin-right: 12px;
+}
+
+.ft-group-count {
+  font-size: 12px;
+  color: var(--admin-text-muted);
+  font-weight: 500;
+}
+
+/* Finance inner tables */
+.fin-inner-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fin-inner-table thead th {
+  background: var(--admin-surface);
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.fin-inner-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--admin-border);
+  vertical-align: middle;
+}
+
+.fin-inner-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive finance tables */
+@media (max-width: 640px) {
+  .ft-tabs {
+    padding: 0 8px;
+  }
+
+  .ft-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}

@@ -153,7 +153,7 @@ export default function AdminDashBoard() {
                         </div>
                     </div>
                 )}
-                {activeSection !== 'ai' && activeSection !== 'orders' && (
+                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && (
                     <FilterBar
                         filters={filters}
                         onApply={handleApplyFilters}
