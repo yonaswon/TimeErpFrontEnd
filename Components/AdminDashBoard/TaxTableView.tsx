@@ -103,14 +103,14 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
     return (
         <div className="orders-table-section" style={{ background: viewMode === 'modern' ? '#f8fafc' : 'transparent', minHeight: '100%', paddingBottom: '40px' }}>
             <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                <div style={{ background: '#e2e8f0', borderRadius: '8px', padding: '4px', display: 'flex', gap: '4px' }}>
+                <div className="admin-kpi-card" style={{ margin: 0, padding: '4px', display: 'flex', gap: '4px', borderRadius: '8px', alignItems: 'center' }}>
                     <button
                         onClick={() => setViewMode('classic')}
-                        style={{ padding: '6px 12px', border: 'none', background: viewMode === 'classic' ? '#fff' : 'transparent', borderRadius: '6px', fontWeight: viewMode === 'classic' ? 600 : 400, boxShadow: viewMode === 'classic' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', transition: 'all 0.2s', fontSize: '13px' }}
+                        style={{ padding: '6px 12px', border: 'none', background: viewMode === 'classic' ? '#3b82f6' : 'transparent', color: viewMode === 'classic' ? '#fff' : 'inherit', borderRadius: '6px', fontWeight: viewMode === 'classic' ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s', fontSize: '13px', opacity: viewMode === 'classic' ? 1 : 0.7 }}
                     >Classic Cards</button>
                     <button
                         onClick={() => setViewMode('modern')}
-                        style={{ padding: '6px 12px', border: 'none', background: viewMode === 'modern' ? '#fff' : 'transparent', borderRadius: '6px', fontWeight: viewMode === 'modern' ? 600 : 400, boxShadow: viewMode === 'modern' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', cursor: 'pointer', transition: 'all 0.2s', fontSize: '13px', color: '#3b82f6' }}
+                        style={{ padding: '6px 12px', border: 'none', background: viewMode === 'modern' ? '#3b82f6' : 'transparent', color: viewMode === 'modern' ? '#fff' : 'inherit', borderRadius: '6px', fontWeight: viewMode === 'modern' ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s', fontSize: '13px', opacity: viewMode === 'modern' ? 1 : 0.7 }}
                     >Compact Ribbon</button>
                 </div>
             </div>
@@ -215,7 +215,7 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                     <div className="admin-kpi-card" style={{ margin: 0, padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: 'none', width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(150, 150, 150, 0.2)', paddingBottom: '16px' }}>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Gross Revenue</div>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Gross Revenue</div>
                                 <div className="kpi-value" style={{ fontSize: '1.25rem' }}>{formatBirr(grossRevenue)}</div>
                                 <div className="kpi-sub" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <input type="checkbox" checked={includeExpected} onChange={e => setIncludeExpected(e.target.checked)} style={{ width: '12px', height: '12px' }} id="expRevM" />
@@ -224,24 +224,24 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                             </div>
                             <div style={{ width: '1px', height: '40px', background: 'rgba(150, 150, 150, 0.2)' }}></div>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Base (ex VAT)</div>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Base (ex VAT)</div>
                                 <div className="kpi-value" style={{ fontSize: '1.25rem' }}>{formatBirr(baseRevenue)}</div>
                             </div>
                             <div style={{ width: '1px', height: '40px', background: 'rgba(150, 150, 150, 0.2)' }}></div>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Total Deductions</div>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Total Deductions</div>
                                 <div className="kpi-value" style={{ fontSize: '1.25rem', color: '#ef4444' }}>-{formatBirr(totals.deductions)}</div>
                             </div>
                             <div style={{ width: '1px', height: '40px', background: 'rgba(150, 150, 150, 0.2)' }}></div>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Net Profit</div>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Net Profit</div>
                                 <div className="kpi-value" style={{ fontSize: '1.5rem', color: '#10b981' }}>{formatBirr(netAmount)}</div>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
                                     Extract VAT
                                     {!isEditingVat ? (
                                         <button onClick={() => setIsEditingVat(true)} style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: 'bold', marginLeft: '6px', cursor: 'pointer' }}>{vatPercent}% <Edit2 size={10} style={{ display: 'inline' }} /></button>
@@ -255,11 +255,11 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                                 <div className="kpi-value" style={{ fontSize: '1.25rem' }}>{formatBirr(vatAmount)}</div>
                             </div>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Withholding Tax</div>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Withholding Tax</div>
                                 <div className="kpi-value" style={{ fontSize: '1.25rem' }}>{formatBirr(totals.withholding_tax)}</div>
                             </div>
                             <div>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
                                     Profit Tax
                                     {!isEditingProfitTax ? (
                                         <button onClick={() => setIsEditingProfitTax(true)} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', marginLeft: '6px', cursor: 'pointer' }}>{profitTaxPercent}% <Edit2 size={10} style={{ display: 'inline' }} /></button>
@@ -273,7 +273,7 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                                 <div className="kpi-value" style={{ fontSize: '1.25rem' }}>{formatBirr(profitTaxAmount)}</div>
                             </div>
                             <div style={{ marginLeft: 'auto', background: 'rgba(239, 68, 68, 0.1)', padding: '10px 24px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                                <div className="kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', color: '#ef4444' }}>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', color: '#ef4444' }}>
                                     Total Tax Due
                                 </div>
                                 <div className="kpi-value" style={{ fontSize: '1.5rem', color: '#ef4444' }}>{formatBirr(totalTaxDue)}</div>
