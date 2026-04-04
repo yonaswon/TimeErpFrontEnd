@@ -101,7 +101,7 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
     let globalIdx = 0;
 
     return (
-        <div className="orders-table-section" style={{ background: viewMode === 'modern' ? '#f8fafc' : 'transparent', minHeight: '100%', paddingBottom: '40px' }}>
+        <div className="orders-table-section" style={{ minHeight: '100%', paddingBottom: '40px' }}>
             <div style={{ padding: '16px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <div className="admin-kpi-card" style={{ margin: 0, padding: '4px', display: 'flex', gap: '4px', borderRadius: '8px', alignItems: 'center' }}>
                     <button
