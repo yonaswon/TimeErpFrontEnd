@@ -5,6 +5,7 @@ import PaymentsTableView from './PaymentsTableView';
 import MaintenanceTableView from './MaintenanceTableView';
 import PurchaseTableView from './PurchaseTableView';
 import PityCostTableView from './PityCostTableView';
+import AdjustmentInvoiceTableView from './AdjustmentInvoiceTableView';
 import FinanceGeneralTab from './FinanceGeneralTab';
 import TaxTableView from './TaxTableView';
 import { DashboardData } from './types';
@@ -25,6 +26,7 @@ const TABS = [
     { id: 'maintenance', label: 'Maintenance', icon: Wrench },
     { id: 'purchases', label: 'Purchases', icon: ShoppingBag },
     { id: 'pity_costs', label: 'Pity Costs', icon: AlertTriangle },
+    { id: 'adjustment_invoices', label: 'Adjustment Invoices', icon: Package },
 ];
 
 export default function FinanceTablesSection({ data, onSelectContainer, onSelectOrder, onPurchaseClick }: Props) {
@@ -98,6 +100,11 @@ export default function FinanceTablesSection({ data, onSelectContainer, onSelect
                     <PityCostTableView
                         onSelectContainer={onSelectContainer}
                         onPurchaseClick={onPurchaseClick}
+                    />
+                )}
+                {activeTab === 'adjustment_invoices' && (
+                    <AdjustmentInvoiceTableView
+                        onSelectContainer={onSelectContainer}
                     />
                 )}
             </div>

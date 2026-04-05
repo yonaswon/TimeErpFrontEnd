@@ -19,7 +19,7 @@ function formatDate(d: string | null) {
 
 export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurchaseClick }: Props) {
     const [rows, setRows] = useState<any[]>([]);
-    const [totals, setTotals] = useState({ income: 0, expected_revenue: 0, deductions: 0, withholding_tax: 0, breakdown: { purchases: 0, expenses: 0, pity_costs: 0 } });
+    const [totals, setTotals] = useState({ income: 0, expected_revenue: 0, deductions: 0, withholding_tax: 0, breakdown: { purchases: 0, expenses: 0, pity_costs: 0, adjustment_invoices: 0 } });
     const [nextPage, setNextPage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'classic' | 'modern'>('modern');
@@ -39,6 +39,7 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
         { value: 'purchase', label: 'Purchases' },
         { value: 'expense', label: 'Expenses' },
         { value: 'pity_cost', label: 'Pity Costs' },
+        { value: 'adjustment', label: 'Adjustment Invoices' },
     ];
 
     const fetchData = useCallback(async (url: string, currentFilters: FinanceTableFiltersState, append = false) => {
@@ -141,7 +142,12 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                     <div className="admin-kpi-card kpi-danger" style={{ margin: 0 }}>
                         <div className="kpi-label"><ArrowDownRight size={16} /> Total Deductions</div>
                         <div className="kpi-value">{formatBirr(totals.deductions)}</div>
-                        <div className="kpi-sub">Purchases, Expenses, Pity Costs</div>
+                        <div className="kpi-sub">Purchases, Expenses, Pity Costs, Adjustments</div>
+                    </div>
+                    <div className="admin-kpi-card kpi-danger" style={{ margin: 0 }}>
+                        <div className="kpi-label"><FileText size={16} /> Adjustment Invoices</div>
+                        <div className="kpi-value">{formatBirr(totals?.breakdown?.adjustment_invoices || 0)}</div>
+                        <div className="kpi-sub">Total recorded adjustments</div>
                     </div>
                     <div className="admin-kpi-card kpi-primary" style={{ margin: 0 }}>
                         <div className="kpi-label"><FileText size={16} /> Net Profit</div>
@@ -234,6 +240,11 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                             </div>
                             <div style={{ width: '1px', height: '40px', background: 'rgba(150, 150, 150, 0.2)' }}></div>
                             <div>
+                                <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Adjustment Invoices</div>
+                                <div className="kpi-value" style={{ fontSize: '1.25rem', color: '#ef4444' }}>{formatBirr(totals?.breakdown?.adjustment_invoices || 0)}</div>
+                            </div>
+                            <div style={{ width: '1px', height: '40px', background: 'rgba(150, 150, 150, 0.2)' }}></div>
+                            <div>
                                 <div className="kpi-label" style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Net Profit</div>
                                 <div className="kpi-value" style={{ fontSize: '1.5rem', color: '#10b981' }}>{formatBirr(netAmount)}</div>
                             </div>
@@ -313,7 +324,7 @@ export default function TaxTableView({ onSelectContainer, onSelectOrder, onPurch
                     <tbody>
                         {rows.map((row) => {
                             globalIdx++;
-                            const isIncome = row.record_type === 'payment';
+                            const isIncome = row.record_type === 'payment' || row.record_type === 'adjustment';
                             return (
                                 <tr key={`${row.record_type}-${row.id}`} className="orders-row">
                                     <td className="ot-cell-num">{globalIdx}</td>
