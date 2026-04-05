@@ -45,6 +45,11 @@ export function useOrderForm({
     { method: '', amount: 0, wallet: null, account: null, transaction_id: '', account_transaction_length: null, screenshot: null, note: '' }
   ]);
 
+  // Withholding tax
+  const [withholdingTax, setWithholdingTax] = useState(false);
+  const [withholdingDeductFrom, setWithholdingDeductFrom] = useState('REMAINING');
+  const [withholdingPaymentIndex, setWithholdingPaymentIndex] = useState(0);
+
   // Initialize items from selectedItems and set default delivery date
   useEffect(() => {
     const initItems: FormItem[] = selectedItems.map((item) => {
@@ -134,9 +139,14 @@ export function useOrderForm({
         paymentErrors.push(`Payment #${i + 1}: screenshot is required for ${p.method}`);
       }
     });
+    // Withholding calculation
+    const WITHHOLDING_RATE = 0.03;
+    const isWithholdingFromAdvance = withholdingTax && withholdingDeductFrom === 'ADVANCE';
+    const basePrice = totalPayment / 1.15;
+    const withholdingAmount = isWithholdingFromAdvance ? Math.round(basePrice * WITHHOLDING_RATE) : 0;
     const totalAllocated = payments.reduce((s, p) => s + p.amount, 0);
     if (Math.round(totalAllocated) !== Math.round(advancePayment)) {
-      paymentErrors.push(`Total payment amounts (${totalAllocated}) must equal advance payment (${advancePayment})`);
+      paymentErrors.push(`Total payment amounts (${totalAllocated}) must equal advance payment (${Math.round(advancePayment)})`);
     }
 
     const validationErrors = validateForm({
@@ -179,14 +189,19 @@ export function useOrderForm({
 
       // Build payments_data (without screenshot files)
       console.log('[DEBUG] payments at submit:', JSON.stringify(payments.map(p => ({ method: p.method, transaction_id: p.transaction_id, is_unique: p.is_unique }))));
-      const paymentsData = payments.map((p) => ({
-        method: p.method,
-        amount: p.amount,
-        wallet: p.wallet,
-        account: p.account,
-        transaction_id: p.transaction_id || '',
-        note: p.note,
-      }));
+      const paymentsData = payments.map((p, idx) => {
+        const isWhtPayment = isWithholdingFromAdvance && idx === withholdingPaymentIndex;
+        return {
+          method: p.method,
+          amount: p.amount,
+          wallet: p.wallet,
+          account: p.account,
+          transaction_id: p.transaction_id || '',
+          note: p.note,
+          with_holding_tax: isWhtPayment,
+          with_holding_tax_amount: isWhtPayment ? withholdingAmount : 0,
+        };
+      });
       console.log('[DEBUG] paymentsData payload:', JSON.stringify(paymentsData));
 
       const payload: Record<string, any> = {
@@ -197,6 +212,8 @@ export function useOrderForm({
         location: location,
         delivery_date: new Date(deliveryDate).toISOString(),
         invoice: withInvoice,
+        withholding_tax: withholdingTax,
+        withholding_deduct_from: withholdingDeductFrom,
         full_payment: totalPayment,
         special_requerment: specialRequirement,
         advance_payment: parseFloat(advancePayment.toFixed(3)),
@@ -287,5 +304,13 @@ export function useOrderForm({
     handleTotalPaymentChange,
     handleAdvancePaymentChange,
     handleSubmit,
+
+    // Withholding
+    withholdingTax,
+    setWithholdingTax,
+    withholdingDeductFrom,
+    setWithholdingDeductFrom,
+    withholdingPaymentIndex,
+    setWithholdingPaymentIndex,
   };
 }

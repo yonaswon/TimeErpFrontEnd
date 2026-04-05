@@ -8,6 +8,7 @@ import {
   Package,
   Trash2,
   Type,
+  DollarSign,
 } from "lucide-react";
 import api from "@/api";
 
@@ -26,6 +27,7 @@ interface DesignType {
 const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
   const [formData, setFormData] = useState({
     order_name: order.order_name || "",
+    price: order.price ? String(order.price) : "",
     mockup_image: null as File | null,
     remove_mockup_image: false,
     design_type: order.design_type || null, // always ID
@@ -132,6 +134,13 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
         formDataToSend.append("order_name", formData.order_name);
       }
 
+      if (formData.price !== (order.price ? String(order.price) : "")) {
+        const parsedPrice = Math.round(Number(formData.price));
+        if (!isNaN(parsedPrice)) {
+          formDataToSend.append("price", String(parsedPrice));
+        }
+      }
+
       const response = await api.patch(
         `/api/orders/${order.order_code}/`,
         formDataToSend,
@@ -230,6 +239,24 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
               value={formData.order_name}
               onChange={(e) => setFormData((prev) => ({ ...prev, order_name: e.target.value }))}
               placeholder="e.g. Living Room TV Unit"
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+            />
+          </div>
+
+          {/* Price */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <DollarSign size={18} className="inline mr-2 text-blue-600" />
+              Price
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              name="price"
+              value={formData.price}
+              onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+              placeholder="e.g. 1500"
               className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
             />
           </div>
@@ -344,7 +371,8 @@ const OrderEdit = ({ order, onClose, onUpdate }: OrderEditProps) => {
                 (!formData.mockup_image &&
                   !formData.remove_mockup_image &&
                   formData.design_type === order.design_type &&
-                  formData.order_name === (order.order_name || ""))
+                  formData.order_name === (order.order_name || "") &&
+                  formData.price === (order.price ? String(order.price) : ""))
               }
               className="px-5 py-2.5 bg-blue-600 text-white rounded-lg flex items-center gap-2"
             >

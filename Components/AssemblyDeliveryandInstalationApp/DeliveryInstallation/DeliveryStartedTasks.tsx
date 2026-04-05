@@ -70,6 +70,8 @@ interface DeliveryAssignment {
     created_at: string;
     updated_at: string | null;
     lead: number;
+    withholding_tax: boolean;
+    withholding_deduct_from: string;
   };
   assigned_to: Array<{
     id: number;
@@ -613,6 +615,7 @@ const CompleteOverlay = ({
   const [paymentMethod, setPaymentMethod] = useState<'BANK' | 'CASH' | 'CHECK'>('CASH');
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [transactionId, setTransactionId] = useState<string>('');
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [proofImages, setProofImages] = useState<File[]>([]);
   const [paymentNote, setPaymentNote] = useState<string>('');
@@ -621,9 +624,18 @@ const CompleteOverlay = ({
   const [error, setError] = useState<string | null>(null);
 
   const container = assignment.order_container;
+  const rawRemaining = parseFloat(container.remaining_payment);
+
+  // Withholding calculation
+  const WITHHOLDING_RATE = 0.03;
+  const isWithholdingFromRemaining = container.withholding_tax && container.withholding_deduct_from === 'REMAINING';
+  const basePrice = container.full_payment / 1.15;
+  const withholdingAmount = isWithholdingFromRemaining ? Math.round(basePrice * WITHHOLDING_RATE) : 0;
+  const effectiveRemaining = isWithholdingFromRemaining ? rawRemaining - withholdingAmount : rawRemaining;
+  const isZeroPayment = effectiveRemaining <= 0;
 
   useEffect(() => {
-    if (paymentMethod === 'BANK') {
+    if (paymentMethod === 'BANK' || paymentMethod === 'CHECK') {
       fetchBankAccounts();
     }
   }, [paymentMethod]);
@@ -648,14 +660,28 @@ const CompleteOverlay = ({
   };
 
   const handleComplete = async () => {
-    if (paymentMethod !== 'CASH' && !paymentScreenshot) {
-      setError('Payment screenshot is required for Bank/Check payments');
+    // If remaining is 0 AND there's withholding, block
+    if (isZeroPayment && isWithholdingFromRemaining) {
+      setError('Remaining payment is 0 after withholding deduction. Please communicate with your manager.');
       return;
     }
 
-    if ((paymentMethod === 'BANK' || paymentMethod === 'CHECK') && !selectedAccount) {
-      setError('Account selection is required for this payment method');
-      return;
+    // Only validate payment fields if there's actually money to collect
+    if (!isZeroPayment) {
+      if (paymentMethod !== 'CASH' && !paymentScreenshot) {
+        setError('Payment screenshot is required for Bank/Check payments');
+        return;
+      }
+
+      if ((paymentMethod === 'BANK' || paymentMethod === 'CHECK') && !selectedAccount) {
+        setError('Account selection is required for this payment method');
+        return;
+      }
+
+      if (paymentMethod === 'BANK' && !transactionId.trim()) {
+        setError('Transaction ID is required for Bank payments');
+        return;
+      }
     }
 
     try {
@@ -663,22 +689,50 @@ const CompleteOverlay = ({
       setError(null);
 
       const formData = new FormData();
-      formData.append('method', paymentMethod);
-      if (paymentScreenshot) {
-        formData.append('payment_screenshot', paymentScreenshot);
+
+      if (!isZeroPayment) {
+        formData.append('method', paymentMethod);
+        if (paymentScreenshot) {
+          formData.append('payment_screenshot', paymentScreenshot);
+        }
+
+        if (paymentMethod !== 'CASH') {
+          formData.append('account', selectedAccount);
+        }
+
+        if (paymentMethod === 'BANK' && transactionId.trim()) {
+          formData.append('transaction_id', transactionId.trim());
+        }
+
+        if (paymentNote) {
+          formData.append('payment_note', paymentNote);
+        }
+
+        // For WHT from remaining, send withholding info
+        if (isWithholdingFromRemaining) {
+          const paymentsData = [{
+            method: paymentMethod,
+            amount: rawRemaining,
+            wallet: paymentMethod === 'CASH' ? 2 : 1,
+            account: selectedAccount ? parseInt(selectedAccount) : null,
+            note: paymentNote,
+            transaction_id: transactionId.trim(),
+            with_holding_tax: true,
+            with_holding_tax_amount: withholdingAmount,
+          }];
+          formData.append('payments_data', JSON.stringify(paymentsData));
+          if (paymentScreenshot) {
+            formData.append('payment_0_screenshot', paymentScreenshot);
+          }
+        }
+      } else {
+        // Zero remaining without withholding — just complete with no payment data
+        formData.append('method', 'CASH');
       }
 
       proofImages.forEach((img, index) => {
         formData.append(`proof_image_${index}`, img);
       });
-
-      if (paymentMethod !== 'CASH') {
-        formData.append('account', selectedAccount);
-      }
-
-      if (paymentNote) {
-        formData.append('payment_note', paymentNote);
-      }
 
       await api.post(`/api/dandi/${assignment.id}/complete/`, formData, {
         headers: {
@@ -690,7 +744,7 @@ const CompleteOverlay = ({
 
     } catch (err: any) {
       console.error('Error completing task:', err);
-      setError('Failed to complete task. Please try again.');
+      setError(err.response?.data?.error || 'Failed to complete task. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -706,7 +760,7 @@ const CompleteOverlay = ({
   const handleProofImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setProofImages(prev => [...prev, ...newFiles].slice(0, 10)); // Max 10 images
+      setProofImages(prev => [...prev, ...newFiles].slice(0, 10));
     }
   };
 
@@ -743,7 +797,7 @@ const CompleteOverlay = ({
         <div className="p-6">
           {error && (
             <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-              <AlertCircle className="w-4 h-4 text-red-600" />
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
               <p className="text-red-700 text-sm">{error}</p>
             </div>
           )}
@@ -753,107 +807,177 @@ const CompleteOverlay = ({
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="text-sm text-blue-600 dark:text-blue-400">Remaining Payment</div>
               <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                ${container.remaining_payment}
+                {rawRemaining.toLocaleString()} ETB
               </div>
               <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                 Invoice: {container.invoice ? 'Yes' : 'No'}
               </div>
             </div>
 
-            {/* Payment Method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Payment Method *
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['BANK', 'CASH', 'CHECK'] as const).map((method) => (
-                  <button
-                    key={method}
-                    type="button"
-                    onClick={() => setPaymentMethod(method)}
-                    className={`p-3 text-center rounded-lg border transition-colors ${paymentMethod === method
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-600 hover:border-blue-500'
-                      }`}
-                  >
-                    <div className="text-sm font-medium">{method}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Bank Account Selection */}
-            {paymentMethod === 'BANK' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Bank Account *
-                </label>
-                {fetchingAccounts ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 dark:text-gray-400 mt-2">Loading bank accounts...</p>
+            {/* Withholding Tax Info */}
+            {isWithholdingFromRemaining && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
+                <div className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">Withholding Tax (WHT)</div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Full Payment (VAT-inclusive)</span>
+                    <span>{container.full_payment.toLocaleString()} ETB</span>
                   </div>
-                ) : bankAccounts.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                    No bank accounts available
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Base Price (excl. 15% VAT)</span>
+                    <span>{Math.round(basePrice).toLocaleString()} ETB</span>
                   </div>
-                ) : (
-                  <select
-                    value={selectedAccount}
-                    onChange={(e) => setSelectedAccount(e.target.value)}
-                    className="w-full p-3 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                  >
-                    <option value="">Select an account</option>
-                    {bankAccounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.bank} - {account.account_number} ({account.account_name})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            )}
-
-            {/* Payment Screenshot */}
-            {paymentMethod !== 'CASH' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Payment Screenshot *
-                </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg p-4 text-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="payment-screenshot"
-                  />
-                  <label
-                    htmlFor="payment-screenshot"
-                    className="cursor-pointer text-blue-600 hover:text-blue-700 text-sm font-medium"
-                  >
-                    {paymentScreenshot ? paymentScreenshot.name : 'Choose payment screenshot'}
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    PNG, JPG, JPEG files
-                  </p>
+                  <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                    <span>Withholding (3%)</span>
+                    <span>{withholdingAmount.toLocaleString()} ETB</span>
+                  </div>
+                  <hr className="border-gray-200 dark:border-zinc-700" />
+                  <div className="flex justify-between text-gray-900 dark:text-white font-bold">
+                    <span>Physical Cash/Transfer to Collect</span>
+                    <span>{effectiveRemaining.toLocaleString()} ETB</span>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Payment Note */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Payment Note (Optional)
-              </label>
-              <textarea
-                value={paymentNote}
-                onChange={(e) => setPaymentNote(e.target.value)}
-                rows={3}
-                className="w-full p-3 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                placeholder="Add any notes about the payment..."
-              />
-            </div>
+            {/* Zero Payment Scenarios */}
+            {isZeroPayment && isWithholdingFromRemaining && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-sm font-medium">
+                  <AlertCircle className="w-4 h-4" />
+                  Remaining is 0 after withholding. Please communicate with your manager.
+                </div>
+              </div>
+            )}
+
+            {isZeroPayment && !isWithholdingFromRemaining && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="text-green-700 dark:text-green-400 text-sm font-medium">
+                  No remaining payment to collect. You can complete the task directly.
+                </div>
+              </div>
+            )}
+
+            {/* Payment Fields — only show if there's money to collect */}
+            {!isZeroPayment && (
+              <>
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Payment Method *
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['BANK', 'CASH', 'CHECK'] as const).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod(method);
+                          setSelectedAccount('');
+                          setTransactionId('');
+                          setPaymentScreenshot(null);
+                        }}
+                        className={`p-3 text-center rounded-lg border transition-colors ${paymentMethod === method
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-600 hover:border-blue-500'
+                          }`}
+                      >
+                        <div className="text-sm font-medium">{method}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bank Account Selection */}
+                {(paymentMethod === 'BANK' || paymentMethod === 'CHECK') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Bank Account *
+                    </label>
+                    {fetchingAccounts ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-600 dark:text-gray-400 mt-2">Loading bank accounts...</p>
+                      </div>
+                    ) : bankAccounts.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                        No bank accounts available
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedAccount}
+                        onChange={(e) => setSelectedAccount(e.target.value)}
+                        className="w-full p-3 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                      >
+                        <option value="">Select an account</option>
+                        {bankAccounts.map((account) => (
+                          <option key={account.id} value={account.id}>
+                            {account.bank} - {account.account_number} ({account.account_name})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+
+                {/* Transaction ID for BANK */}
+                {paymentMethod === 'BANK' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Transaction ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      className="w-full p-3 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                      placeholder="Enter transaction ID"
+                    />
+                  </div>
+                )}
+
+                {/* Payment Screenshot */}
+                {paymentMethod !== 'CASH' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Payment Screenshot *
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 dark:border-zinc-600 rounded-lg p-4 text-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="payment-screenshot"
+                      />
+                      <label
+                        htmlFor="payment-screenshot"
+                        className="cursor-pointer text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      >
+                        {paymentScreenshot ? paymentScreenshot.name : 'Choose payment screenshot'}
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        PNG, JPG, JPEG files
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Note */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Payment Note (Optional)
+                  </label>
+                  <textarea
+                    value={paymentNote}
+                    onChange={(e) => setPaymentNote(e.target.value)}
+                    rows={3}
+                    className="w-full p-3 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                    placeholder="Add any notes about the payment..."
+                  />
+                </div>
+              </>
+            )}
 
             {/* Proof Images Section */}
             <div className="pt-4 border-t border-gray-200 dark:border-zinc-700">
@@ -867,11 +991,11 @@ const CompleteOverlay = ({
                   multiple
                   onChange={handleProofImagesChange}
                   className="hidden"
-                  id="proof-images"
+                  id="payment-screenshot-proof"
                   disabled={proofImages.length >= 10}
                 />
                 <label
-                  htmlFor="proof-images"
+                  htmlFor="payment-screenshot-proof"
                   className={`cursor-pointer text-sm font-medium flex items-center justify-center gap-2 ${proofImages.length >= 10 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-700'}`}
                 >
                   <ImageIcon className="w-4 h-4" />
@@ -915,7 +1039,7 @@ const CompleteOverlay = ({
             </button>
             <button
               onClick={handleComplete}
-              disabled={loading || (paymentMethod !== 'CASH' && !paymentScreenshot) || (paymentMethod !== 'CASH' && !selectedAccount)}
+              disabled={loading || (isZeroPayment && isWithholdingFromRemaining)}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (

@@ -521,6 +521,19 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       label="Invoice Status"
                       value={order.invoice ? "Invoice Required" : "No Invoice"}
                     />
+                    {order.withholding_tax && (
+                      <>
+                        <div className="border-t border-gray-100 dark:border-zinc-800"></div>
+                        <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-b-lg">
+                          <InfoRow
+                            icon={AlertCircle}
+                            label="Withholding Tax"
+                            value="Active (3%)"
+                            subValue={`Deducted from ${order.withholding_deduct_from || 'REMAINING'}`}
+                          />
+                        </div>
+                      </>
+                    )}
                     <div className="border-t border-gray-100 dark:border-zinc-800"></div>
                     <div className="flex items-center gap-3 p-4 bg-blue-50/50 dark:bg-blue-900/10">
                       <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md">
@@ -863,11 +876,20 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                       />
 
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
                           <h4 className="font-bold text-gray-900 dark:text-white text-lg">
                             {getReasonText(payment.reason)}
                           </h4>
                           {getStatusIcon(payment.status)}
+                          {payment.invoice ? (
+                            <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800 uppercase tracking-wide">
+                              Invoice
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-gray-400 rounded border border-gray-200 dark:border-zinc-700 uppercase tracking-wide">
+                              No Invoice
+                            </span>
+                          )}
                           <button
                             onClick={() => setSuggestPayment(payment)}
                             className="ml-auto text-gray-400 hover:text-blue-500 transition-colors"
@@ -899,6 +921,16 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                               {payment.wallet?.name || "N/A"}
                             </p>
                           </div>
+                          {payment.with_holding_tax && (
+                            <div className="col-span-2 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
+                              <span className="text-xs text-amber-500 uppercase tracking-wider flex items-center gap-1">
+                                <AlertCircle size={12} /> Withholding Tax Deducted
+                              </span>
+                              <p className="font-medium text-amber-600 dark:text-amber-500 mt-0.5">
+                                {formatCurrency(payment.with_holding_tax_amount || 0)}
+                              </p>
+                            </div>
+                          )}
                           {payment.confirmed_by && (
                             <div className="col-span-2 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
                               <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -910,22 +942,55 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                         </div>
                       </div>
 
-                      {/* Amount & Proof */}
-                      <div className="flex flex-col items-start md:items-end justify-between min-w-[150px]">
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(payment.amount)}
-                        </span>
-
+                      {/* Images */}
+                      <div className="flex flex-row md:flex-col items-center md:items-end justify-start md:justify-center gap-2 flex-wrap min-w-[120px]">
                         {payment.confirmation_image && (
                           <button
                             onClick={() =>
                               window.open(payment.confirmation_image, "_blank")
                             }
-                            className="mt-4 flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg w-full md:w-auto justify-center"
+                            className="flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg w-full md:w-auto justify-center"
                           >
-                            <Image size={14} /> View Receipt
+                            <Image size={14} /> Receipt
                           </button>
                         )}
+                        {payment.invoice_image && (
+                          <button
+                            onClick={() =>
+                              window.open(payment.invoice_image, "_blank")
+                            }
+                            className="flex items-center gap-2 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg w-full md:w-auto justify-center"
+                          >
+                            <FileText size={14} /> Invoice
+                          </button>
+                        )}
+                        {payment.with_holding_tax_image && (
+                          <button
+                            onClick={() =>
+                              window.open(payment.with_holding_tax_image, "_blank")
+                            }
+                            className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg w-full md:w-auto justify-center"
+                          >
+                            <Receipt size={14} /> WHT Proof
+                          </button>
+                        )}
+                        {payment.additional_image && (
+                          <button
+                            onClick={() =>
+                              window.open(payment.additional_image, "_blank")
+                            }
+                            className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:underline bg-gray-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg w-full md:w-auto justify-center"
+                          >
+                            <Image size={14} /> Additional
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Amount */}
+                      <div className="flex flex-col items-start md:items-end justify-center min-w-[120px]">
+                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {formatCurrency(payment.amount)}
+                        </span>
                       </div>
                     </div>
                   ))}

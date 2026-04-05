@@ -52,6 +52,13 @@ export default function DirectOrderOverlay({ onClose }: DirectOrderOverlayProps)
         handleTotalPaymentChange,
         handleAdvancePaymentChange,
         handleSubmit,
+        // Withholding
+        withholdingTax,
+        setWithholdingTax,
+        withholdingDeductFrom,
+        setWithholdingDeductFrom,
+        withholdingPaymentIndex,
+        setWithholdingPaymentIndex,
     } = useDirectOrderForm({
         designTypes,
         wallets,
@@ -193,6 +200,13 @@ export default function DirectOrderOverlay({ onClose }: DirectOrderOverlayProps)
                                 setPayments={setPayments}
                                 wallets={wallets}
                                 advancePayment={advancePayment}
+                                totalPayment={totalPayment}
+                                withholdingTax={withholdingTax}
+                                setWithholdingTax={setWithholdingTax}
+                                withholdingDeductFrom={withholdingDeductFrom}
+                                setWithholdingDeductFrom={setWithholdingDeductFrom}
+                                withholdingPaymentIndex={withholdingPaymentIndex}
+                                setWithholdingPaymentIndex={setWithholdingPaymentIndex}
                             />
                         </div>
                     )}

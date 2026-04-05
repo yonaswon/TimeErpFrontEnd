@@ -200,6 +200,9 @@ export interface Payment {
   confirmation_image: string | null;
   confirmed_at: string | null;
   note: string;
+  with_holding_tax?: boolean;
+  with_holding_tax_amount?: number;
+  with_holding_tax_image?: string | null;
   created_at: string;
   account: number | null;
   transaction_id: string | null;

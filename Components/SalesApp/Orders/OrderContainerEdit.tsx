@@ -39,6 +39,8 @@ const OrderContainerEdit = ({
     delivery_service: container.delivery_service || true,
     order_difficulty: container.order_difficulty || "MEDIUM",
     invoice: container.invoice || false,
+    withholding_tax: container.withholding_tax || false,
+    withholding_deduct_from: container.withholding_deduct_from || "REMAINING",
   });
 
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ const OrderContainerEdit = ({
       setSuccess(true);
       setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 2500);
     } catch (err: any) {
       console.error("Failed to update order container:", err);
       setError(
@@ -141,6 +143,8 @@ const OrderContainerEdit = ({
               />
               <p className="text-sm text-emerald-700 dark:text-emerald-400">
                 Order container updated successfully!
+                <br />
+                <span className="font-semibold block mt-1">Please notify the finance team to change the payment withholding status if you modified it.</span>
               </p>
             </div>
           )}
@@ -277,8 +281,16 @@ const OrderContainerEdit = ({
                       type="checkbox"
                       name="invoice"
                       checked={formData.invoice}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      disabled={formData.withholding_tax}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setFormData((prev) => ({
+                          ...prev,
+                          invoice: checked,
+                          withholding_tax: checked ? prev.withholding_tax : false,
+                        }));
+                      }}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                     />
                   </div>
                   <div className="flex items-center gap-2">
@@ -291,6 +303,49 @@ const OrderContainerEdit = ({
                     </label>
                   </div>
                 </div>
+
+                {formData.invoice && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200 dark:border-amber-800 col-span-1 sm:col-span-3">
+                    <div className="flex items-center h-5">
+                      <input
+                        type="checkbox"
+                        name="withholding_tax"
+                        checked={formData.withholding_tax}
+                        disabled={container.withholding_tax}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData((prev) => ({
+                            ...prev,
+                            withholding_tax: checked,
+                            invoice: checked ? true : prev.invoice,
+                          }));
+                        }}
+                        className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500 dark:focus:ring-amber-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FileText size={18} className="text-amber-600 dark:text-amber-500" />
+                      <label className="text-sm font-medium text-amber-800 dark:text-amber-400">
+                        Withholding Tax Active
+                      </label>
+                    </div>
+
+                    {formData.withholding_tax && (
+                      <div className="ml-auto flex items-center gap-2">
+                        <label className="text-sm font-medium text-amber-800 dark:text-amber-400">Deduct From:</label>
+                        <select
+                          name="withholding_deduct_from"
+                          value={formData.withholding_deduct_from}
+                          onChange={handleChange}
+                          className="px-2 py-1 text-sm bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-800 rounded-md focus:ring-amber-500 focus:border-amber-500"
+                        >
+                          <option value="REMAINING">Remaining</option>
+                          <option value="ADVANCE">Advance</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mt-4">

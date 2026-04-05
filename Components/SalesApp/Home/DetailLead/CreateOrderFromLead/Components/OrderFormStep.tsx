@@ -60,6 +60,13 @@ export default function OrderFormStep({
     handleTotalPaymentChange,
     handleAdvancePaymentChange,
     handleSubmit,
+    // Withholding
+    withholdingTax,
+    setWithholdingTax,
+    withholdingDeductFrom,
+    setWithholdingDeductFrom,
+    withholdingPaymentIndex,
+    setWithholdingPaymentIndex,
   } = useOrderForm({
     leadId,
     leadData,
@@ -134,6 +141,13 @@ export default function OrderFormStep({
         setPayments={setPayments}
         wallets={wallets}
         advancePayment={advancePayment}
+        totalPayment={totalPayment}
+        withholdingTax={withholdingTax}
+        setWithholdingTax={setWithholdingTax}
+        withholdingDeductFrom={withholdingDeductFrom}
+        setWithholdingDeductFrom={setWithholdingDeductFrom}
+        withholdingPaymentIndex={withholdingPaymentIndex}
+        setWithholdingPaymentIndex={setWithholdingPaymentIndex}
       />
 
       {/* Actions */}

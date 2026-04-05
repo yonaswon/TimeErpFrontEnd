@@ -34,6 +34,9 @@ interface OrderContainer {
     remaining_payment: string;
     delivery_service: boolean;
     instalation_service: boolean;
+    invoice: boolean;
+    withholding_tax: boolean;
+    withholding_deduct_from: string;
     orders: Array<{
         order_code: number;
         order_name?: string;
@@ -453,6 +456,7 @@ interface PaymentEntry {
     amount: number;
     wallet: number | null;
     account: string;
+    transaction_id: string;
     screenshot: File | null;
     note: string;
 }
@@ -470,10 +474,19 @@ const CompleteTaskOverlay = ({
     const [error, setError] = useState<string | null>(null);
 
     const remainingPayment = parseFloat(task.order_container.remaining_payment);
+    const container = task.order_container;
+
+    // Withholding calculation
+    const WITHHOLDING_RATE = 0.03;
+    const isWithholdingFromRemaining = container.withholding_tax && container.withholding_deduct_from === 'REMAINING';
+    const basePrice = container.full_payment / 1.15;
+    const withholdingAmount = isWithholdingFromRemaining ? Math.round(basePrice * WITHHOLDING_RATE) : 0;
+    const effectiveRemaining = isWithholdingFromRemaining ? remainingPayment - withholdingAmount : remainingPayment;
+    const isZeroPayment = effectiveRemaining <= 0;
 
     // Multiple payments state
     const [payments, setPayments] = useState<PaymentEntry[]>([
-        { method: 'CASH', amount: Math.round(remainingPayment), wallet: 2, account: '', screenshot: null, note: '' }
+        { method: 'CASH', amount: Math.round(isZeroPayment ? 0 : remainingPayment), wallet: 2, account: '', transaction_id: '', screenshot: null, note: '' }
     ]);
     const [proofImages, setProofImages] = useState<File[]>([]);
 
@@ -507,6 +520,7 @@ const CompleteTaskOverlay = ({
         if (field === 'method') {
             entry.wallet = (value === 'BANK' || value === 'CHECK') ? 1 : value === 'CASH' ? 2 : null;
             entry.account = '';
+            entry.transaction_id = '';
             entry.screenshot = null;
         }
         updated[index] = entry;
@@ -514,8 +528,9 @@ const CompleteTaskOverlay = ({
     };
 
     const addPayment = () => {
-        const remaining = remainingPayment - payments.reduce((s, p) => s + p.amount, 0);
-        setPayments([...payments, { method: 'CASH', amount: Math.max(0, Math.round(remaining)), wallet: 2, account: '', screenshot: null, note: '' }]);
+        const target = remainingPayment;
+        const remaining = target - payments.reduce((s, p) => s + p.amount, 0);
+        setPayments([...payments, { method: 'CASH', amount: Math.max(0, Math.round(remaining)), wallet: 2, account: '', transaction_id: '', screenshot: null, note: '' }]);
     };
 
     const removePayment = (index: number) => {
@@ -526,24 +541,36 @@ const CompleteTaskOverlay = ({
     const totalAllocated = payments.reduce((s, p) => s + p.amount, 0);
 
     const handleComplete = async () => {
-        // Validate all payments
-        const errors: string[] = [];
-        payments.forEach((p, i) => {
-            if (!p.method) errors.push(`Payment #${i + 1}: method is required`);
-            if (!p.amount || p.amount <= 0) errors.push(`Payment #${i + 1}: amount must be > 0`);
-            if ((p.method === 'BANK' || p.method === 'CHECK') && !p.account) {
-                errors.push(`Payment #${i + 1}: account is required`);
-            }
-            if ((p.method === 'BANK' || p.method === 'CHECK') && !p.screenshot) {
-                errors.push(`Payment #${i + 1}: screenshot is required`);
-            }
-        });
-        if (remainingPayment > 0 && Math.round(totalAllocated) !== Math.round(remainingPayment)) {
-            errors.push(`Total amounts (${totalAllocated}) must equal remaining payment (${remainingPayment})`);
-        }
-        if (errors.length > 0) {
-            setError(errors.join('\n'));
+        // If remaining is 0 AND there's withholding, block
+        if (isZeroPayment && isWithholdingFromRemaining) {
+            setError('Remaining payment is 0 after withholding deduction. Please communicate with your manager.');
             return;
+        }
+
+        if (!isZeroPayment) {
+            // Validate all payments
+            const errors: string[] = [];
+            payments.forEach((p, i) => {
+                if (!p.method) errors.push(`Payment #${i + 1}: method is required`);
+                if (!p.amount || p.amount <= 0) errors.push(`Payment #${i + 1}: amount must be > 0`);
+                if ((p.method === 'BANK' || p.method === 'CHECK') && !p.account) {
+                    errors.push(`Payment #${i + 1}: account is required`);
+                }
+                if (p.method === 'BANK' && !p.transaction_id.trim()) {
+                    errors.push(`Payment #${i + 1}: transaction ID is required for BANK`);
+                }
+                if ((p.method === 'BANK' || p.method === 'CHECK') && !p.screenshot) {
+                    errors.push(`Payment #${i + 1}: screenshot is required`);
+                }
+            });
+            const requiredAmount = remainingPayment;
+            if (requiredAmount > 0 && Math.round(totalAllocated) !== Math.round(requiredAmount)) {
+                errors.push(`Total amounts (${totalAllocated}) must equal physical cash/transfer to collect (${Math.round(requiredAmount)})`);
+            }
+            if (errors.length > 0) {
+                setError(errors.join('\n'));
+                return;
+            }
         }
 
         try {
@@ -552,7 +579,7 @@ const CompleteTaskOverlay = ({
 
             const formData = new FormData();
 
-            if (remainingPayment > 0) {
+            if (!isZeroPayment) {
                 // Build payments_data JSON (without file fields)
                 const paymentsData = payments.map((p) => ({
                     method: p.method,
@@ -560,6 +587,9 @@ const CompleteTaskOverlay = ({
                     wallet: p.wallet,
                     account: p.account ? parseInt(p.account) : null,
                     note: p.note,
+                    transaction_id: p.transaction_id || '',
+                    with_holding_tax: isWithholdingFromRemaining,
+                    with_holding_tax_amount: isWithholdingFromRemaining ? withholdingAmount : 0,
                 }));
                 formData.append('payments_data', JSON.stringify(paymentsData));
 
@@ -569,6 +599,9 @@ const CompleteTaskOverlay = ({
                         formData.append(`payment_${index}_screenshot`, p.screenshot);
                     }
                 });
+            } else if (!isWithholdingFromRemaining) {
+                // Zero remaining, no withholding — just complete with dummy method
+                formData.append('method', 'CASH');
             }
 
             // Append proof images regardless of payment remaining
@@ -590,7 +623,7 @@ const CompleteTaskOverlay = ({
     const handleProofImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
-            setProofImages(prev => [...prev, ...newFiles].slice(0, 10)); // Max 10 images
+            setProofImages(prev => [...prev, ...newFiles].slice(0, 10));
         }
     };
 
@@ -620,7 +653,7 @@ const CompleteTaskOverlay = ({
                         <h4 className="font-medium text-yellow-800 dark:text-yellow-600 mb-2">Payment Details</h4>
                         <div className="flex justify-between text-sm mb-1 text-yellow-700 dark:text-yellow-500">
                             <span>Total Amount:</span>
-                            <span>{task.order_container.full_payment.toLocaleString()} Birr</span>
+                            <span>{container.full_payment.toLocaleString()} Birr</span>
                         </div>
                         <div className="flex justify-between font-semibold text-yellow-900 dark:text-yellow-400">
                             <span>Remaining Amount:</span>
@@ -628,20 +661,67 @@ const CompleteTaskOverlay = ({
                         </div>
                     </div>
 
+                    {/* Withholding Tax Info */}
+                    {isWithholdingFromRemaining && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
+                            <div className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">Withholding Tax (WHT)</div>
+                            <div className="space-y-1 text-xs">
+                                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                                    <span>Full Payment (VAT-inclusive)</span>
+                                    <span>{container.full_payment.toLocaleString()} ETB</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                                    <span>Base Price (excl. 15% VAT)</span>
+                                    <span>{Math.round(basePrice).toLocaleString()} ETB</span>
+                                </div>
+                                <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                                    <span>Withholding (3%)</span>
+                                    <span>−{withholdingAmount.toLocaleString()} ETB</span>
+                                </div>
+                                <hr className="border-gray-200 dark:border-zinc-700" />
+                                <div className="flex justify-between text-gray-900 dark:text-white font-bold">
+                                    <span>Physical Cash/Transfer to Collect</span>
+                                    <span>{remainingPayment.toLocaleString()} ETB</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Zero Payment Scenarios */}
+                    {isZeroPayment && isWithholdingFromRemaining && (
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-sm font-medium">
+                                <AlertCircle className="w-4 h-4" />
+                                Remaining is 0 after withholding. Please communicate with your manager.
+                            </div>
+                        </div>
+                    )}
+
+                    {isZeroPayment && !isWithholdingFromRemaining && (
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                            <div className="text-green-700 dark:text-green-400 text-sm font-medium">
+                                No remaining payment to collect. You can complete the task directly.
+                            </div>
+                        </div>
+                    )}
+
                     {/* Allocated vs Required */}
-                    {remainingPayment > 0 && (
+                    {!isZeroPayment && (
                         <div className={`p-3 rounded-lg text-sm font-medium ${Math.round(totalAllocated) === Math.round(remainingPayment)
                             ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                             : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
                             }`}>
                             Allocated: {totalAllocated.toLocaleString()} / {remainingPayment.toLocaleString()} Birr
+                            {isWithholdingFromRemaining && (
+                                <span className="ml-1 text-xs opacity-70">(WHT: {withholdingAmount.toLocaleString()})</span>
+                            )}
                             {Math.round(totalAllocated) !== Math.round(remainingPayment) && (
                                 <span className="ml-2 text-xs">(Diff: {(remainingPayment - totalAllocated).toLocaleString()})</span>
                             )}
                         </div>
                     )}
 
-                    {remainingPayment > 0 && (
+                    {!isZeroPayment && (
                         <div className="space-y-4">
                             {payments.map((payment, index) => {
                                 const accounts = accountsMap[index] || [];
@@ -706,6 +786,20 @@ const CompleteTaskOverlay = ({
                                                         </option>
                                                     ))}
                                                 </select>
+                                            </div>
+                                        )}
+
+                                        {/* Transaction ID (for BANK) */}
+                                        {payment.method === 'BANK' && (
+                                            <div className="mb-3">
+                                                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Transaction ID *</label>
+                                                <input
+                                                    type="text"
+                                                    value={payment.transaction_id}
+                                                    onChange={(e) => updatePayment(index, 'transaction_id', e.target.value)}
+                                                    className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                                                    placeholder="Enter transaction ID"
+                                                />
                                             </div>
                                         )}
 
@@ -817,8 +911,8 @@ const CompleteTaskOverlay = ({
                     </button>
                     <button
                         onClick={handleComplete}
-                        disabled={loading}
-                        className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                        disabled={loading || (isZeroPayment && isWithholdingFromRemaining)}
+                        className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
                         {loading ? (
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

@@ -59,7 +59,7 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
   // Upload invoice/additional image for a payment
   const handleImageUpload = async (
     paymentId: number,
-    field: "invoice_image" | "additional_image",
+    field: "invoice_image" | "additional_image" | "with_holding_tax_image",
     file: File
   ) => {
     try {
@@ -1002,6 +1002,16 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                                     <p className="font-medium text-gray-700 dark:text-gray-300">{payment.note}</p>
                                   </div>
                                 )}
+                                {payment.with_holding_tax && (
+                                  <div className="col-span-2 mt-2 pt-2 border-t border-gray-100 dark:border-zinc-800">
+                                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center gap-1">
+                                      📉 Withholding Tax (3%)
+                                    </span>
+                                    <p className="font-bold text-amber-600 dark:text-amber-400">
+                                      {formatCurrency(payment.with_holding_tax_amount || 0)}
+                                    </p>
+                                  </div>
+                                )}
                                 {payment.confirmed_by && (
                                   <div className="col-span-2 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
                                     <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -1045,54 +1055,90 @@ const OrderDetail = ({ order, onClose }: OrderDetailProps) => {
                                     <Image size={14} /> Additional
                                   </button>
                                 )}
+                                {payment.with_holding_tax_image && (
+                                  <button
+                                    onClick={() => setFullscreenImage(payment.with_holding_tax_image!)}
+                                    className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400 hover:underline bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg"
+                                  >
+                                    <FileText size={14} /> WHT Document
+                                  </button>
+                                )}
                               </div>
 
-                              {/* Upload / Update buttons for invoice payments */}
-                              {payment.invoice && (
+                              {/* Upload / Update buttons for invoice payments & WHT */}
+                              {(payment.invoice || payment.with_holding_tax) && (
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {/* Invoice Image Upload */}
-                                  <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer px-3 py-2 rounded-lg border border-dashed border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
-                                    {uploadingPaymentId === payment.id ? (
-                                      <Loader size={14} className="animate-spin" />
-                                    ) : payment.invoice_image ? (
-                                      <Pencil size={14} />
-                                    ) : (
-                                      <Plus size={14} />
-                                    )}
-                                    {payment.invoice_image ? "Update Invoice" : "Add Invoice"}
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) handleImageUpload(payment.id, "invoice_image", file);
-                                        e.target.value = "";
-                                      }}
-                                    />
-                                  </label>
+                                  {payment.invoice && (
+                                    <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer px-3 py-2 rounded-lg border border-dashed border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
+                                      {uploadingPaymentId === payment.id ? (
+                                        <Loader size={14} className="animate-spin" />
+                                      ) : payment.invoice_image ? (
+                                        <Pencil size={14} />
+                                      ) : (
+                                        <Plus size={14} />
+                                      )}
+                                      {payment.invoice_image ? "Update Invoice" : "Add Invoice"}
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleImageUpload(payment.id, "invoice_image", file);
+                                          e.target.value = "";
+                                        }}
+                                      />
+                                    </label>
+                                  )}
 
                                   {/* Additional Image Upload */}
-                                  <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer px-3 py-2 rounded-lg border border-dashed border-teal-300 dark:border-teal-700 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/10 transition-colors">
-                                    {uploadingPaymentId === payment.id ? (
-                                      <Loader size={14} className="animate-spin" />
-                                    ) : payment.additional_image ? (
-                                      <Pencil size={14} />
-                                    ) : (
-                                      <Plus size={14} />
-                                    )}
-                                    {payment.additional_image ? "Update Additional" : "Add Additional"}
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) handleImageUpload(payment.id, "additional_image", file);
-                                        e.target.value = "";
-                                      }}
-                                    />
-                                  </label>
+                                  {payment.invoice && (
+                                    <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer px-3 py-2 rounded-lg border border-dashed border-teal-300 dark:border-teal-700 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/10 transition-colors">
+                                      {uploadingPaymentId === payment.id ? (
+                                        <Loader size={14} className="animate-spin" />
+                                      ) : payment.additional_image ? (
+                                        <Pencil size={14} />
+                                      ) : (
+                                        <Plus size={14} />
+                                      )}
+                                      {payment.additional_image ? "Update Additional" : "Add Additional"}
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleImageUpload(payment.id, "additional_image", file);
+                                          e.target.value = "";
+                                        }}
+                                      />
+                                    </label>
+                                  )}
+
+                                  {/* Withholding Document Upload */}
+                                  {payment.with_holding_tax && (
+                                    <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer px-3 py-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+                                      {uploadingPaymentId === payment.id ? (
+                                        <Loader size={14} className="animate-spin" />
+                                      ) : payment.with_holding_tax_image ? (
+                                        <Pencil size={14} />
+                                      ) : (
+                                        <Plus size={14} />
+                                      )}
+                                      {payment.with_holding_tax_image ? "Update Withhold Doc" : "Upload Withhold Doc"}
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleImageUpload(payment.id, "with_holding_tax_image", file);
+                                          e.target.value = "";
+                                        }}
+                                      />
+                                    </label>
+                                  )}
                                 </div>
                               )}
                             </div>

@@ -118,6 +118,15 @@ export const PaymentDetailOverlay = ({
                 <p className="text-2xl font-bold text-[#111827] dark:text-[#F1F5F9]">
                   {payment.amount} Birr
                 </p>
+                {payment.with_holding_tax && (
+                  <div className="mt-1.5 flex items-center space-x-2 text-xs font-semibold">
+                    <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded">📉 WHT: {payment.with_holding_tax_amount}</span>
+                    <span className="text-[#6B7280] dark:text-[#94A3B8]">|</span>
+                    <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded">
+                      Actual: {(Number(payment.amount) - (payment.with_holding_tax_amount || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
               <span
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold ${statusColor}`}
@@ -407,14 +416,15 @@ export const PaymentDetailOverlay = ({
           {/* ─── Images ─── */}
           {(payment.invoice_image ||
             payment.confirmation_image ||
-            payment.additional_image) && (
+            payment.additional_image ||
+            payment.with_holding_tax_image) && (
               <Section title="Documents" icon={ImageIcon}>
                 <div className="grid grid-cols-2 gap-3">
                   {payment.invoice_image && (
                     <ImageCard
                       label="Invoice"
                       src={payment.invoice_image}
-                      onExpand={() => setExpandedImage(payment.invoice_image)}
+                      onExpand={() => setExpandedImage(payment.invoice_image!)}
                     />
                   )}
                   {payment.confirmation_image && (
@@ -422,7 +432,7 @@ export const PaymentDetailOverlay = ({
                       label="Confirmation"
                       src={payment.confirmation_image}
                       onExpand={() =>
-                        setExpandedImage(payment.confirmation_image)
+                        setExpandedImage(payment.confirmation_image!)
                       }
                     />
                   )}
@@ -431,7 +441,16 @@ export const PaymentDetailOverlay = ({
                       label="Additional"
                       src={payment.additional_image}
                       onExpand={() =>
-                        setExpandedImage(payment.additional_image)
+                        setExpandedImage(payment.additional_image!)
+                      }
+                    />
+                  )}
+                  {payment.with_holding_tax_image && (
+                    <ImageCard
+                      label="WHT Doc"
+                      src={payment.with_holding_tax_image}
+                      onExpand={() =>
+                        setExpandedImage(payment.with_holding_tax_image!)
                       }
                     />
                   )}

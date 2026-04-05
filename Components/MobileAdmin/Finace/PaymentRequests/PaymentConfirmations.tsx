@@ -392,6 +392,20 @@ const PaymentCard = ({
                 {new Date(payment.created_at).toLocaleDateString()}
               </span>
             </div>
+            {payment.note && (
+              <p className="mt-2 text-xs text-[#4B5563] dark:text-[#94A3B8] italic border-l-2 border-[#E5E7EB] dark:border-[#334155] pl-2 line-clamp-2">
+                "{payment.note}"
+              </p>
+            )}
+            {payment.with_holding_tax && (
+              <div className="mt-1.5 flex items-center space-x-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                <span className="bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">📉 WHT: {payment.with_holding_tax_amount} Birr</span>
+                <span className="text-[#6B7280] dark:text-[#94A3B8]">|</span>
+                <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded">
+                  Actual: {(Number(payment.amount) - (payment.with_holding_tax_amount || 0)).toFixed(2)} Birr
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Confirmation image thumbnail */}

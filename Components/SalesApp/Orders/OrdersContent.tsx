@@ -143,13 +143,6 @@ const OrdersContent = () => {
     fetchOrders(searchUrl);
   };
 
-  const filteredOrders = orders.filter(
-    (order) =>
-      order.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.contact?.includes(searchQuery) ||
-      order.location?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Show loading state
   if (loading && !refreshing) {
     return (

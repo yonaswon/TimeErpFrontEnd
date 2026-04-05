@@ -14,6 +14,13 @@ interface PaymentSectionProps {
   setPayments: (payments: PaymentEntry[]) => void
   wallets: Wallet[]
   advancePayment: number
+  totalPayment: number
+  withholdingTax: boolean
+  setWithholdingTax: (value: boolean) => void
+  withholdingDeductFrom: string
+  setWithholdingDeductFrom: (value: string) => void
+  withholdingPaymentIndex: number
+  setWithholdingPaymentIndex: (value: number) => void
 }
 
 const EMPTY_PAYMENT: PaymentEntry = {
@@ -36,6 +43,13 @@ export default function PaymentSection({
   setPayments,
   wallets,
   advancePayment,
+  totalPayment,
+  withholdingTax,
+  setWithholdingTax,
+  withholdingDeductFrom,
+  setWithholdingDeductFrom,
+  withholdingPaymentIndex,
+  setWithholdingPaymentIndex,
 }: PaymentSectionProps) {
   const [accountsMap, setAccountsMap] = useState<Record<number, Account[]>>({})
   const debounceTimers = useRef<Record<number, NodeJS.Timeout>>({})
@@ -217,7 +231,8 @@ export default function PaymentSection({
   }
 
   const addPayment = () => {
-    const remaining = advancePayment - payments.reduce((s, p) => s + p.amount, 0)
+    const target = advancePayment
+    const remaining = target - payments.reduce((s, p) => s + p.amount, 0)
     setPayments([...payments, { ...EMPTY_PAYMENT, amount: Math.max(0, Math.round(remaining)) }])
   }
 
@@ -230,6 +245,12 @@ export default function PaymentSection({
     setInvoiceImage(e.target.files?.[0] || null)
   }
 
+  const WITHHOLDING_RATE = 0.03
+  const isWithholdingFromAdvance = withholdingTax && withholdingDeductFrom === 'ADVANCE'
+  const basePrice = totalPayment / 1.15
+  const withholdingAmount = isWithholdingFromAdvance ? Math.round(basePrice * WITHHOLDING_RATE) : 0
+  const effectiveAdvance = isWithholdingFromAdvance ? advancePayment - withholdingAmount : advancePayment
+  const requiredAmount = advancePayment
   const totalAllocated = payments.reduce((s, p) => s + p.amount, 0)
 
   return (
@@ -242,7 +263,12 @@ export default function PaymentSection({
           <input
             type="checkbox"
             checked={withInvoice}
-            onChange={(e) => setWithInvoice(e.target.checked)}
+            onChange={(e) => {
+              setWithInvoice(e.target.checked)
+              if (!e.target.checked) {
+                setWithholdingTax(false)
+              }
+            }}
             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           With Invoice
@@ -276,14 +302,96 @@ export default function PaymentSection({
         )}
       </div>
 
+      {/* Withholding Tax Section — only when invoice is on */}
+      {withInvoice && (
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg space-y-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={withholdingTax}
+              onChange={(e) => {
+                setWithholdingTax(e.target.checked)
+                if (!e.target.checked) {
+                  setWithholdingDeductFrom('REMAINING')
+                  setWithholdingPaymentIndex(0)
+                }
+              }}
+              className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+            />
+            Withholding Tax (WHT)
+          </label>
+
+          {withholdingTax && (
+            <div className="space-y-3">
+              {/* Deduct From Selector */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">Deduct From</label>
+                <select
+                  value={withholdingDeductFrom}
+                  onChange={(e) => setWithholdingDeductFrom(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="REMAINING">Remaining Payment (default)</option>
+                  <option value="ADVANCE">Advance Payment</option>
+                </select>
+              </div>
+
+              {/* Show calculation when deducting from advance */}
+              {withholdingDeductFrom === 'ADVANCE' && (
+                <div className="bg-white dark:bg-zinc-800 rounded-lg p-3 text-xs space-y-1 border border-amber-100 dark:border-zinc-700">
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Full Payment (VAT-inclusive)</span>
+                    <span>{totalPayment.toLocaleString()} ETB</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Base Price (excl. 15% VAT)</span>
+                    <span>{Math.round(basePrice).toLocaleString()} ETB</span>
+                  </div>
+                  <div className="flex justify-between text-amber-700 dark:text-amber-400 font-semibold">
+                    <span>Withholding (3%)</span>
+                    <span>{withholdingAmount.toLocaleString()} ETB</span>
+                  </div>
+                  <hr className="border-gray-200 dark:border-zinc-700" />
+                  <div className="flex justify-between text-gray-900 dark:text-white font-bold">
+                    <span>Physical Cash/Transfer to Collect</span>
+                    <span>{effectiveAdvance.toLocaleString()} ETB</span>
+                  </div>
+
+                  {/* Per-payment withholding selector for multiple payments */}
+                  {payments.length > 1 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-zinc-700">
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+                        Withholding deducted from which payment?
+                      </label>
+                      <select
+                        value={withholdingPaymentIndex}
+                        onChange={(e) => setWithholdingPaymentIndex(parseInt(e.target.value))}
+                        className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
+                      >
+                        {payments.map((_, i) => (
+                          <option key={i} value={i}>Payment #{i + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Allocated vs Required */}
-      <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${Math.round(totalAllocated) === Math.round(advancePayment)
+      <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${Math.round(totalAllocated) === Math.round(requiredAmount)
         ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
         : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
         }`}>
-        Allocated: {totalAllocated.toLocaleString()} / {advancePayment.toLocaleString()} ETB
-        {Math.round(totalAllocated) !== Math.round(advancePayment) && (
-          <span className="ml-2 text-xs">(Remaining: {(advancePayment - totalAllocated).toLocaleString()})</span>
+        Allocated: {totalAllocated.toLocaleString()} / {requiredAmount.toLocaleString()} ETB
+        {isWithholdingFromAdvance && (
+          <span className="ml-1 text-xs opacity-70">(WHT: {withholdingAmount.toLocaleString()})</span>
+        )}
+        {Math.round(totalAllocated) !== Math.round(requiredAmount) && (
+          <span className="ml-2 text-xs">(Remaining: {(requiredAmount - totalAllocated).toLocaleString()})</span>
         )}
       </div>
 
