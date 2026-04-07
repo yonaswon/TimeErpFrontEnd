@@ -78,6 +78,7 @@ export interface CuttingFile {
 }
 export interface Order {
   order_code: number;
+  order_name?: string;
   boms: Bom[];
   mockup: Mockup | null;
   mockup_modification: MockupModification | null;

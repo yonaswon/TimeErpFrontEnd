@@ -1,7 +1,7 @@
 // CuttingFile.tsx
-import { useState, useEffect } from 'react';
-import { Download, Plus, FileText, Package, Calendar, Ruler, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2 } from 'lucide-react';
-import { CuttingFile, CuttingFileResponse } from '@/types/cutting';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers } from 'lucide-react';
+import { CuttingFile, CuttingFileResponse, Material } from '@/types/cutting';
 import api from '@/api';
 import { CuttingFileDetailOverlay } from './CuttingFileDetailOverlay';
 import { CreateCuttingFileOverlay } from './CreateCuttingFileOverlay';
@@ -15,24 +15,52 @@ export const CuttingFileComponent = () => {
   const [cuttingFiles, setCuttingFiles] = useState<CuttingFile[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<CuttingFile | null>(null);
   const [editingFile, setEditingFile] = useState<CuttingFile | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const fetchCuttingFiles = async (url?: string) => {
-    const isLoadMore = !!url;
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterMaterial, setFilterMaterial] = useState('');
+  const [filterSheet, setFilterSheet] = useState('');
+
+  // Materials list for filter dropdown
+  const [materials, setMaterials] = useState<{ id: number; name: string }[]>([]);
+  const [sheets, setSheets] = useState<{ id: number; code: number; material_name: string; label: string }[]>([]);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Build the API URL with current search/filter params
+  const buildApiUrl = useCallback((extraParams?: string) => {
+    const params = new URLSearchParams();
+    params.set('ordering', '-date');
+    if (searchQuery.trim()) params.set('search', searchQuery.trim());
+    if (filterMaterial) params.set('material', filterMaterial);
+    if (filterSheet) params.set('sheet', filterSheet);
+    let url = `/api/cuttingfiles/?${params.toString()}`;
+    if (extraParams) url += `&${extraParams}`;
+    return url;
+  }, [searchQuery, filterMaterial, filterSheet]);
+
+  const fetchCuttingFiles = useCallback(async (url?: string, isLoadMore: boolean = false) => {
     try {
       if (isLoadMore) {
         setLoadingMore(true);
+      } else if (cuttingFiles.length > 0) {
+        setSearching(true);
       } else {
         setInitialLoading(true);
       }
       setError(null);
-      // For load-more, extract the path from the full next URL; for initial, use the default endpoint
-      let requestUrl = '/api/cuttingfiles/?ordering=-date';
+
+      let requestUrl = url || buildApiUrl();
       if (url) {
+        // For load-more, extract the path from the full next URL
         try {
           const parsedUrl = new URL(url);
           requestUrl = parsedUrl.pathname + parsedUrl.search;
@@ -40,6 +68,7 @@ export const CuttingFileComponent = () => {
           requestUrl = url;
         }
       }
+
       const response = await api.get<CuttingFileResponse>(requestUrl);
       if (isLoadMore) {
         setCuttingFiles(prev => [...prev, ...response.data.results]);
@@ -47,18 +76,51 @@ export const CuttingFileComponent = () => {
         setCuttingFiles(response.data.results);
       }
       setNextPageUrl(response.data.next);
+      setTotalCount(response.data.count || 0);
     } catch (err) {
       setError('Failed to fetch cutting files');
-      console.error('Error fetching cutting files:', err);
     } finally {
       setInitialLoading(false);
       setLoadingMore(false);
+      setSearching(false);
     }
-  };
+  }, [buildApiUrl]);
 
+  // Fetch materials for the filter dropdown (once)
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      try {
+        const res = await api.get('/materials/?ordering=name&type=A');
+        const mats = res.data.results || res.data || [];
+        setMaterials(mats.map((m: any) => ({ id: m.id, name: m.name })));
+      } catch { /* ignore */ }
+    };
+    const fetchSheets = async () => {
+      try {
+        const res = await api.get('/each-areal-materials/?finished=false&ordering=-code');
+        const data = res.data.results || res.data || [];
+        setSheets(data.map((s: any) => ({ id: s.id, code: s.code, material_name: s.material_name, label: `${s.material_name} #${s.code}` })));
+      } catch { /* ignore */ }
+    };
+    fetchMaterials();
+    fetchSheets();
+  }, []);
+
+  // Initial load
   useEffect(() => {
     fetchCuttingFiles();
   }, []);
+
+  // Debounced search — re-fetch when search/filter changes
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchCuttingFiles();
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery, filterMaterial, filterSheet]);
 
   const handleDownload = (fileUrl: string, fileName: string) => {
     if ((window as any).Telegram?.WebApp) {
@@ -76,8 +138,16 @@ export const CuttingFileComponent = () => {
 
   const handleLoadMore = () => {
     if (nextPageUrl && !loadingMore) {
-      fetchCuttingFiles(nextPageUrl);
+      fetchCuttingFiles(nextPageUrl, true);
     }
+  };
+
+  const hasActiveFilters = searchQuery || filterMaterial || filterSheet;
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setFilterMaterial('');
+    setFilterSheet('');
   };
 
   return (
@@ -119,12 +189,135 @@ export const CuttingFileComponent = () => {
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Cutting Files</h2>
             <button
               onClick={() => setShowCreateOverlay(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 active:scale-[0.97] transition-all"
             >
               <Plus className="w-4 h-4" />
               New
             </button>
           </div>
+
+          {/* Search & Filter Bar */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              {/* Search Input */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by order code or name..."
+                  className="w-full h-11 pl-10 pr-9 border border-gray-200 dark:border-zinc-600 rounded-xl bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              {/* Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`h-11 px-3 flex items-center gap-1.5 border rounded-xl text-sm font-medium transition-all shrink-0 ${
+                  showFilters || filterMaterial || filterSheet
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-600 dark:text-blue-400'
+                    : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-600 text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                <Filter className="w-4 h-4" />
+                <span className="hidden sm:inline">Filters</span>
+                {(filterMaterial || filterSheet) && (
+                  <span className="w-5 h-5 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                    {(filterMaterial ? 1 : 0) + (filterSheet ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Filter Dropdowns */}
+            {showFilters && (
+              <div className="bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Filters</h4>
+                  {hasActiveFilters && (
+                    <button onClick={clearAllFilters} className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Material</label>
+                    <select
+                      value={filterMaterial}
+                      onChange={(e) => { setFilterMaterial(e.target.value); setFilterSheet(''); }}
+                      className="w-full h-10 px-3 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    >
+                      <option value="">All Materials</option>
+                      {materials.map(m => (
+                        <option key={m.id} value={m.name}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Sheet</label>
+                    <select
+                      value={filterSheet}
+                      onChange={(e) => setFilterSheet(e.target.value)}
+                      className="w-full h-10 px-3 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+                      disabled={!filterMaterial}
+                    >
+                      <option value="">{filterMaterial ? 'All Sheets' : 'Select a material first'}</option>
+                      {sheets
+                         .filter(s => filterMaterial ? s.material_name === filterMaterial : false)
+                         .map(s => (
+                           <option key={s.id} value={s.code}>#{s.code}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active filter pills */}
+            {hasActiveFilters && !showFilters && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-xs text-blue-700 dark:text-blue-300 font-medium border border-blue-200 dark:border-blue-800/40">
+                    Search: "{searchQuery}"
+                    <button onClick={() => setSearchQuery('')}><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {filterMaterial && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-900/20 text-xs text-green-700 dark:text-green-300 font-medium border border-green-200 dark:border-green-800/40">
+                    Material: {filterMaterial}
+                    <button onClick={() => setFilterMaterial('')}><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {filterSheet && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-xs text-purple-700 dark:text-purple-300 font-medium border border-purple-200 dark:border-purple-800/40">
+                    Sheet: #{filterSheet}
+                    <button onClick={() => setFilterSheet('')}><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Searching indicator */}
+          {searching && (
+            <div className="flex items-center justify-center gap-2 py-2">
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">Searching...</span>
+            </div>
+          )}
+
+          {/* Results count */}
+          {hasActiveFilters && !initialLoading && !searching && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {totalCount} cutting file{totalCount !== 1 ? 's' : ''} found
+            </p>
+          )}
 
           {/* Initial Loading State */}
           {initialLoading ? (
@@ -132,26 +325,33 @@ export const CuttingFileComponent = () => {
               <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
               <p className="text-sm text-gray-500 dark:text-gray-400">Loading cutting files...</p>
             </div>
-          ) : cuttingFiles.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No Cutting Files
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                Get started by creating your first cutting file
-              </p>
+          ) : cuttingFiles.length === 0 && !hasActiveFilters ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="p-4 rounded-2xl bg-gray-100 dark:bg-zinc-800">
+                <FileText className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">No Cutting Files</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Get started by creating your first cutting file</p>
               <button
                 onClick={() => setShowCreateOverlay(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 Create Cutting File
               </button>
             </div>
+          ) : cuttingFiles.length === 0 && hasActiveFilters ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="p-4 rounded-2xl bg-gray-100 dark:bg-zinc-800">
+                <Search className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">No Results</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">No cutting files match your search or filters</p>
+              <button onClick={clearAllFilters} className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline">Clear Filters</button>
+            </div>
           ) : (
             <>
-              {/* Cutting Files Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Cutting Files List */}
+              <div className="space-y-3">
                 {cuttingFiles.map((file) => (
                   <CuttingFileCard
                     key={file.id}
@@ -165,22 +365,17 @@ export const CuttingFileComponent = () => {
 
               {/* Load More Button */}
               {nextPageUrl && (
-                <div className="flex justify-center mt-8">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed border border-gray-200 dark:border-zinc-700"
-                  >
-                    {loadingMore ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      'Load More'
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /><span>Loading...</span></>
+                  ) : (
+                    <><ChevronDown className="w-4 h-4" /><span>Load More</span></>
+                  )}
+                </button>
               )}
             </>
           )}
@@ -221,6 +416,7 @@ export const CuttingFileComponent = () => {
     </div>
   );
 };
+
 interface CuttingFileCardProps {
   file: CuttingFile;
   onViewDetails: () => void;
@@ -242,148 +438,123 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'NOT-ASSIGNED': { color: 'bg-gray-100 text-gray-800', label: 'Not Assigned' },
-      'ASSIGNED': { color: 'bg-blue-100 text-blue-800', label: 'Assigned' },
-      'STARTED': { color: 'bg-yellow-100 text-yellow-800', label: 'Started' },
-      'COMPLATED': { color: 'bg-green-100 text-green-800', label: 'Completed' }
+    const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
+      'NOT-ASSIGNED': { bg: 'bg-gray-100 dark:bg-zinc-700', text: 'text-gray-700 dark:text-gray-300', label: 'Not Assigned' },
+      'ASSIGNED': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Assigned' },
+      'STARTED': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300', label: 'Started' },
+      'COMPLATED': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'Completed' }
     };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['NOT-ASSIGNED'];
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
+    return statusConfig[status] || statusConfig['NOT-ASSIGNED'];
   };
 
+  const statusBadge = getStatusBadge(file.status);
+
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" onClick={onViewDetails}>
-      {/* Header with Actions */}
-      <div className="p-4 border-b border-gray-200 dark:border-zinc-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {fileName.length > 15 ? fileName.substring(0, 15) + '...' : fileName}
+    <div
+      className="bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 overflow-hidden active:scale-[0.99] transition-transform cursor-pointer"
+      onClick={onViewDetails}
+    >
+      <div className="flex gap-3 p-3">
+        {/* Preview thumbnail */}
+        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-700 shrink-0 border border-gray-200 dark:border-zinc-600">
+          <img src={file.image} alt="Cutting preview" className="w-full h-full object-contain" />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          {/* Top row: filename + actions */}
+          <div className="flex items-start justify-between mb-1">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <Scissors className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {fileName.length > 20 ? fileName.substring(0, 20) + '...' : fileName}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0 -mt-0.5 -mr-1">
+              <button
+                onClick={handleEditClick}
+                className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+              >
+                <Edit className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleDownloadClick}
+                className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Material + status */}
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
+              {statusBadge.label}
             </span>
+            {file.assigned_to && (
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-0.5">
+                <User className="w-2.5 h-2.5" />@{file.assigned_to.telegram_user_name}
+              </span>
+            )}
           </div>
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={handleEditClick}
-              className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-              title="Edit cutting file"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleDownloadClick}
-              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-              title="Download CRV3D file"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
 
-        {/* Status and Assignment */}
-        <div className="flex items-center justify-between mt-2">
-          <div>
-            {getStatusBadge(file.status)}
+          {/* Material info */}
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {file.on ? (
+              <span className="flex items-center gap-1">
+                <Layers className="w-3 h-3 text-blue-500 shrink-0" />
+                <span className="truncate">{file.on.material_name} #{file.on.code}</span>
+                <span className="text-gray-400 dark:text-gray-500">• {file.on.current_width}×{file.on.current_height}</span>
+              </span>
+            ) : file.old_material && file.old_material_number ? (
+              <span className="flex items-center gap-1">
+                <Layers className="w-3 h-3 text-amber-500 shrink-0" />
+                <span className="truncate">{file.old_material.name} #{file.old_material_number}</span>
+                <span className="text-amber-500 text-[10px]">Unreg.</span>
+              </span>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">Unknown Material</span>
+            )}
           </div>
-          {file.assigned_to && (
-            <div className="flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-400">
-              <User className="w-3 h-3" />
-              <span>@{file.assigned_to.telegram_user_name}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Material Info */}
-        <div className="mt-2 text-left">
-          {file.on ? (
-            <>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {file.on.material_name} - {file.on.code}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                Size: {file.on.current_width} x {file.on.current_height}
-              </p>
-            </>
-          ) : file.old_material && file.old_material_number ? (
-            <>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {file.old_material.name} - {file.old_material_number}
-              </p>
-              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                Unregistered Sheet
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Unknown Material
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Preview Image */}
-      <div className="aspect-video bg-gray-100 dark:bg-zinc-700">
-        <img
-          src={file.image}
-          alt="Cutting preview"
-          className="w-full h-full object-contain"
-        />
-      </div>
-
-      {/* Orders List */}
-      <div className="p-4">
-        <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400 mb-2">
-          <Package className="w-4 h-4" />
-          <span>Connected Orders:</span>
-        </div>
-        <div className="space-y-1">
+      {/* Orders */}
+      <div className="px-3 pb-3">
+        <div className="flex flex-wrap gap-1.5">
           {file.orders.map((order) => (
-            <div
+            <span
               key={order.order_code}
-              className="flex items-center justify-between text-sm"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                order.order_status === 'CNC-COMPLETED'
+                  ? 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800/40'
+                  : order.order_status === 'CNC-STARTED'
+                    ? 'bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800/40'
+                    : 'bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-600'
+              }`}
             >
-              <span className="text-gray-700 dark:text-gray-300 font-medium">
-                ORD-{order.order_code}
-              </span>
-              <span className={`px-2 py-1 rounded-full text-xs ${order.order_status === 'PRE-ACCEPTED'
-                ? 'bg-yellow-100 text-yellow-800'
-                : order.order_status === 'PRE-CONFIRMED'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-gray-100 text-gray-800'
-                }`}>
-                {order.order_status.replace('-', ' ')}
-              </span>
-            </div>
+              ORD-{order.order_code}
+              {order.order_name && (
+                <span className="text-gray-500 dark:text-gray-400 font-normal truncate max-w-[100px]">— {order.order_name}</span>
+              )}
+            </span>
           ))}
         </div>
 
-        {/* Timeline Information */}
-        <div className="mt-3 space-y-1 text-xs text-gray-500">
-          {file.start_date && (
-            <div className="flex items-center space-x-1">
-              <Play className="w-3 h-3 text-yellow-600" />
-              <span>Started: {new Date(file.start_date).toLocaleDateString()}</span>
-            </div>
-          )}
-          {file.complate_date && (
-            <div className="flex items-center space-x-1">
-              <CheckCircle className="w-3 h-3 text-green-600" />
-              <span>Completed: {new Date(file.complate_date).toLocaleDateString()}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Date */}
-        <div className="flex items-center space-x-1 text-xs text-gray-500 mt-4 pt-4 border-t border-gray-200 dark:border-zinc-700">
-          <Calendar className="w-3 h-3" />
-          <span>Created: {new Date(file.date).toLocaleDateString()}</span>
-        </div>
+        {/* Timeline */}
+        {(file.start_date || file.complate_date) && (
+          <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
+            {file.start_date && (
+              <span className="flex items-center gap-0.5"><Play className="w-2.5 h-2.5 text-yellow-600" />{new Date(file.start_date).toLocaleDateString()}</span>
+            )}
+            {file.complate_date && (
+              <span className="flex items-center gap-0.5"><CheckCircle className="w-2.5 h-2.5 text-green-600" />{new Date(file.complate_date).toLocaleDateString()}</span>
+            )}
+            <span className="flex items-center gap-0.5 ml-auto"><Calendar className="w-2.5 h-2.5" />{new Date(file.date).toLocaleDateString()}</span>
+          </div>
+        )}
       </div>
     </div>
   );

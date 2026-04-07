@@ -1,15 +1,6 @@
 // AssignCutting/AssignCuttingOverlay.tsx
 import { useState, useEffect } from "react";
-import {
-  X,
-  Scissors,
-  Calendar,
-  User,
-  Package,
-  AlertCircle,
-  CheckCircle,
-  Lock,
-} from "lucide-react";
+import { X, Scissors, User, Package, AlertCircle, CheckCircle, Lock, Loader2 } from "lucide-react";
 import api from "@/api";
 
 interface CuttingFile {
@@ -31,6 +22,7 @@ interface CuttingFile {
 
 interface Order {
   order_code: number;
+  order_name?: string;
   boms: Bom[];
   mockup: any;
   mockup_modification: any;
@@ -43,54 +35,16 @@ interface Order {
   design_type: number;
 }
 
-interface Bom {
-  id: number;
-  amount: string;
-  width: string;
-  height: string;
-  price_per_unit: string;
-  total_price: string;
-  estimated_price: string;
-  date: string;
-  material: number;
-}
-
-interface EachArealMaterial {
-  id: number;
-  material: number;
-  material_name: string;
-  areal_material_record: number;
-  code: number;
-  inventory: number;
-  inventory_name: string;
-  current_width: string;
-  current_height: string;
-  started: boolean;
-  finished: boolean;
-  date: string;
-}
-
-interface TeamMember {
-  id: number;
-  telegram_id: number;
-  telegram_user_name: string;
-  role: Role[];
-  first_name: string;
-}
-
-interface Role {
-  id: number;
-  Name: string;
-  date: string;
-}
+interface Bom { id: number; amount: string; width: string; height: string; price_per_unit: string; total_price: string; estimated_price: string; date: string; material: number; }
+interface EachArealMaterial { id: number; material: number; material_name: string; areal_material_record: number; code: number; inventory: number; inventory_name: string; current_width: string; current_height: string; started: boolean; finished: boolean; date: string; }
+interface TeamMember { id: number; telegram_id: number; telegram_user_name: string; role: Role[]; first_name: string; }
+interface Role { id: number; Name: string; date: string; }
 
 interface AssignCuttingOverlayProps {
   onClose: () => void;
 }
 
-export const AssignCuttingOverlay = ({
-  onClose,
-}: AssignCuttingOverlayProps) => {
+export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => {
   const [cuttingFiles, setCuttingFiles] = useState<CuttingFile[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedFile, setSelectedFile] = useState<CuttingFile | null>(null);
@@ -102,71 +56,38 @@ export const AssignCuttingOverlay = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Fetch unassigned cutting files
-      const cuttingResponse = await api.get(
-        "/api/cuttingfiles/?status=NOT-ASSIGNED"
-      );
+      const cuttingResponse = await api.get("/api/cuttingfiles/?status=NOT-ASSIGNED");
       setCuttingFiles(cuttingResponse.data.results);
-
-      // Fetch CNC operators
       const teamResponse = await api.get("/core/teams/?role=CNC_OPEREATOR");
       setTeamMembers(teamResponse.data);
     } catch (err) {
       setError("Failed to fetch data");
-      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Check if all orders in a cutting file have payment confirmed (any status beyond PRE-ACCEPTED)
-  const areAllOrdersPaymentConfirmed = (file: CuttingFile) => {
-    return file.orders.every((order) => order.order_status !== "PRE-ACCEPTED");
-  };
-
-  // Check if any order is still pre-accepted (payment pending)
-  const hasPreAcceptedOrders = (file: CuttingFile) => {
-    return file.orders.some((order) => order.order_status === "PRE-ACCEPTED");
-  };
+  const areAllOrdersPaymentConfirmed = (file: CuttingFile) => file.orders.every((o) => o.order_status !== "PRE-ACCEPTED");
+  const hasPreAcceptedOrders = (file: CuttingFile) => file.orders.some((o) => o.order_status === "PRE-ACCEPTED");
 
   const handleAssign = async (fileId: number) => {
-    if (!selectedMember || !scheduleStartDate || !scheduleCompleteDate) {
-      setError("Please fill all required fields");
-      return;
-    }
-
+    if (!selectedMember || !scheduleStartDate || !scheduleCompleteDate) { setError("Please fill all required fields"); return; }
     try {
       setAssigning(true);
       setError(null);
-
-      const payload = {
+      await api.post(`/api/cuttingfiles/${fileId}/assign/`, {
         assigned_to: parseInt(selectedMember),
         schedule_start_date: scheduleStartDate,
         schedule_complate_date: scheduleCompleteDate,
-      };
-
-      await api.post(`/api/cuttingfiles/${fileId}/assign/`, payload);
-
+      });
       setSuccess("Task assigned successfully!");
-
-      // Refresh the list after successful assignment
-      setTimeout(() => {
-        fetchData();
-        setSelectedFile(null);
-        setSelectedMember("");
-        setScheduleStartDate("");
-        setScheduleCompleteDate("");
-        setSuccess(null);
-      }, 2000);
+      setTimeout(() => { fetchData(); setSelectedFile(null); setSelectedMember(""); setScheduleStartDate(""); setScheduleCompleteDate(""); setSuccess(null); }, 2000);
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to assign task");
     } finally {
@@ -175,18 +96,10 @@ export const AssignCuttingOverlay = ({
   };
 
   const getRelativeDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const diffTime = date.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+    const diffDays = Math.ceil((new Date(dateString).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Tomorrow";
-    if (diffDays === 2) return "2 days from now";
-    if (diffDays === 3) return "3 days from now";
+    if (diffDays < 0) return `${Math.abs(diffDays)} day(s) ago`;
     return `${diffDays} days from now`;
   };
 
@@ -196,252 +109,136 @@ export const AssignCuttingOverlay = ({
     return now.toISOString().slice(0, 16);
   };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-3 text-center">
-            Loading...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white dark:bg-zinc-800 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto overscroll-contain">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700">
-          <div className="flex items-center space-x-3">
-            <Scissors className="w-6 h-6 text-blue-600" />
+        <div className="sticky top-0 bg-white dark:bg-zinc-800 flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-zinc-700 z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20">
+              <Scissors className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Assign Cutting Tasks
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {cuttingFiles.length} unassigned cutting file(s)
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Assign Cutting</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{cuttingFiles.length} unassigned file(s)</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4">
           {error && (
-            <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-              <AlertCircle className="w-4 h-4 text-red-600" />
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl mb-4">
+              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+              <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
             </div>
           )}
-
           {success && (
-            <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <p className="text-green-700 text-sm">{success}</p>
+            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 rounded-xl mb-4">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-green-700 dark:text-green-300 text-sm">{success}</p>
             </div>
           )}
 
-          {cuttingFiles.length === 0 ? (
-            <div className="text-center py-8">
-              <Scissors className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No Unassigned Cutting Files
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                All cutting files have been assigned to operators.
-              </p>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            </div>
+          ) : cuttingFiles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="p-4 rounded-2xl bg-gray-100 dark:bg-zinc-700">
+                <Scissors className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">No Unassigned Files</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">All cutting files have been assigned.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {cuttingFiles.map((file) => {
                 const paymentPending = hasPreAcceptedOrders(file);
-                const canAssign = areAllOrdersPaymentConfirmed(file);
                 return (
-                  <div
-                    key={file.id}
-                    className={`bg-gray-50 dark:bg-zinc-700 rounded-lg p-4 border ${paymentPending ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-zinc-600'}`}
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start gap-4">
-                      {/* File Preview */}
-                      <div className="shrink-0">
-                        <img
-                          src={file.image}
-                          alt="Cutting preview"
-                          className="w-24 h-24 object-cover rounded-lg border border-gray-300"
-                        />
-                      </div>
-
-                      {/* File Information */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">
-                              {file.crv3d.split("/").pop()}
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end space-y-1">
-                            <span className="px-2 py-1 bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-full text-xs">
-                              {file.orders.length} order(s)
+                  <div key={file.id} className={`bg-gray-50 dark:bg-zinc-900/50 rounded-xl border ${paymentPending ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-zinc-700'} overflow-hidden`}>
+                    <div className="p-4">
+                      {/* File Header */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <img src={file.image} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-zinc-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.crv3d.split("/").pop()}</h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300">
+                            {file.orders.length} order(s)
+                          </span>
+                          {paymentPending ? (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+                              <Lock className="w-2.5 h-2.5" /> Payment Pending
                             </span>
-                            {paymentPending ? (
-                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs flex items-center space-x-1">
-                                <Lock className="w-3 h-3" />
-                                <span>Payment Pending</span>
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                Ready to Assign
-                              </span>
-                            )}
-                          </div>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Ready</span>
+                          )}
                         </div>
-
-                        {/* Orders List */}
-                        <div className="space-y-2 mb-3">
-                          {file.orders.map((order) => (
-                            <div
-                              key={order.order_code}
-                              className="flex items-center justify-between text-sm"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <Package className="w-3 h-3 text-blue-600" />
-                                <span className="text-gray-700 dark:text-gray-300">
-                                  ORD-{order.order_code}
-                                  {(order as any).order_name && <span className="ml-1 text-gray-500 dark:text-gray-400">— {(order as any).order_name}</span>}
-                                </span>
-                              </div>
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs ${order.order_status === "PRE-ACCEPTED"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-green-100 text-green-800"
-                                  }`}
-                              >
-                                {order.order_status.replace(/-/g, " ")}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Assignment Form */}
-                        {selectedFile?.id === file.id ? (
-                          <div className="space-y-3 p-3 bg-white dark:bg-zinc-800 rounded-lg border border-gray-200 dark:border-zinc-600">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {/* Team Member Selection */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                  Assign To *
-                                </label>
-                                <select
-                                  value={selectedMember}
-                                  onChange={(e) =>
-                                    setSelectedMember(e.target.value)
-                                  }
-                                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                                >
-                                  <option value="">Select Operator</option>
-                                  {teamMembers.map((member) => (
-                                    <option key={member.id} value={member.id}>
-                                      @{member.telegram_user_name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              {/* Schedule Start Date */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                  Schedule Start Date *
-                                </label>
-                                <input
-                                  type="datetime-local"
-                                  value={scheduleStartDate}
-                                  onChange={(e) =>
-                                    setScheduleStartDate(e.target.value)
-                                  }
-                                  min={getMinDate()}
-                                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                                />
-                                {scheduleStartDate && (
-                                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                    {getRelativeDate(scheduleStartDate)}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Schedule Complete Date */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                  Schedule Complete Date *
-                                </label>
-                                <input
-                                  type="datetime-local"
-                                  value={scheduleCompleteDate}
-                                  onChange={(e) =>
-                                    setScheduleCompleteDate(e.target.value)
-                                  }
-                                  min={scheduleStartDate || getMinDate()}
-                                  className="w-full p-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white text-sm"
-                                />
-                                {scheduleCompleteDate && (
-                                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                    {getRelativeDate(scheduleCompleteDate)}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex justify-end space-x-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedFile(null);
-                                  setSelectedMember("");
-                                  setScheduleStartDate("");
-                                  setScheduleCompleteDate("");
-                                }}
-                                className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-600 rounded-lg transition-colors text-sm"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => handleAssign(file.id)}
-                                disabled={assigning}
-                                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                              >
-                                {assigning ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                                    <span>Assigning...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <User className="w-3 h-3" />
-                                    <span>Assign Task</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setSelectedFile(file)}
-                            className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            <User className="w-3 h-3" />
-                            <span>Assign Task</span>
-                          </button>
-                        )}
                       </div>
+
+                      {/* Orders */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {file.orders.map((order) => (
+                          <span key={order.order_code} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                            order.order_status === "PRE-ACCEPTED" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                          }`}>
+                            <Package className="w-2.5 h-2.5" />
+                            ORD-{order.order_code}
+                            {order.order_name && <span className="opacity-70">— {order.order_name}</span>}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Assignment Form */}
+                      {selectedFile?.id === file.id ? (
+                        <div className="space-y-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign To *</label>
+                            <select value={selectedMember} onChange={(e) => setSelectedMember(e.target.value)}
+                              className="w-full h-11 px-3 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                              <option value="">Select Operator</option>
+                              {teamMembers.map((m) => <option key={m.id} value={m.id}>@{m.telegram_user_name}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date *</label>
+                            <input type="datetime-local" value={scheduleStartDate} onChange={(e) => setScheduleStartDate(e.target.value)} min={getMinDate()}
+                              className="w-full h-11 px-3 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            {scheduleStartDate && <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{getRelativeDate(scheduleStartDate)}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Complete Date *</label>
+                            <input type="datetime-local" value={scheduleCompleteDate} onChange={(e) => setScheduleCompleteDate(e.target.value)} min={scheduleStartDate || getMinDate()}
+                              className="w-full h-11 px-3 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            {scheduleCompleteDate && <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{getRelativeDate(scheduleCompleteDate)}</p>}
+                          </div>
+                          <div className="flex gap-3 pt-2">
+                            <button onClick={() => { setSelectedFile(null); setSelectedMember(""); setScheduleStartDate(""); setScheduleCompleteDate(""); }}
+                              className="flex-1 h-11 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors">
+                              Cancel
+                            </button>
+                            <button onClick={() => handleAssign(file.id)} disabled={assigning}
+                              className="flex-1 h-11 flex items-center justify-center gap-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-zinc-600 disabled:cursor-not-allowed transition-colors">
+                              {assigning ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Assigning...</span></> : <><User className="w-4 h-4" /><span>Assign</span></>}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setSelectedFile(file)}
+                          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:scale-[0.98] transition-all">
+                          <User className="w-4 h-4" /> <span>Assign Task</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
