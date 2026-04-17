@@ -1,12 +1,13 @@
 // CuttingFile.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers } from 'lucide-react';
+import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers, Target } from 'lucide-react';
 import { CuttingFile, CuttingFileResponse, Material } from '@/types/cutting';
 import api from '@/api';
 import { CuttingFileDetailOverlay } from './CuttingFileDetailOverlay';
 import { CreateCuttingFileOverlay } from './CreateCuttingFileOverlay';
 import { EditCuttingFileOverlay } from './EditCuttingFileOverlay';
 import { DxfOrdersList } from './DxfOrdersList';
+import { SearchFitSidebar } from './SearchFitSidebar';
 
 type TopTab = 'cutting_files' | 'dxf_orders'
 
@@ -20,6 +21,7 @@ export const CuttingFileComponent = () => {
   const [selectedFile, setSelectedFile] = useState<CuttingFile | null>(null);
   const [editingFile, setEditingFile] = useState<CuttingFile | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
+  const [showSearchFit, setShowSearchFit] = useState(false);
   const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
@@ -187,13 +189,22 @@ export const CuttingFileComponent = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Cutting Files</h2>
-            <button
-              onClick={() => setShowCreateOverlay(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 active:scale-[0.97] transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              New
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSearchFit(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:from-purple-700 hover:to-indigo-700 active:scale-[0.97] transition-all"
+              >
+                <Target className="w-4 h-4" />
+                Search & Fit
+              </button>
+              <button
+                onClick={() => setShowCreateOverlay(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 active:scale-[0.97] transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                New
+              </button>
+            </div>
           </div>
 
           {/* Search & Filter Bar */}
@@ -411,6 +422,13 @@ export const CuttingFileComponent = () => {
               }}
             />
           )}
+
+          {/* Search & Fit Sidebar */}
+          <SearchFitSidebar
+            isOpen={showSearchFit}
+            onClose={() => setShowSearchFit(false)}
+            materials={materials as any[]}
+          />
         </>
       )}
     </div>
@@ -455,9 +473,16 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
       onClick={onViewDetails}
     >
       <div className="flex gap-3 p-3">
-        {/* Preview thumbnail */}
-        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-700 shrink-0 border border-gray-200 dark:border-zinc-600">
-          <img src={file.image} alt="Cutting preview" className="w-full h-full object-contain" />
+        {/* Preview thumbnail(s) */}
+        <div className={`flex gap-1 ${file.line_image ? 'w-[164px]' : 'w-20'} shrink-0`}>
+          <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600">
+            <img src={file.image} alt="Cutting preview" className="w-full h-full object-contain" />
+          </div>
+          {file.line_image && (
+            <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600">
+              <img src={file.line_image} alt="Wireframe preview" className="w-full h-full object-contain" />
+            </div>
+          )}
         </div>
 
         {/* Info */}

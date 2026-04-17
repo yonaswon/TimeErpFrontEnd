@@ -1,18 +1,29 @@
 // CreateCuttingFileOverlay.tsx
 import { useState, useEffect } from 'react';
-import { X, Upload, FileText, Package, AlertCircle, Image } from 'lucide-react';
-import { Material, EachArealMaterial, Order } from '@/types/cutting';
+import { X, Upload, FileText, Package, AlertCircle, Layers, Eye, Check, RefreshCw, Loader2 } from 'lucide-react';
+import { Material, EachArealMaterial, Order, DxfLayer, DxfAnalyzeResponse } from '@/types/cutting';
 import api from '@/api';
+
+type DxfAnalysisStatus = 'idle' | 'analyzing' | 'ready' | 'failed';
 
 interface CreateCuttingFileOverlayProps {
   onClose: () => void;
   onSuccess: () => void;
 }
 
+const STEP_LABELS = [
+  'Upload Files',
+  'Select Material',
+  'Select Sheet',
+  'Select Orders',
+  'Select Layers',
+  'Review & Submit',
+];
+
 export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFileOverlayProps) => {
   const [step, setStep] = useState(1);
   const [crv3dFile, setCrv3dFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [dxfFile, setDxfFile] = useState<File | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
   const [eachArealMaterials, setEachArealMaterials] = useState<EachArealMaterial[]>([]);
@@ -22,11 +33,20 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dxfAnalysisStatus, setDxfAnalysisStatus] = useState<DxfAnalysisStatus>('idle');
+  const [dxfAnalysisError, setDxfAnalysisError] = useState<string | null>(null);
   const [loadingStates, setLoadingStates] = useState({
     materials: false,
     eachArealMaterials: false,
-    orders: false
+    orders: false,
+    dxfAnalysis: false,
   });
+
+  // DXF Layer Selection State
+  const [dxfLayers, setDxfLayers] = useState<DxfLayer[]>([]);
+  const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
+  const [fullPreview, setFullPreview] = useState<string | null>(null);
+  const [highlightedPreview, setHighlightedPreview] = useState<string | null>(null);
 
   const [orderTab, setOrderTab] = useState<'Active' | 'All'>('Active');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
@@ -120,17 +140,50 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
     }
   };
 
-  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDxfFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Check if it's an image file
-      if (selectedFile.type.startsWith('image/')) {
-        setImageFile(selectedFile);
+      if (selectedFile.name.endsWith('.dxf')) {
+        setDxfFile(selectedFile);
         setError(null);
+        // Fire analysis in background — don't await
+        analyzeDxfFile(selectedFile);
       } else {
-        setError('Please select a valid image file');
+        setError('Please select a .dxf file');
       }
     }
+  };
+
+  const analyzeDxfFile = async (file: File) => {
+    try {
+      setDxfAnalysisStatus('analyzing');
+      setDxfAnalysisError(null);
+      setLoadingStates(prev => ({ ...prev, dxfAnalysis: true }));
+      const formData = new FormData();
+      formData.append('dxf_file', file);
+      const response = await api.post('/api/cuttingfiles/analyze_dxf_upload/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const data: DxfAnalyzeResponse = response.data;
+      setDxfLayers(data.layers);
+      setFullPreview(data.full_preview);
+      setHighlightedPreview(null);
+      setSelectedLayers([]);
+      setDxfAnalysisStatus('ready');
+    } catch (err: any) {
+      setDxfAnalysisStatus('failed');
+      setDxfAnalysisError(err.response?.data?.error || 'DXF analysis failed. Please retry.');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, dxfAnalysis: false }));
+    }
+  };
+
+  const handleLayerToggle = (layerName: string) => {
+    setSelectedLayers(prev =>
+      prev.includes(layerName)
+        ? prev.filter(n => n !== layerName)
+        : [...prev, layerName]
+    );
   };
 
   const handleOrderToggle = (orderCode: number) => {
@@ -142,7 +195,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
   };
 
   const handleSubmit = async () => {
-    if (!crv3dFile || !imageFile || (!selectedEachArealMaterial && oldMaterialNumber.trim() === '') || selectedOrders.length === 0) {
+    if (!crv3dFile || !dxfFile || (!selectedEachArealMaterial && oldMaterialNumber.trim() === '') || selectedOrders.length === 0) {
       setError('Please fill all required fields');
       return;
     }
@@ -153,7 +206,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
 
       const formData = new FormData();
       formData.append('crv3d', crv3dFile);
-      formData.append('image', imageFile);
+      formData.append('dxf_file', dxfFile);
 
       if (selectedEachArealMaterial) {
         formData.append('on', selectedEachArealMaterial.id.toString());
@@ -167,6 +220,11 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
       selectedOrders.forEach(orderCode => {
         formData.append('orders', orderCode.toString());
       });
+
+      // Send selected layers
+      if (selectedLayers.length > 0) {
+        formData.append('selected_layers', JSON.stringify(selectedLayers));
+      }
 
       await api.post('/api/cuttingfiles/', formData, {
         headers: {
@@ -184,13 +242,17 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
 
   const canProceed = () => {
     switch (step) {
-      case 1: return crv3dFile !== null && imageFile !== null;
+      case 1: return crv3dFile !== null && dxfFile !== null;
       case 2: return selectedMaterial !== null;
       case 3: return selectedEachArealMaterial !== null || oldMaterialNumber.trim() !== '';
       case 4: return selectedOrders.length > 0;
+      case 5: return selectedLayers.length > 0 && dxfAnalysisStatus === 'ready';
+      case 6: return true;
       default: return false;
     }
   };
+
+  const totalSteps = 6;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -211,31 +273,41 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
         {/* Progress Steps */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700">
           <div className="flex items-center justify-between">
-            {[1, 2, 3, 4].map((stepNum) => (
+            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((stepNum) => (
               <div key={stepNum} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNum
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-600 dark:bg-zinc-700 dark:text-gray-400'
                   }`}>
-                  {stepNum}
+                  {step > stepNum ? <Check className="w-4 h-4" /> : stepNum}
                 </div>
-                {stepNum < 4 && (
-                  <div className={`w-12 h-1 mx-2 ${step > stepNum ? 'bg-blue-600' : 'bg-gray-200 dark:bg-zinc-700'
+                {stepNum < totalSteps && (
+                  <div className={`w-6 sm:w-10 h-1 mx-1 ${step > stepNum ? 'bg-blue-600' : 'bg-gray-200 dark:bg-zinc-700'
                     }`} />
                 )}
               </div>
             ))}
           </div>
           <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <span>Upload Files</span>
-            <span>Select Material</span>
-            <span>Select Sheet</span>
-            <span>Select Orders</span>
+            {STEP_LABELS.map((label, i) => (
+              <span key={i} className={`${step === i + 1 ? 'text-blue-600 font-medium' : ''}`}
+                style={{ maxWidth: `${100 / totalSteps}%`, textAlign: 'center', fontSize: '0.65rem' }}>
+                {label}
+              </span>
+            ))}
           </div>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Background Analysis Banner */}
+          {dxfAnalysisStatus === 'analyzing' && step >= 2 && step <= 4 && (
+            <div className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg animate-pulse">
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <p className="text-blue-700 dark:text-blue-300 text-sm font-medium">Processing DXF file in background...</p>
+            </div>
+          )}
+
           {error && (
             <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
               <AlertCircle className="w-4 h-4 text-red-600" />
@@ -243,7 +315,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
             </div>
           )}
 
-          {/* Step 1: File Upload */}
+          {/* Step 1: File Upload (CRV3D + DXF) */}
           {step === 1 && (
             <div className="space-y-6">
               <div className="text-center">
@@ -270,43 +342,67 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                 </label>
                 {crv3dFile && (
                   <p className="mt-3 text-sm text-green-600">
-                    Selected: {crv3dFile.name}
+                    ✓ {crv3dFile.name}
                   </p>
                 )}
               </div>
 
               <div className="text-center">
-                <Image className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <Layers className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  Upload Preview Image
+                  Upload DXF File
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Select a preview image for the cutting file
+                  Select the exported DXF version with layers
                 </p>
                 <input
                   type="file"
-                  accept="image/*"
-                  onChange={handleImageFileSelect}
+                  accept=".dxf"
+                  onChange={handleDxfFileSelect}
                   className="hidden"
-                  id="image-upload"
+                  id="dxf-upload"
                 />
                 <label
-                  htmlFor="image-upload"
+                  htmlFor="dxf-upload"
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors"
                 >
-                  <Image className="w-4 h-4" />
-                  <span>Choose Image</span>
+                  <Layers className="w-4 h-4" />
+                  <span>Choose DXF File</span>
                 </label>
-                {imageFile && (
+                {dxfAnalysisStatus === 'analyzing' && (
+                  <div className="mt-3 flex items-center justify-center space-x-2">
+                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                    <span className="text-sm text-blue-600">Analyzing DXF layers in background...</span>
+                  </div>
+                )}
+                {dxfFile && dxfAnalysisStatus === 'ready' && (
                   <p className="mt-3 text-sm text-green-600">
-                    Selected: {imageFile.name}
+                    ✓ {dxfFile.name} — {dxfLayers.length} layers detected
                   </p>
+                )}
+                {dxfFile && dxfAnalysisStatus === 'idle' && (
+                  <p className="mt-3 text-sm text-gray-500">
+                    ✓ {dxfFile.name} selected
+                  </p>
+                )}
+                {dxfAnalysisStatus === 'failed' && (
+                  <div className="mt-3 flex items-center justify-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <span className="text-sm text-red-600">{dxfAnalysisError}</span>
+                    <button
+                      onClick={() => dxfFile && analyzeDxfFile(dxfFile)}
+                      className="ml-2 inline-flex items-center space-x-1 px-2 py-1 bg-red-50 text-red-600 rounded text-xs font-medium hover:bg-red-100 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Retry</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Step 2: Material Selection */}
+          {/* Step 2: Material Selection (was Step 3) */}
           {step === 2 && (
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -339,7 +435,8 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
               )}
             </div>
           )}
-          {/* Step 3: Each Areal Material Selection */}
+
+          {/* Step 3: Each Areal Material Selection (was Step 4) */}
           {step === 3 && (
             <div className="space-y-6">
               <div>
@@ -423,7 +520,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
             </div>
           )}
 
-          {/* Step 4: Order Selection */}
+          {/* Step 4: Order Selection (was Step 5) */}
           {step === 4 && (
             <div className="flex flex-col h-full">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-3 sm:space-y-0">
@@ -498,9 +595,16 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                               {order.order_status.replace('-', ' ')}
                             </span>
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Size: {bom.width} x {bom.height}
-                          </div>
+                          {order.order_name && (
+                            <div className="text-sm text-gray-800 dark:text-gray-300 mt-0.5 font-medium">
+                              {order.order_name}
+                            </div>
+                          )}
+                          {bom && (
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              Size: {bom.width} x {bom.height}
+                            </div>
+                          )}
 
                           {/* Mockup Image */}
                           {(order.mockup_image || order.mockup_modification?.mockup_image || order.mockup?.mockup_image) && (
@@ -510,8 +614,6 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                               className="w-16 h-16 object-cover rounded border border-gray-300 mt-2"
                             />
                           )}
-
-
 
                           {/* Related Cutting Files */}
                           {order.cutting_files && order.cutting_files.length > 0 && (
@@ -539,6 +641,192 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
               )}
             </div>
           )}
+
+          {/* Step 5: Layer Selection (was Step 2) — analysis should be done by now */}
+          {step === 5 && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                  Select Current Cut Layers
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Click on the layers that represent the current cut. Selected layers will be highlighted in red.
+                </p>
+              </div>
+
+              {/* Loading State */}
+              {dxfAnalysisStatus === 'analyzing' && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Analyzing DXF layers — almost ready...</p>
+                  <div className="w-48 h-1.5 bg-gray-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-600 rounded-full animate-pulse" style={{ width: '70%' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Failed State */}
+              {dxfAnalysisStatus === 'failed' && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <AlertCircle className="w-10 h-10 text-red-500" />
+                  <p className="text-sm text-red-600 font-medium">{dxfAnalysisError || 'DXF analysis failed'}</p>
+                  <button
+                    onClick={() => dxfFile && analyzeDxfFile(dxfFile)}
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-200 dark:border-red-800 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Retry Analysis</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Ready State — Layer selection UI */}
+              {dxfAnalysisStatus === 'ready' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Layer Cards */}
+                  <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+                    {dxfLayers.map((layer) => {
+                      const isSelected = selectedLayers.includes(layer.name);
+                      return (
+                        <button
+                          key={layer.name}
+                          onClick={() => handleLayerToggle(layer.name)}
+                          className={`w-full text-left rounded-xl border-2 transition-all overflow-hidden ${isSelected
+                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20 ring-2 ring-red-500/30'
+                            : 'border-gray-200 dark:border-zinc-700 hover:border-blue-400'
+                            }`}
+                        >
+                          {/* Layer preview image */}
+                          <div className="w-full h-20 bg-gray-50 dark:bg-zinc-900 overflow-hidden">
+                            <img
+                              src={layer.preview_image}
+                              alt={`Layer ${layer.name}`}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <div className="p-3 flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-sm text-gray-900 dark:text-white">
+                                {layer.name}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {layer.entity_count} entities
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <span className="px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded-full uppercase">
+                                Current Cut
+                              </span>
+                            )}
+                            {!isSelected && (
+                              <div className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-zinc-600" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Live DXF Preview */}
+                  <div className="border border-gray-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-zinc-900">
+                    <div className="p-2 bg-gray-100 dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 flex items-center space-x-2">
+                      <Eye className="w-4 h-4 text-gray-500" />
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        Sheet Preview
+                      </span>
+                      {selectedLayers.length > 0 && (
+                        <span className="text-xs text-red-500 font-medium ml-auto">
+                          {selectedLayers.length} layer{selectedLayers.length > 1 ? 's' : ''} selected
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      {fullPreview ? (
+                        <img
+                          src={highlightedPreview || fullPreview}
+                          alt="DXF Preview"
+                          className="w-full h-auto rounded"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+                          No preview available
+                        </div>
+                      )}
+                    </div>
+                    {/* Legend */}
+                    <div className="px-3 py-2 bg-gray-100 dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 flex items-center space-x-4 text-xs">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-3 h-3 rounded-sm bg-red-500" />
+                        <span className="text-gray-600 dark:text-gray-400">Selected (Current Cut)</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-3 h-3 rounded-sm bg-gray-400" />
+                        <span className="text-gray-600 dark:text-gray-400">Other Layers</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 6: Review & Submit */}
+          {step === 6 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Review Cutting File
+              </h3>
+
+              {/* DXF Preview with highlighted layers */}
+              <div className="border border-gray-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                {fullPreview && (
+                  <img
+                    src={fullPreview}
+                    alt="Cutting File Preview"
+                    className="w-full h-auto"
+                  />
+                )}
+              </div>
+
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-gray-500 dark:text-gray-400">CRV3D File</div>
+                  <div className="font-medium text-gray-900 dark:text-white truncate">{crv3dFile?.name}</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-gray-500 dark:text-gray-400">DXF File</div>
+                  <div className="font-medium text-gray-900 dark:text-white truncate">{dxfFile?.name}</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-gray-500 dark:text-gray-400">Material</div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {selectedMaterial?.name || 'N/A'}
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-gray-500 dark:text-gray-400">Sheet</div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {selectedEachArealMaterial
+                      ? `${selectedEachArealMaterial.code} - ${selectedEachArealMaterial.material_name}`
+                      : oldMaterialNumber || 'N/A'}
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-gray-500 dark:text-gray-400">Selected Layers</div>
+                  <div className="font-medium text-red-600">
+                    {selectedLayers.join(', ') || 'None'}
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-gray-500 dark:text-gray-400">Orders</div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -550,7 +838,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
             {step > 1 ? 'Back' : 'Cancel'}
           </button>
           <button
-            onClick={() => step < 4 ? setStep(step + 1) : handleSubmit()}
+            onClick={() => step < totalSteps ? setStep(step + 1) : handleSubmit()}
             disabled={!canProceed() || loading}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
@@ -559,7 +847,7 @@ export const CreateCuttingFileOverlay = ({ onClose, onSuccess }: CreateCuttingFi
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 <span>Creating...</span>
               </div>
-            ) : step < 4 ? (
+            ) : step < totalSteps ? (
               'Next'
             ) : (
               'Create Cutting File'

@@ -40,6 +40,13 @@ interface OrderAnalysis {
     sheet_count: number;
     other_sheets: number[];
     coverage_percent?: number;
+    // DXF verification
+    dxf_verification_status?: 'PENDING' | 'MATCHED' | 'UNMATCHED' | 'ERROR';
+    dxf_verification_score?: number | null;
+    coverage_percent_dxf?: number | null;
+    matched_parts_count?: number | null;
+    total_parts_count?: number | null;
+    analysis_notes?: string | null;
 }
 
 interface CuttingFile {
@@ -47,11 +54,22 @@ interface CuttingFile {
     status: string;
     date: string;
     image: string | null;
+    line_image: string | null;
     crv3d: string | null;
     orders: string[];
     analysis_status?: string;
     total_usage?: number | null;
     order_analyses?: OrderAnalysis[];
+    history_integrity_status?: 'PENDING' | 'MATCHED' | 'MISMATCHED' | 'N/A' | null;
+    history_integrity_score?: string | number | null;
+    selected_layers?: string[] | null;
+    // History area details
+    history_area_m2?: number | null;
+    history_current_area_m2?: number | null;
+    history_diff_m2?: number | null;
+    history_note?: string | null;
+    prev_total_cut_area_m2?: number | null;
+    prev_utilization_pct?: number | null;
 }
 
 interface MaterialDetail {
@@ -59,6 +77,8 @@ interface MaterialDetail {
     stats: {
         available: number;
         code_name: string;
+        width?: number;
+        height?: number;
     };
     areal_pieces: Piece[];
 }
@@ -77,10 +97,20 @@ export default function ArealTimelineContent() {
     const [detailLoading, setDetailLoading] = useState(false);
 
     const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
+    const [showColorsMap, setShowColorsMap] = useState<Record<number, boolean>>({});
 
     // View Modes & Refs
     const [piecesViewMode, setPiecesViewMode] = useState<"LIST" | "GRID">("LIST");
     const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+    const [expandedAnalysis, setExpandedAnalysis] = useState<Record<string, boolean>>({});
+    const [activeCardTab, setActiveCardTab] = useState<Record<number, 'info' | 'dxf'>>({});
+
+    const toggleAnalysis = (key: string) => {
+        setExpandedAnalysis(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const getCardTab = (cutId: number): 'info' | 'dxf' => activeCardTab[cutId] || 'info';
+    const setCardTab = (cutId: number, tab: 'info' | 'dxf') => setActiveCardTab(prev => ({ ...prev, [cutId]: tab }));
 
     const scrollTimeline = (direction: 'left' | 'right') => {
         if (scrollAreaRef.current) {
@@ -88,6 +118,11 @@ export default function ArealTimelineContent() {
             scrollAreaRef.current.scrollBy({ left: amount, behavior: 'smooth' });
         }
     };
+
+    // Get material dimensions (always from material, never piece)
+    const matWidth = materialDetail?.stats?.width || 0;
+    const matHeight = materialDetail?.stats?.height || 0;
+    const matArea = (matWidth * matHeight).toFixed(2);
 
     // Fetch materials on mount
     useEffect(() => {
@@ -300,9 +335,14 @@ export default function ArealTimelineContent() {
                                                 setLevel("TIMELINE");
                                             }}
                                         >
-                                            <div className="piece-grid-thumbnail">
+                                            <div className={`piece-grid-thumbnail flex flex-col gap-1 ${latestCut?.line_image ? 'h-auto' : ''}`}>
                                                 {latestCut?.image ? (
-                                                    <img src={resolveMediaUrl(latestCut.image)} alt="Latest Cut" />
+                                                    <div className="flex w-full gap-1">
+                                                        <img src={resolveMediaUrl(latestCut.image)} alt="Latest Cut" className="flex-1 object-cover" />
+                                                        {latestCut?.line_image && (
+                                                            <img src={resolveMediaUrl(latestCut.line_image)} alt="Line Cut" className="flex-1 object-cover" />
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <div className="thumbnail-placeholder"><ImageIcon size={24} style={{ opacity: 0.5 }} /></div>
                                                 )}
@@ -350,9 +390,14 @@ export default function ArealTimelineContent() {
                                             )}
                                         </div>
 
-                                        <div className="piece-list-thumbnail">
+                                        <div className={`piece-list-thumbnail flex gap-1 ${latestCut?.line_image ? 'w-[100px]' : ''}`}>
                                             {latestCut?.image ? (
-                                                <img src={resolveMediaUrl(latestCut.image)} alt="Latest Cut" />
+                                                <div className="flex w-full gap-1">
+                                                    <img src={resolveMediaUrl(latestCut.image)} alt="Latest Cut" className="flex-1 object-cover" />
+                                                    {latestCut?.line_image && (
+                                                        <img src={resolveMediaUrl(latestCut.line_image)} alt="Line Cut" className="flex-1 object-cover" />
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <div className="thumbnail-placeholder"><ImageIcon size={16} style={{ opacity: 0.5 }} /></div>
                                             )}
@@ -373,7 +418,7 @@ export default function ArealTimelineContent() {
             </div>
 
             {/* -------------------------------------------------------------
-          LEVEL 3: Detailed Timeline for a Specific Piece
+          LEVEL 3: Detailed Timeline for a Specific Piece (VERTICAL SCROLL)
          ------------------------------------------------------------- */}
             <div className={`areal-level-view areal-level-3 ${level === "TIMELINE" ? "active-view" : "hidden-right"}`}>
                 <div className="areal-detail-header">
@@ -382,10 +427,10 @@ export default function ArealTimelineContent() {
                     </button>
                     <div className="areal-detail-title-group">
                         <h2 className="areal-detail-title">
-                            {materialDetail?.stats.code_name}-{selectedPiece?.code || selectedPiece?.id} Timeline
+                            {materialDetail?.stats.code_name}-{selectedPiece?.code || selectedPiece?.id}
                         </h2>
                         <div className="areal-detail-available">
-                            {selectedPiece?.width} × {selectedPiece?.height} • {selectedPiece && calculateArea(selectedPiece.width, selectedPiece.height)} m²
+                            {matWidth} × {matHeight} • {matArea} m²
                         </div>
                     </div>
                     {selectedPiece && (
@@ -402,24 +447,65 @@ export default function ArealTimelineContent() {
                                 const isLatest = index === 0;
                                 return (
                                     <div key={cut.id} className="areal-piece-column">
-                                        {isLatest && (
-                                            <div className="areal-latest-badge mb-2 text-center text-xs font-bold text-blue-500 uppercase tracking-widest">LATEST CUT</div>
-                                        )}
-                                        <div className={`areal-cut-card ${isLatest ? 'is-latest outline outline-2 outline-blue-500' : ''}`}>
-                                            <div className="areal-cut-image-wrapper">
-                                                {cut.image ? (
-                                                    <img
-                                                        src={resolveMediaUrl(cut.image)}
-                                                        alt={`Cut ${cut.status}`}
-                                                        className="areal-cut-image"
-                                                        onClick={() => window.open(resolveMediaUrl(cut.image), "_blank")}
-                                                    />
+                                        {/* Timeline Card */}
+                                        <div className={`timeline-card ${isLatest ? 'timeline-card-latest' : ''}`}>
+                                            {/* ─── IMAGE SECTION ─── */}
+                                            <div className="timeline-image-section">
+                                                {/* Floating Status Pills */}
+                                                <div className="timeline-floating-header">
+                                                    <div className="timeline-floating-badges">
+                                                        {isLatest && (
+                                                            <div className="timeline-glass-pill latest-pill">LATEST</div>
+                                                        )}
+                                                        <div className={`timeline-glass-pill status-${cut.status.toLowerCase()}`}>
+                                                            {cut.status}
+                                                        </div>
+                                                    </div>
+                                                    <div className="timeline-glass-pill date-pill">
+                                                        {formatDate(cut.date)}
+                                                    </div>
+                                                </div>
+
+                                                {/* Image */}
+                                                {cut.line_image || cut.image ? (
+                                                    <>
+                                                        <img
+                                                            src={resolveMediaUrl(showColorsMap[cut.id] ? (cut.image || cut.line_image) : (cut.line_image || cut.image))}
+                                                            alt={`Cut ${cut.status}`}
+                                                            className="timeline-sheet-image"
+                                                            onClick={() => window.open(resolveMediaUrl(showColorsMap[cut.id] ? (cut.image || cut.line_image) : (cut.line_image || cut.image)), "_blank")}
+                                                            onError={(e) => {
+                                                                const target = e.target as HTMLImageElement;
+                                                                target.style.display = 'none';
+                                                                const placeholder = target.nextElementSibling as HTMLElement;
+                                                                if (placeholder) placeholder.style.display = 'flex';
+                                                            }}
+                                                        />
+                                                        <div className="timeline-image-fallback" style={{ display: 'none' }}>
+                                                            <ImageIcon size={28} style={{ opacity: 0.4 }} />
+                                                            <span>Image unavailable</span>
+                                                        </div>
+                                                        {cut.line_image && cut.image && (
+                                                            <button
+                                                                className="timeline-image-toggle"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setShowColorsMap(prev => ({...prev, [cut.id]: !prev[cut.id]}));
+                                                                }}
+                                                            >
+                                                                <ImageIcon size={13} />
+                                                                {showColorsMap[cut.id] ? "Line Drawing" : "Colored"}
+                                                            </button>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <div className="areal-cut-placeholder">
-                                                        <ImageIcon size={32} style={{ opacity: 0.5, marginBottom: 8 }} />
-                                                        <span style={{ fontSize: 12 }}>No Image</span>
+                                                    <div className="timeline-image-fallback">
+                                                        <ImageIcon size={28} style={{ opacity: 0.4 }} />
+                                                        <span>No image</span>
                                                     </div>
                                                 )}
+
+                                                {/* Download CRV3D */}
                                                 {cut.crv3d && (
                                                     <button
                                                         className="areal-download-btn"
@@ -429,168 +515,253 @@ export default function ArealTimelineContent() {
                                                         <Download size={16} />
                                                     </button>
                                                 )}
+
+                                                {/* ─── Stats Overlay Bar (embedded in image footer) ─── */}
+                                                {cut.total_usage != null && matWidth > 0 && matHeight > 0 && (
+                                                    <div className="timeline-stats-overlay">
+                                                        <div className="stats-overlay-bar">
+                                                            <div className="stats-overlay-fill" style={{ width: `${Math.min(cut.total_usage, 100)}%` }} />
+                                                        </div>
+                                                        <div className="stats-overlay-values">
+                                                            <span>{matArea} m² total</span>
+                                                            <span className="stats-overlay-accent">{cut.total_usage}% used</span>
+                                                            <span>Rem: {(parseFloat(matArea) * ((100 - cut.total_usage) / 100)).toFixed(2)} m²</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <div className="areal-cut-content">
-                                                <div className="areal-cut-header">
-                                                    <h4 className="areal-cut-status">{cut.status}</h4>
-                                                    <span className="areal-cut-date">{formatDate(cut.date)}</span>
-                                                </div>
+                                            {/* ─── TAB BAR ─── */}
+                                            <div className="timeline-tab-bar">
+                                                <button
+                                                    className={`timeline-tab ${getCardTab(cut.id) === 'info' ? 'timeline-tab-active' : ''}`}
+                                                    onClick={() => setCardTab(cut.id, 'info')}
+                                                >
+                                                    Info
+                                                </button>
+                                                <button
+                                                    className={`timeline-tab ${getCardTab(cut.id) === 'dxf' ? 'timeline-tab-active' : ''}`}
+                                                    onClick={() => setCardTab(cut.id, 'dxf')}
+                                                >
+                                                    DXF{' '}
+                                                    {cut.order_analyses && cut.order_analyses.length > 0 && (() => {
+                                                        const allMatched = cut.order_analyses.every(oa => oa.dxf_verification_status === 'MATCHED');
+                                                        return <span className={`tab-status-dot ${allMatched ? 'tab-dot-ok' : 'tab-dot-warn'}`}>{allMatched ? '✅' : '⚠️'}</span>;
+                                                    })()}
+                                                </button>
+                                            </div>
 
-                                                {/* Orders List */}
-                                                <div style={{ flex: 1 }}>
-                                                    {cut.orders && cut.orders.length > 0 ? (
-                                                        <div>
-                                                            <div style={{ fontSize: 11, color: 'var(--admin-text-secondary)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase' }}>
-                                                                <Package size={12} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} />
-                                                                Orders
-                                                            </div>
-                                                            <div className="areal-cut-orders">
-                                                                {cut.orders.map(o => (
-                                                                    <span key={o} className="areal-order-badge">
+                                            {/* ─── TAB PANEL: INFO ─── */}
+                                            {getCardTab(cut.id) === 'info' && (
+                                                <div className="timeline-tab-panel">
+                                                    {/* History Badge */}
+                                                    {cut.history_note === 'First cut on this sheet' ? (
+                                                        <div className="timeline-compact-badge timeline-badge-info">
+                                                            🆕 First Cut
+                                                        </div>
+                                                    ) : cut.history_note === 'History DXF not available' ? (
+                                                        <div className="timeline-compact-badge timeline-badge-warn">
+                                                            ⚠️ No Prev DXF
+                                                        </div>
+                                                    ) : cut.history_integrity_status && cut.history_integrity_status !== 'N/A' && cut.history_integrity_status !== 'PENDING' ? (
+                                                        <div className={`timeline-compact-badge ${cut.history_integrity_status === 'MATCHED' ? 'timeline-badge-success' : 'timeline-badge-error'}`}>
+                                                            {cut.history_integrity_status === 'MATCHED' ? '✅' : '⚠️'}
+                                                            <span>Hist: {cut.history_integrity_score ? `${parseFloat(String(cut.history_integrity_score)).toFixed(1)}%` : '—'}</span>
+                                                        </div>
+                                                    ) : null}
+
+                                                    {/* Orders */}
+                                                    {cut.orders && cut.orders.length > 0 && (
+                                                        <div className="timeline-compact-orders">
+                                                            <Package size={12} style={{ color: 'var(--admin-text-secondary)' }} />
+                                                            <div className="timeline-compact-orders-list">
+                                                                {cut.orders.map((o, idx) => (
+                                                                    <span key={o}>
                                                                         {o.startsWith('ORD-') ? o : `ORD-${o}`}
+                                                                        {idx < cut.orders!.length - 1 ? ', ' : ''}
                                                                     </span>
                                                                 ))}
                                                             </div>
                                                         </div>
+                                                    )}
+
+                                                    {/* Reanalyze */}
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            try {
+                                                                await api.post(`/api/cuttingfiles/${cut.id}/reanalyze/`);
+                                                                alert('Reanalysis triggered! Refresh in a few seconds.');
+                                                            } catch (err) {
+                                                                console.error('Reanalyze failed:', err);
+                                                                alert('Reanalysis failed.');
+                                                            }
+                                                        }}
+                                                        disabled={cut.status === "STARTED"}
+                                                        className="reanalyze-drawer-btn"
+                                                    >
+                                                        <RefreshCw size={14} />
+                                                        Reanalyze Current Usage
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* ─── TAB PANEL: DXF ─── */}
+                                            {getCardTab(cut.id) === 'dxf' && (
+                                                <div className="timeline-tab-panel">
+                                                    {cut.order_analyses && cut.order_analyses.length > 0 ? (
+                                                        <div className="timeline-verification-section">
+                                                            {cut.order_analyses.map((oa) => {
+                                                                const vStatus = oa.dxf_verification_status;
+                                                                const covDxf = oa.coverage_percent_dxf;
+                                                                const mParts = oa.matched_parts_count;
+                                                                const tParts = oa.total_parts_count;
+                                                                const orderArea = oa.dxf_actual_area;
+                                                                const sheetArea = oa.detected_actual_area;
+                                                                const areaDiff = orderArea != null && sheetArea != null ? Math.abs(sheetArea - orderArea) : null;
+                                                                const areaMatchPct = orderArea != null && sheetArea != null && orderArea > 0
+                                                                    ? Math.min((sheetArea / orderArea) * 100, 100) : null;
+                                                                const analysisKey = `${cut.id}-${oa.order_code}`;
+                                                                const isExpanded = expandedAnalysis[analysisKey];
+
+                                                                return (
+                                                                    <div key={oa.order_code} className="timeline-analysis-card">
+                                                                        <div
+                                                                            className="timeline-analysis-header"
+                                                                            onClick={() => toggleAnalysis(analysisKey)}
+                                                                        >
+                                                                            <div className="timeline-analysis-left">
+                                                                                <span className="timeline-analysis-code">ORD-{oa.order_code}</span>
+                                                                                {vStatus && vStatus !== 'PENDING' && (
+                                                                                    <span className={`timeline-status-dot ${vStatus === 'MATCHED' ? 'dot-matched' : vStatus === 'UNMATCHED' ? 'dot-unmatched' : 'dot-error'}`}>
+                                                                                        {vStatus === 'MATCHED' && covDxf != null && covDxf >= 99 ? '✅' : vStatus === 'MATCHED' ? '🟡' : '❌'}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="timeline-analysis-right">
+                                                                                {mParts != null && tParts != null && (
+                                                                                    <span className="timeline-parts-badge">{mParts}/{tParts}</span>
+                                                                                )}
+                                                                                {orderArea != null && (
+                                                                                    <span className="timeline-area-compact">{orderArea.toFixed(4)} m²</span>
+                                                                                )}
+                                                                                <Shapes size={14} style={{ color: 'var(--admin-text-muted)', transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {covDxf != null && (
+                                                                            <div className="timeline-coverage-bar-wrap">
+                                                                                <div className="timeline-coverage-track">
+                                                                                    <div className="timeline-coverage-fill" style={{
+                                                                                        width: `${Math.min(covDxf, 100)}%`,
+                                                                                        background: covDxf >= 99 ? '#16a34a' : covDxf >= 50 ? '#d97706' : '#dc2626',
+                                                                                    }} />
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {isExpanded && (
+                                                                            <div className="timeline-analysis-expanded">
+                                                                                {covDxf != null && (
+                                                                                    <div className="timeline-detail-row">
+                                                                                        <span>Parts Found</span>
+                                                                                        <span className="timeline-detail-value" style={{ color: covDxf >= 99 ? '#16a34a' : covDxf >= 50 ? '#d97706' : '#dc2626' }}>
+                                                                                            {mParts != null && tParts != null ? `${mParts}/${tParts}` : `${covDxf.toFixed(0)}%`}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {orderArea != null && (
+                                                                                    <div className="timeline-detail-row">
+                                                                                        <span>Order DXF Area</span>
+                                                                                        <span className="timeline-detail-value">{orderArea.toFixed(4)} m²</span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {sheetArea != null && (
+                                                                                    <div className="timeline-detail-row">
+                                                                                        <span>Found on Sheet</span>
+                                                                                        <span className="timeline-detail-value">{sheetArea.toFixed(4)} m²</span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {areaDiff != null && (
+                                                                                    <div className="timeline-detail-row">
+                                                                                        <span>Difference</span>
+                                                                                        <span className="timeline-detail-value" style={{ color: areaDiff < 0.001 ? '#16a34a' : '#d97706' }}>
+                                                                                            {areaDiff.toFixed(4)} m²
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {areaMatchPct != null && (
+                                                                                    <div className="timeline-detail-row">
+                                                                                        <span>Area Match</span>
+                                                                                        <span className="timeline-detail-value" style={{ color: areaMatchPct >= 95 ? '#16a34a' : areaMatchPct >= 70 ? '#d97706' : '#dc2626' }}>
+                                                                                            {areaMatchPct.toFixed(1)}%
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {oa.usage != null && (
+                                                                                    <div className="timeline-detail-row" style={{ borderTop: '1px dashed var(--admin-border)', paddingTop: 4, marginTop: 2 }}>
+                                                                                        <span>Sheet Usage</span>
+                                                                                        <span className="timeline-detail-value">{oa.usage.toFixed(1)}%</span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {oa.dxf_preview && (
+                                                                                    <div style={{ marginTop: 4 }}>
+                                                                                        <img
+                                                                                            src={resolveMediaUrl(oa.dxf_preview)}
+                                                                                            alt={`DXF ORD-${oa.order_code}`}
+                                                                                            style={{
+                                                                                                width: 52, height: 52, objectFit: 'contain', borderRadius: 4,
+                                                                                                border: '1px solid var(--admin-border)', background: '#111',
+                                                                                            }}
+                                                                                            onClick={() => window.open(resolveMediaUrl(oa.dxf_preview), '_blank')}
+                                                                                        />
+                                                                                    </div>
+                                                                                )}
+                                                                                {(vStatus === 'ERROR' || vStatus === 'UNMATCHED') && oa.analysis_notes && (
+                                                                                    <div className="timeline-analysis-note" style={{
+                                                                                        color: vStatus === 'ERROR' ? '#dc2626' : '#92400e',
+                                                                                        background: vStatus === 'ERROR' ? 'rgba(220,38,38,.06)' : 'rgba(217,119,6,.06)',
+                                                                                    }}>
+                                                                                        {oa.analysis_notes}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     ) : (
-                                                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--admin-text-muted)', marginTop: 8 }}>No explicit orders.</div>
+                                                        <div style={{ color: 'var(--admin-text-muted)', fontSize: 12, textAlign: 'center', padding: 16 }}>
+                                                            No DXF verification data available.
+                                                        </div>
                                                     )}
                                                 </div>
-
-                                                {/* V6 Analysis Results */}
-                                                {cut.order_analyses && cut.order_analyses.length > 0 && (
-                                                    <div className="analysis-section">
-                                                        <div className="analysis-section-title">
-                                                            <BarChart3 size={12} />
-                                                            Analysis
-                                                        </div>
-                                                        {cut.order_analyses.map((oa) => (
-                                                            <div key={oa.order_code} className="analysis-order-row">
-                                                                <div className="analysis-order-header">
-                                                                    <span className="analysis-order-code">ORD-{oa.order_code}</span>
-                                                                    {oa.accuracy !== null && (
-                                                                        <span className={`analysis-accuracy-badge ${oa.accuracy >= 95 ? 'acc-excellent' :
-                                                                            oa.accuracy >= 80 ? 'acc-good' :
-                                                                                oa.accuracy >= 60 ? 'acc-fair' : 'acc-poor'
-                                                                            }`}>
-                                                                            {oa.accuracy.toFixed(1)}%
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="analysis-order-details">
-                                                                    {oa.dxf_actual_area !== null && (
-                                                                        <span className="analysis-metric">
-                                                                            <Shapes size={10} />
-                                                                            DXF: {oa.dxf_actual_area.toFixed(4)}m²
-                                                                        </span>
-                                                                    )}
-                                                                    {oa.detected_actual_area !== null && (
-                                                                        <span className="analysis-metric">
-                                                                            Det: {oa.detected_actual_area.toFixed(4)}m²
-                                                                        </span>
-                                                                    )}
-                                                                    {oa.area_delta !== null && (
-                                                                        <span className={`analysis-metric ${oa.area_delta >= 0 ? 'delta-positive' : 'delta-negative'}`}
-                                                                            style={{
-                                                                                color: oa.area_delta >= 0 ? '#22c55e' : '#ef4444',
-                                                                                fontWeight: 700
-                                                                            }}
-                                                                        >
-                                                                            {oa.area_delta >= 0 ? '+' : ''}{oa.area_delta.toFixed(4)}m²
-                                                                        </span>
-                                                                    )}
-                                                                    {oa.sheet_count > 1 && (
-                                                                        <span className="analysis-metric" style={{ color: '#3b82f6', fontWeight: 600 }}>
-                                                                            📋 In {oa.sheet_count} sheets {oa.coverage_percent !== undefined ? `(${oa.coverage_percent}% here)` : ''}
-                                                                        </span>
-                                                                    )}
-                                                                    {oa.shape_similarity !== null && (
-                                                                        <span className="analysis-metric">
-                                                                            Shape: {oa.shape_similarity.toFixed(0)}%
-                                                                        </span>
-                                                                    )}
-                                                                    {oa.usage !== null && (
-                                                                        <span className="analysis-metric">
-                                                                            Usage: {oa.usage.toFixed(1)}%
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                {oa.dxf_preview && (
-                                                                    <img
-                                                                        src={resolveMediaUrl(oa.dxf_preview)}
-                                                                        alt={`DXF ORD-${oa.order_code}`}
-                                                                        className="analysis-dxf-preview"
-                                                                        onClick={() => window.open(resolveMediaUrl(oa.dxf_preview), '_blank')}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {/* Reanalyze Button */}
-                                                <button
-                                                    className="reanalyze-btn"
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        try {
-                                                            await api.post(`/api/production/cutting-files/${cut.id}/reanalyze/`);
-                                                            alert('Reanalysis triggered! Refresh in a few seconds.');
-                                                        } catch (err) {
-                                                            console.error('Reanalyze failed:', err);
-                                                            alert('Reanalysis failed.');
-                                                        }
-                                                    }}
-                                                >
-                                                    <RefreshCw size={12} />
-                                                    Reanalyze
-                                                </button>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
                             })}
-                        </div>
-
-                        {/* Average Accuracy Bar */}
-                        {(() => {
-                            const allAccuracies = selectedPiece.cutting_files
-                                .flatMap(cf => (cf.order_analyses || []).map(oa => oa.accuracy))
-                                .filter((a): a is number => a !== null);
-                            if (allAccuracies.length === 0) return null;
-                            const avg = allAccuracies.reduce((s, v) => s + v, 0) / allAccuracies.length;
-                            return (
-                                <div className="average-accuracy-bar">
-                                    <div className="avg-accuracy-label">Average Accuracy</div>
-                                    <div className="avg-accuracy-track">
-                                        <div className="avg-accuracy-fill" style={{ width: `${Math.min(avg, 100)}%` }} />
-                                    </div>
-                                    <div className={`avg-accuracy-value ${avg >= 95 ? 'acc-excellent' : avg >= 80 ? 'acc-good' : avg >= 60 ? 'acc-fair' : 'acc-poor'
-                                        }`}>{avg.toFixed(1)}%</div>
-                                </div>
-                            );
-                        })()}
-
-                        {/* Navigation Arrows */}
+                    </div>
+                    {/* Navigation Arrows for Level 3 */}
+                    {selectedPiece.cutting_files.length > 2 && (
                         <div className="areal-timeline-nav">
                             <button className="timeline-nav-arrow" onClick={() => scrollTimeline('left')}>
-                                <ChevronLeft size={24} />
+                                <ChevronLeft size={20} />
                             </button>
                             <button className="timeline-nav-arrow" onClick={() => scrollTimeline('right')}>
-                                <ChevronRight size={24} />
+                                <ChevronRight size={20} />
                             </button>
                         </div>
-                    </>
-                ) : (
-                    <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-gray-500">
-                        <Activity size={48} className="mb-4 text-gray-300 dark:text-gray-700" />
-                        <p>No cutting files recorded for this piece yet.</p>
-                    </div>
-                )
-                }
-            </div>
-
+                    )}
+                </>
+            ) : (
+                <div className="flex flex-col items-center justify-center flex-1 p-8 text-center text-gray-500">
+                    <Activity size={48} className="mb-4 text-gray-300 dark:text-gray-700" />
+                    <p>No cutting files recorded for this piece yet.</p>
+                </div>
+            )}
         </div>
-    );
+    </div>
+  );
 }

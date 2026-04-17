@@ -215,11 +215,26 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
           {/* Preview Image */}
           <Section title="Design Preview">
             <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
-              <img
-                src={file.image}
-                alt="Cutting preview"
-                className="w-full h-auto max-h-64 object-contain mx-auto rounded-[8px]"
-              />
+              <div className="flex flex-col md:flex-row gap-[16px] justify-center items-center">
+                <div className="flex-1 w-full flex flex-col items-center">
+                  <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">Layer Highlighting</span>
+                  <img
+                    src={file.image}
+                    alt="Cutting preview"
+                    className="w-full h-auto max-h-64 object-contain rounded-[8px]"
+                  />
+                </div>
+                {file.line_image && (
+                  <div className="flex-1 w-full flex flex-col items-center border-t md:border-t-0 md:border-l border-[#E5E7EB] dark:border-[#334155] pt-[16px] md:pt-0 md:pl-[16px]">
+                    <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">Wireframe Preview</span>
+                    <img
+                      src={file.line_image}
+                      alt="Wireframe preview"
+                      className="w-full h-auto max-h-64 object-contain rounded-[8px]"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </Section>
 
@@ -546,6 +561,18 @@ const DxfAnalysisCard = ({ selection, isActive }: { selection: CuttingFileOrderD
             {isActive ? '● ACTIVE' : '○ HISTORY'}
           </span>
           <AnalysisStatusBadge status={selection.analysis_status} small />
+          {/* DXF Verification Badge */}
+          {selection.dxf_verification_status && selection.dxf_verification_status !== 'PENDING' && (
+            <span className={`px-2 py-1 rounded-[6px] text-[11px] font-bold ${
+              selection.dxf_verification_status === 'MATCHED'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : selection.dxf_verification_status === 'UNMATCHED'
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+            }`}>
+              {selection.dxf_verification_status === 'MATCHED' ? '✓' : selection.dxf_verification_status === 'UNMATCHED' ? '✗' : '!'} DXF {selection.dxf_verification_score ? `${parseFloat(selection.dxf_verification_score).toFixed(0)}%` : ''}
+            </span>
+          )}
         </div>
       </div>
 

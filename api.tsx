@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const base_url = "https://timeerp.duckdns.org";
-// export const base_url = "https://gravity-sellers-bids-developed.trycloudflare.com";
+// export const base_url = "https://bears-frames-dial-beast.trycloudflare.com";
 
 
 

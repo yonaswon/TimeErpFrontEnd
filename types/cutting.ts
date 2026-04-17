@@ -7,6 +7,45 @@ export interface DxfFileType {
   date: string;
 }
 
+// DXF Layer types for layer selection UI
+export interface DxfLayer {
+  name: string;
+  entity_count: number;
+  color: string;
+  preview_image: string; // base64 data URI
+}
+
+export interface DxfLayerData {
+  layers: DxfLayer[];
+  layer_count: number;
+  selected_layers: string[];
+}
+
+export interface DxfAnalyzeResponse {
+  layers: DxfLayer[];
+  full_preview: string; // base64 data URI
+  layer_count: number;
+}
+
+// Search & Fit types
+export interface PlacementSuggestion {
+  sheet_id: number;
+  sheet_code: number;
+  material_name: string;
+  cutting_file_id: number;
+  position: { x: number; y: number };
+  rotation: number;
+  waste_reduction_pct: number;
+  current_usage_pct: number;
+  new_usage_pct: number;
+  preview_image: string | null;
+}
+
+export interface SearchFitResponse {
+  results: PlacementSuggestion[];
+  sheets_searched: number;
+}
+
 export interface CuttingFileOrderDxf {
   id: number;
   cutting_file: number;
@@ -26,6 +65,13 @@ export interface CuttingFileOrderDxf {
   analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
   analysis_notes: string | null;
   date: string;
+  // DXF verification fields
+  dxf_verification_status: 'PENDING' | 'MATCHED' | 'UNMATCHED' | 'ERROR';
+  dxf_verification_score: string | null;
+  // Coverage fields
+  coverage_percent: string | null;
+  matched_parts_count: number | null;
+  total_parts_count: number | null;
 }
 
 export interface SheetAnalysisResponse {
@@ -52,6 +98,7 @@ export interface CuttingFile {
   old_material: Material | null;
   crv3d: string;
   image: string;
+  line_image: string | null;
   status: 'NOT-ASSIGNED' | 'ASSIGNED' | 'STARTED' | 'COMPLATED';
   assigned_to: {
     id: number;
@@ -75,6 +122,13 @@ export interface CuttingFile {
   previous_cutting_file_image: string | null;
   previous_cutting_file_id: number | null;
   order_dxf_selections: CuttingFileOrderDxf[];
+  // DXF-first fields
+  dxf_file: string | null;
+  dxf_layers_data: DxfLayerData | null;
+  selected_layers: string[] | null;
+  // History integrity
+  history_integrity_status: 'PENDING' | 'MATCHED' | 'MISMATCHED' | 'N/A' | null;
+  history_integrity_score: string | null;
 }
 export interface Order {
   order_code: number;
