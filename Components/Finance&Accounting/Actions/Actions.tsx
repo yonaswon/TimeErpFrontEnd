@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, Upload, Search, Settings, Plus, FileText } from "lucide-react";
+import { DollarSign, Upload, Search, Settings, Plus, FileText, Package } from "lucide-react";
 import CreatePurchaseOverlay from "./createpurchase/CreatePurchaseOverlay";
 import { InWalletTransfer } from "./InWalletTransfer/InWalletTransferOverlay";
 import PityPurchaseOverlay from "./pitypurchase/PityPurchaseOverlay"; // Add this import
 import PityCostOverlay from "./pitypurchase/PityCostOverlay";
 import AdjustmentInvoiceOverlay from "./AdjustmentInvoiceOverlay";
+import { AddMaterialOverlay } from "@/Components/MobileAdmin/Stock/AddMaterialOverlay";
 import { FinanceLogs } from "./FinanceLogs";
 
 
@@ -16,6 +17,7 @@ const ActionsContent = () => {
   const [showPityPurchase, setShowPityPurchase] = useState(false); // Add this state
   const [showPityCost, setShowPityCost] = useState(false); // Add this state
   const [showAdjustmentInvoice, setShowAdjustmentInvoice] = useState(false);
+  const [showAddMaterial, setShowAddMaterial] = useState(false);
 
   // In your actions array, update the pity-cost action:
   // ... other actions
@@ -32,6 +34,11 @@ const ActionsContent = () => {
       key: "adjustment-invoice",
       label: "Adjustment Invoice",
       icon: FileText,
+    },
+    {
+      key: "add-material",
+      label: "Add Material",
+      icon: Package,
     },
   ];
 
@@ -54,6 +61,7 @@ const ActionsContent = () => {
                   if (a.key === "pity-purchase") setShowPityPurchase(true); // Add this
                   if (a.key === "pity-cost") setShowPityCost(true); // Add this
                   if (a.key === "adjustment-invoice") setShowAdjustmentInvoice(true);
+                  if (a.key === "add-material") setShowAddMaterial(true);
                 }}
                 className="w-full text-left py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-zinc-700 px-2 rounded-md transition"
                 type="button"
@@ -103,6 +111,13 @@ const ActionsContent = () => {
       <AdjustmentInvoiceOverlay
         open={showAdjustmentInvoice}
         onClose={() => setShowAdjustmentInvoice(false)}
+      />
+
+      {/* Add Material Overlay */}
+      <AddMaterialOverlay
+        isOpen={showAddMaterial}
+        onClose={() => setShowAddMaterial(false)}
+        onSuccess={() => {}}
       />
 
       {/* Finance Logs */}
