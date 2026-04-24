@@ -1,13 +1,15 @@
 import { Purchase } from '@/types/finance'
-import { User, FileText, Calendar, DollarSign, Eye, CheckCircle, XCircle, Clock, Upload } from 'lucide-react'
+import { User, FileText, Calendar, DollarSign, Eye, CheckCircle, XCircle, Clock, Upload, Pencil, Trash2 } from 'lucide-react'
 
 interface PurchaseCardProps {
   purchase: Purchase
   onViewDetails: () => void
   onFinishPurchase: (purchase: Purchase) => void
+  onEdit: (purchase: Purchase) => void
+  onDelete: (purchase: Purchase) => void
 }
 
-export const PurchaseCard = ({ purchase, onViewDetails, onFinishPurchase }: PurchaseCardProps) => {
+export const PurchaseCard = ({ purchase, onViewDetails, onFinishPurchase, onEdit, onDelete }: PurchaseCardProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -176,6 +178,27 @@ export const PurchaseCard = ({ purchase, onViewDetails, onFinishPurchase }: Purc
             <Eye size={14} />
             <span>Details</span>
           </button>
+
+          {purchase.status === 'P' && (
+            <>
+              <button
+                onClick={() => onEdit(purchase)}
+                className="flex items-center gap-1 px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 text-sm rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                title="Edit purchase"
+              >
+                <Pencil size={13} />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={() => onDelete(purchase)}
+                className="flex items-center gap-1 px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 text-sm rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                title="Delete purchase"
+              >
+                <Trash2 size={13} />
+                <span>Delete</span>
+              </button>
+            </>
+          )}
 
           {canFinishPurchase() && (
             <button

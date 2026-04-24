@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import api from '@/api'
 import { useWallet } from '@/hooks/useWallet'
 import { usePurchases } from '@/hooks/usePurchases'
 import { WalletBalance } from './WalletBalance'
@@ -9,6 +10,7 @@ import { PurchaseCard } from './PurchaseCard'
 import { PurchaseLine } from './PurchaseLine'
 import { PurchaseDetails } from './PurchaseDetails'
 import { FinishPurchase } from './FinishPurchase'
+import { EditPurchaseOverlay } from './EditPurchaseOverlay'
 import { Purchase } from '@/types/finance'
 import { ChevronLeft, ChevronRight, RefreshCw, Bell, Package, FileText, Grid, List } from 'lucide-react'
 
@@ -19,6 +21,9 @@ export const OverviewContent = () => {
   const [activeTab, setActiveTab] = useState<TabType>('purchases')
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null)
   const [purchaseToFinish, setPurchaseToFinish] = useState<Purchase | null>(null)
+  const [purchaseToEdit, setPurchaseToEdit] = useState<Purchase | null>(null)
+  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [viewType, setViewType] = useState<ViewType>('grid')
 
@@ -56,7 +61,21 @@ export const OverviewContent = () => {
   }
 
   const handleFinishSuccess = () => {
-    refetchPurchases() // Refresh the list after successful finish
+    refetchPurchases()
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!purchaseToDelete) return
+    setDeleting(true)
+    try {
+      await api.delete(`/finance/purchase/${purchaseToDelete.id}/soft_delete/`)
+      setPurchaseToDelete(null)
+      refetchPurchases()
+    } catch (e: any) {
+      alert(e.response?.data?.error || 'Failed to delete purchase.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -143,6 +162,8 @@ export const OverviewContent = () => {
                       purchase={purchase}
                       onViewDetails={() => handleViewDetails(purchase)}
                       onFinishPurchase={handleFinishPurchase}
+                      onEdit={p => setPurchaseToEdit(p)}
+                      onDelete={p => setPurchaseToDelete(p)}
                     />
                   ))}
                 </div>
@@ -233,6 +254,36 @@ export const OverviewContent = () => {
           onClose={() => setPurchaseToFinish(null)}
           onSuccess={handleFinishSuccess}
         />
+      )}
+
+      {purchaseToEdit && (
+        <EditPurchaseOverlay
+          purchase={purchaseToEdit}
+          onClose={() => setPurchaseToEdit(null)}
+          onSuccess={() => { setPurchaseToEdit(null); refetchPurchases(); }}
+        />
+      )}
+
+      {purchaseToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !deleting && setPurchaseToDelete(null)} />
+          <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-200 dark:border-zinc-700 p-6 max-w-sm w-full">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Delete Purchase #{purchaseToDelete.id}?</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+              This will soft-delete the purchase and notify all admins via Telegram. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setPurchaseToDelete(null)} disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={handleDeleteConfirm} disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white disabled:opacity-50">
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

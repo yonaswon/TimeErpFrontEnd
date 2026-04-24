@@ -361,7 +361,7 @@ const TypewriterMarkdown = React.memo(({ content, isStreaming, onImageClick }: {
                             return (
                                 <div className="ai-text-callout">
                                     {childStr.split('\n').map((line: string, i: number) => (
-                                        <p key={i} className={line.trim() === '' ? 'my-2' : ''}>{line}</p>
+                                        <span key={i} style={{ display: 'block' }} className={line.trim() === '' ? 'my-2' : ''}>{line}</span>
                                     ))}
                                 </div>
                             );
@@ -484,7 +484,7 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
-    const [modelProvider, setModelProvider] = useState('gpt-5');
+    const [modelProvider, setModelProvider] = useState('deepseek');
     const [loading, setLoading] = useState(false);
     const [sessionsLoading, setSessionsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -869,12 +869,14 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
                         <select
                             value={modelProvider}
                             onChange={(e) => setModelProvider(e.target.value as any)}
-                            className="hidden md:block bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
+                            className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
                             style={{ backgroundImage: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                         >
-                            <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4 (Default)</option>
+                            <option value="deepseek" style={{ background: '#2f2f2f', color: '#ececec' }}>DeepSeek V3.2 ✦</option>
                             <option value="gpt-5.4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4 Mini</option>
-                            <option value="gpt-5-reasoning" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 Reasoning (Slow)</option>
+                            <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4</option>
+                            <option value="deepseek-reasoner" style={{ background: '#2f2f2f', color: '#ececec' }}>DeepSeek Reasoner</option>
+                            <option value="gpt-5-reasoning" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 Reasoning</option>
                             <option value="o4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o4 Mini</option>
                             <option value="o4" style={{ background: '#2f2f2f', color: '#ececec' }}>o4</option>
                             <option value="o3-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o3-mini</option>

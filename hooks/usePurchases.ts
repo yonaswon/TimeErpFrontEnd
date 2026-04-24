@@ -13,7 +13,7 @@ export const usePurchases = (page: number = 1) => {
     try {
       setLoading(true)
       setError(null)
-      const response = await api.get(`/finance/purchase/?p=${pageNum}`)
+      const response = await api.get(`/finance/purchase/?is_deleted=false&p=${pageNum}`)
       setPurchases(response.data)
     } catch (err: any) {
       console.error('Error fetching purchases:', err)
