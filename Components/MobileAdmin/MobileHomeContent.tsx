@@ -123,8 +123,50 @@ function OrderSheet({ order, onClose }: { order: OrderRow; onClose: () => void }
 }
 
 // ─── Payment Detail Sheet ─────────────────────────────────────────────────────
-function PaymentSheet({ payments, title, onClose }: { payments: PaymentRow[]; title: string; onClose: () => void }) {
+function PaymentSheet({ reason, dateRange, title, totalAmount, onClose }: { reason: string; dateRange: {from: string, to: string}; title: string; totalAmount?: number; onClose: () => void }) {
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nextPage, setNextPage] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+
+  const fetchPayments = useCallback(async (append = false) => {
+    if (!append) setLoading(true);
+    try {
+      const url = append && nextPage 
+        ? nextPage 
+        : `/api/admin/finance-detail/?date_from=${dateRange.from}&date_to=${dateRange.to}&reason=${reason}&page_size=25`;
+      // Use absolute path if nextPage provides it, else relative
+      const res = await (append && nextPage && nextPage.startsWith('http') ? api.get(nextPage.replace(/^.*\/\/[^\/]+/, '')) : api.get(url));
+      
+      const pItems: PaymentRow[] = (res.data.results || []).map((p: any) => ({
+        id: p.id, amount: parseFloat(p.amount || 0), reason: p.reason, status: p.status,
+        method: p.method,
+        source_type: p.source_type || null,
+        client: p.order_container?.client || p.material_sales?.customer_name || null,
+        created_at: p.created_at,
+        confirmed_at: p.confirmed_at,
+        transaction_id: p.transaction_id,
+        note: p.note,
+        accepted_by: p.accepted_by,
+        confirmed_by: p.confirmed_by,
+        wallet_name: p.wallet_name,
+        account_bank: p.account_bank,
+        invoice_image: p.invoice_image,
+        confirmation_image: p.confirmation_image,
+        additional_image: p.additional_image,
+        order_container: p.order_container || undefined,
+        material_sales: p.material_sales || undefined,
+        maintenance: p.maintenance || undefined,
+      }));
+      setPayments(prev => append ? [...prev, ...pItems] : pItems);
+      setNextPage(res.data.next || null);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [reason, dateRange, nextPage]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [reason, dateRange]);
 
   const sourceIcon = (s: string | null) => {
     if (s === "order") return <Package size={13} className="text-blue-400 shrink-0" />;
@@ -144,11 +186,12 @@ function PaymentSheet({ payments, title, onClose }: { payments: PaymentRow[]; ti
     return { main: "—", sub: null };
   };
 
-  const total = payments.reduce((s, p) => s + p.amount, 0);
+  const total = totalAmount !== undefined ? totalAmount : payments.reduce((s, p) => s + p.amount, 0);
 
   return (
     <Sheet title={`${title} · ${fmtBirr(total)}`} onClose={onClose}>
-      {payments.length === 0 && <div className="px-5 py-8 text-center text-sm text-gray-400">No payments found</div>}
+      {loading && payments.length === 0 && <div className="px-5 py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>}
+      {!loading && payments.length === 0 && <div className="px-5 py-8 text-center text-sm text-gray-400">No payments found</div>}
       <div className="divide-y divide-gray-100 dark:divide-zinc-800">
         {payments.map(p => {
           const { main, sub } = sourceLabel(p);
@@ -201,6 +244,12 @@ function PaymentSheet({ payments, title, onClose }: { payments: PaymentRow[]; ti
             </div>
           );
         })}
+        {nextPage && !loading && (
+          <button onClick={() => fetchPayments(true)} className="w-full py-3 text-sm text-blue-600 dark:text-blue-400 font-medium text-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+            Load more
+          </button>
+        )}
+        {loading && payments.length > 0 && <div className="py-3 flex justify-center"><Loader2 className="w-4 h-4 animate-spin text-blue-500" /></div>}
       </div>
     </Sheet>
   );
@@ -212,7 +261,6 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
   const [productionOrders, setProductionOrders] = useState<OrderRow[]>([]);
   const [delayedOrders, setDelayedOrders] = useState<OrderRow[]>([]);
   const [mockups, setMockups] = useState<MockupRow[]>([]);
-  const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [rangeContainers, setRangeContainers] = useState<any[]>([]);
@@ -226,7 +274,7 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
 
   // Sheet state
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
-  const [paymentSheet, setPaymentSheet] = useState<{ title: string; items: PaymentRow[] } | null>(null);
+  const [paymentSheet, setPaymentSheet] = useState<{ title: string; reason: string; totalAmount?: number } | null>(null);
   const [delayedSheet, setDelayedSheet] = useState(false);
   const [newOrdersSheet, setNewOrdersSheet] = useState(false);
 
@@ -239,12 +287,11 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
     setLoading(true);
     const { from, to } = getRange();
     try {
-      const [dashRes, rangeRes, prodRes, mockupRes, payRes, rangeOrdersRes] = await Promise.all([
+      const [dashRes, rangeRes, prodRes, mockupRes, rangeOrdersRes] = await Promise.all([
         api.get("/api/admin-dashboard/"),
         api.get(`/api/admin-dashboard/?date_from=${from}&date_to=${to}`),
         api.get("/api/admin/orders-table/?ordering=-created_at&page_size=100"),
         api.get("/lead/mockups/?ordering=-requested_date&page_size=50"),
-        api.get(`/api/admin/finance-detail/?date_from=${from}&date_to=${to}&page_size=100`),
         api.get(`/api/admin/orders-table/?ordering=-created_at&date_from=${from}&date_to=${to}&page_size=50`),
       ]);
 
@@ -282,28 +329,6 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
           request_status: m.request_status, requested_date: m.requested_date,
         }));
       setMockups(mItems);
-
-      const pItems: PaymentRow[] = (payRes.data.results || []).map((p: any) => ({
-        id: p.id, amount: parseFloat(p.amount || 0), reason: p.reason, status: p.status,
-        method: p.method,
-        source_type: p.source_type || null,
-        client: p.order_container?.client || p.material_sales?.customer_name || null,
-        created_at: p.created_at,
-        confirmed_at: p.confirmed_at,
-        transaction_id: p.transaction_id,
-        note: p.note,
-        accepted_by: p.accepted_by,
-        confirmed_by: p.confirmed_by,
-        wallet_name: p.wallet_name,
-        account_bank: p.account_bank,
-        invoice_image: p.invoice_image,
-        confirmation_image: p.confirmation_image,
-        additional_image: p.additional_image,
-        order_container: p.order_container || undefined,
-        material_sales: p.material_sales || undefined,
-        maintenance: p.maintenance || undefined,
-      }));
-      setPayments(pItems);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [getRange]);
@@ -328,9 +353,8 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
     : productionOrders;
 
   // ── Payment helpers ──
-  const openPaymentSheet = (reason: string, label: string) => {
-    const items = payments.filter(p => p.reason === reason);
-    setPaymentSheet({ title: `${label} Payments`, items });
+  const openPaymentSheet = (reason: string, label: string, totalAmount: number) => {
+    setPaymentSheet({ title: `${label} Payments`, reason, totalAmount });
   };
 
   if (loading) return (
@@ -385,12 +409,12 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
             {datePreset === "today" ? "Today" : datePreset === "yesterday" ? "Yesterday" : datePreset === "week" ? "This Week" : datePreset === "month" ? "This Month" : "Custom Range"}
           </h2>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => openPaymentSheet("PRE", "Pre-Payment")}
+            <button onClick={() => openPaymentSheet("PRE", "Pre-Payment", preTotal)}
               className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
               <FileText size={18} className="text-blue-600 dark:text-blue-400" />
               <div><div className="text-base font-bold text-blue-600 dark:text-blue-400">{fmtBirr(preTotal)}</div><div className="text-xs text-gray-500">Pre-Payment</div></div>
             </button>
-            <button onClick={() => openPaymentSheet("REM", "Remaining")}
+            <button onClick={() => openPaymentSheet("REM", "Remaining", remTotal)}
               className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
               <CheckCircle2 size={18} className="text-green-600 dark:text-green-400" />
               <div><div className="text-base font-bold text-green-600 dark:text-green-400">{fmtBirr(remTotal)}</div><div className="text-xs text-gray-500">Remaining Paid</div></div>
@@ -408,12 +432,12 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
           </div>
           {/* Sales & Maintenance row */}
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => openPaymentSheet("SALES", "Sales")}
+            <button onClick={() => openPaymentSheet("SALES", "Sales", salesTotal)}
               className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
               <ShoppingBag size={18} className="text-indigo-600 dark:text-indigo-400" />
               <div><div className="text-base font-bold text-indigo-600 dark:text-indigo-400">{fmtBirr(salesTotal)}</div><div className="text-xs text-gray-500">Sales</div></div>
             </button>
-            <button onClick={() => openPaymentSheet("MAINTENANCE", "Maintenance")}
+            <button onClick={() => openPaymentSheet("MAINTENANCE", "Maintenance", maintTotal)}
               className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
               <Wrench size={18} className="text-orange-600 dark:text-orange-400" />
               <div><div className="text-base font-bold text-orange-600 dark:text-orange-400">{fmtBirr(maintTotal)}</div><div className="text-xs text-gray-500">Maintenance</div></div>
@@ -553,7 +577,7 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
         </Sheet>
       )}
 
-      {paymentSheet && <PaymentSheet payments={paymentSheet.items} title={paymentSheet.title} onClose={() => setPaymentSheet(null)} />}
+      {paymentSheet && <PaymentSheet reason={paymentSheet.reason} dateRange={getRange()} title={paymentSheet.title} totalAmount={paymentSheet.totalAmount} onClose={() => setPaymentSheet(null)} />}
       {selectedOrder && <OrderSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
     </div>
   );
