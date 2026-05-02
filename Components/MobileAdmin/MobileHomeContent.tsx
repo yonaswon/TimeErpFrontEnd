@@ -68,6 +68,11 @@ function getDateRange(preset: string): { from: string; to: string } {
   const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   const today = fmt(now);
   if (preset === "today") return { from: today, to: today };
+  if (preset === "yesterday") {
+    const y = new Date(now); y.setDate(now.getDate() - 1);
+    const yStr = fmt(y);
+    return { from: yStr, to: yStr };
+  }
   if (preset === "week") {
     const start = new Date(now); start.setDate(now.getDate() - now.getDay());
     return { from: fmt(start), to: today };
@@ -213,9 +218,10 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
   const [rangeContainers, setRangeContainers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"production" | "mockups">("production");
   const [pipelineFilter, setPipelineFilter] = useState<string | null>(null);
-  const [datePreset, setDatePreset] = useState<"today" | "week" | "month" | "custom">("today");
+  const [datePreset, setDatePreset] = useState<"today" | "yesterday" | "week" | "month" | "custom">("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [appliedCustomRange, setAppliedCustomRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
   const [showCustom, setShowCustom] = useState(false);
 
   // Sheet state
@@ -225,9 +231,9 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
   const [newOrdersSheet, setNewOrdersSheet] = useState(false);
 
   const getRange = useCallback(() => {
-    if (datePreset === "custom") return { from: customFrom, to: customTo };
+    if (datePreset === "custom") return { from: appliedCustomRange.from, to: appliedCustomRange.to };
     return getDateRange(datePreset);
-  }, [datePreset, customFrom, customTo]);
+  }, [datePreset, appliedCustomRange]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -313,6 +319,8 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
   // Orders created in the selected period
   const newOrdersCount = rangeOrders?.total_containers || 0;
   const statusDist = dashData?.orders?.status_distribution || {};
+  const salesTotal = payByReason.find((p: any) => p.reason === "SALES")?.total || 0;
+  const maintTotal = payByReason.find((p: any) => p.reason === "MAINTENANCE")?.total || 0;
 
   // ── Filtered orders list ──
   const visibleOrders = pipelineFilter
@@ -347,10 +355,10 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
 
       {/* ── Date Filter Bar ── */}
       <div className="px-4 pt-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-        {(["today","week","month"] as const).map(p => (
+        {(["today","yesterday","week","month"] as const).map(p => (
           <button key={p} onClick={() => { setDatePreset(p); setShowCustom(false); }}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${datePreset === p && !showCustom ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"}`}>
-            {p === "today" ? "Today" : p === "week" ? "This Week" : "This Month"}
+            {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "week" ? "This Week" : "This Month"}
           </button>
         ))}
         <button onClick={() => setShowCustom(v => !v)}
@@ -365,7 +373,7 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
           <span className="text-xs text-gray-400">–</span>
           <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
             className="flex-1 text-xs border border-gray-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white" />
-          <button onClick={() => { setDatePreset("custom"); fetchAll(); }}
+          <button onClick={() => { setAppliedCustomRange({ from: customFrom, to: customTo }); setDatePreset("custom"); }}
             className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium">Go</button>
         </div>
       )}
@@ -374,7 +382,7 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
         {/* ── Today's Pulse ── */}
         <section>
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-            {datePreset === "today" ? "Today" : datePreset === "week" ? "This Week" : datePreset === "month" ? "This Month" : "Custom Range"}
+            {datePreset === "today" ? "Today" : datePreset === "yesterday" ? "Yesterday" : datePreset === "week" ? "This Week" : datePreset === "month" ? "This Month" : "Custom Range"}
           </h2>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => openPaymentSheet("PRE", "Pre-Payment")}
@@ -396,6 +404,19 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
               className={`${delayedOrders.length > 0 ? "bg-red-50 dark:bg-red-900/20" : "bg-gray-50 dark:bg-zinc-800"} rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70`}>
               <AlertTriangle size={18} className={delayedOrders.length > 0 ? "text-red-600 dark:text-red-400" : "text-gray-400"} />
               <div><div className={`text-base font-bold ${delayedOrders.length > 0 ? "text-red-600 dark:text-red-400" : "text-gray-400"}`}>{delayedOrders.length}</div><div className="text-xs text-gray-500">Delayed</div></div>
+            </button>
+          </div>
+          {/* Sales & Maintenance row */}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button onClick={() => openPaymentSheet("SALES", "Sales")}
+              className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
+              <ShoppingBag size={18} className="text-indigo-600 dark:text-indigo-400" />
+              <div><div className="text-base font-bold text-indigo-600 dark:text-indigo-400">{fmtBirr(salesTotal)}</div><div className="text-xs text-gray-500">Sales</div></div>
+            </button>
+            <button onClick={() => openPaymentSheet("MAINTENANCE", "Maintenance")}
+              className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
+              <Wrench size={18} className="text-orange-600 dark:text-orange-400" />
+              <div><div className="text-base font-bold text-orange-600 dark:text-orange-400">{fmtBirr(maintTotal)}</div><div className="text-xs text-gray-500">Maintenance</div></div>
             </button>
           </div>
         </section>
