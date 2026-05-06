@@ -6,6 +6,7 @@ import FinanceContent from "./Finace/FinanceContent";
 import StockContent from "./Stock/StockContent";
 import MobileAnalyticsContent from "./MobileAnalyticsContent";
 import MobileHomeContent from "./MobileHomeContent";
+import MobileCRMContent from "./MobileCRMContent";
 import AiChat from "@/Components/AdminDashBoard/Ai/AiChat";
 import { GlobalProfile } from "../GlobalComponents/GlobalProfile/GlobalProfile";
 
@@ -14,6 +15,7 @@ type TabType = "home" | "finance" | "stock" | "ai" | "profile";
 const AdminMobile = ({ userData, selectedRole, onRoleSelect }: any) => {
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [showFullDashboard, setShowFullDashboard] = useState(false);
+  const [showCRM, setShowCRM] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -34,6 +36,9 @@ const AdminMobile = ({ userData, selectedRole, onRoleSelect }: any) => {
   ];
 
   const renderContent = () => {
+    if (showCRM) {
+      return <MobileCRMContent onBack={() => setShowCRM(false)} />;
+    }
     if (showFullDashboard) {
       return (
         <div>
@@ -49,7 +54,7 @@ const AdminMobile = ({ userData, selectedRole, onRoleSelect }: any) => {
     }
     switch (activeTab) {
       case "home":
-        return <MobileHomeContent onShowFullDashboard={() => setShowFullDashboard(true)} />;
+        return <MobileHomeContent onShowFullDashboard={() => setShowFullDashboard(true)} onShowCRM={() => setShowCRM(true)} />;
       case "finance":
         return <FinanceContent />;
       case "stock":
@@ -73,6 +78,7 @@ const AdminMobile = ({ userData, selectedRole, onRoleSelect }: any) => {
   // Reset full dashboard when switching tabs
   const handleTabChange = (id: TabType) => {
     setShowFullDashboard(false);
+    setShowCRM(false);
     setActiveTab(id);
   };
 

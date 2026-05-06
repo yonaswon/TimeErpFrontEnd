@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw, AlertTriangle, FileText, CheckCircle2, ChevronRight,
   X, Calendar, MapPin, Phone, Loader2, Package, Palette, BarChart2,
-  ShoppingBag, Wrench, Filter
+  ShoppingBag, Wrench, Filter, Users
 } from "lucide-react";
 import api from "@/api";
 
@@ -256,7 +256,7 @@ function PaymentSheet({ reason, dateRange, title, totalAmount, onClose }: { reas
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullDashboard: () => void }) {
+export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { onShowFullDashboard: () => void; onShowCRM?: () => void }) {
   const [dashData, setDashData] = useState<any>(null);
   const [productionOrders, setProductionOrders] = useState<OrderRow[]>([]);
   const [delayedOrders, setDelayedOrders] = useState<OrderRow[]>([]);
@@ -520,6 +520,14 @@ export default function MobileHomeContent({ onShowFullDashboard }: { onShowFullD
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
           <BarChart2 size={16} /> Full Dashboard & Analytics <ChevronRight size={13} />
         </button>
+
+        {/* ── Manage CRM ── */}
+        {onShowCRM && (
+          <button onClick={onShowCRM}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mt-2">
+            <Users size={16} /> Manage CRM <ChevronRight size={13} />
+          </button>
+        )}
       </div>
 
       {/* ── Sheets ── */}
