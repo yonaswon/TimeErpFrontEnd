@@ -3,13 +3,22 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import api from '@/api'
 
-export const OtpLogin = () => {
+type OtpClient = 'web' | 'finance'
+
+interface OtpLoginProps {
+    client?: OtpClient
+}
+
+export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
     const [step, setStep] = useState<1 | 2>(1)
     const [username, setUsername] = useState('')
     const [otp, setOtp] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
+
+    const isFinance = client === 'finance'
+    const title = isFinance ? 'Finance & Accounting' : 'Admin'
 
     const handleRequestOtp = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -20,7 +29,7 @@ export const OtpLogin = () => {
         setLoading(true)
         setError(null)
         try {
-            await api.post('/core/request-otp/', { username, client: 'web' })
+            await api.post('/core/request-otp/', { username, client })
             setStep(2)
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to request OTP')
@@ -38,11 +47,16 @@ export const OtpLogin = () => {
         setLoading(true)
         setError(null)
         try {
-            const response = await api.post('/core/verify-otp/', { username, otp, client: 'web' })
+            const response = await api.post('/core/verify-otp/', { username, otp, client })
             if (response.data.access && response.data.user) {
                 localStorage.setItem('access_token', response.data.access)
                 localStorage.setItem('user_data', JSON.stringify(response.data.user))
-                router.push('/admin')
+                // Route based on client
+                if (isFinance) {
+                    router.push('/finance')
+                } else {
+                    router.push('/admin')
+                }
             }
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to verify OTP')
@@ -53,9 +67,23 @@ export const OtpLogin = () => {
 
     return (
         <div className="w-full max-w-md p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            <h2 className="text-[22px] font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
-                {step === 1 ? 'Admin Login' : 'Enter OTP'}
-            </h2>
+            {/* Header */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+                <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm"
+                    style={{ background: isFinance ? '#7C3AED' : '#2563EB' }}
+                >
+                    {isFinance ? 'F' : 'A'}
+                </div>
+                <div>
+                    <h2 className="text-[18px] font-bold text-gray-900 dark:text-gray-100">
+                        {title} Login
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {step === 1 ? 'Enter your Telegram username' : 'Check Telegram for your code'}
+                    </p>
+                </div>
+            </div>
 
             {error && (
                 <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm text-center">
@@ -74,14 +102,16 @@ export const OtpLogin = () => {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="@username"
-                            className="w-full h-[44px] px-4 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full h-[44px] px-4 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                            style={{ '--tw-ring-color': isFinance ? '#7C3AED' : '#2563EB' } as React.CSSProperties}
                             disabled={loading}
                         />
                     </div>
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-[44px] bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+                        className="w-full h-[44px] disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+                        style={{ background: isFinance ? '#7C3AED' : '#2563EB' }}
                     >
                         {loading ? 'Sending...' : 'Request OTP'}
                     </button>
@@ -97,7 +127,7 @@ export const OtpLogin = () => {
                             value={otp}
                             onChange={(e) => setOtp(e.target.value)}
                             placeholder="Enter code"
-                            className="w-full h-[44px] px-4 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center tracking-widest text-lg"
+                            className="w-full h-[44px] px-4 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 text-center tracking-widest text-lg"
                             disabled={loading}
                             maxLength={6}
                         />
@@ -105,11 +135,11 @@ export const OtpLogin = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-[44px] bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+                        className="w-full h-[44px] disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+                        style={{ background: isFinance ? '#7C3AED' : '#2563EB' }}
                     >
                         {loading ? 'Verifying...' : 'Verify & Login'}
                     </button>
-
                     <button
                         type="button"
                         onClick={() => setStep(1)}

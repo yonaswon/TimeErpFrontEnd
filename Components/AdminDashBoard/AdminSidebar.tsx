@@ -10,7 +10,8 @@ import {
     Bot,
     ClipboardList,
     Activity,
-    Phone
+    Phone,
+    CalendarCheck
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -30,6 +31,7 @@ const sections = [
     { id: 'stock-records', label: 'Stock Records', icon: ClipboardList },
     { id: 'material-usage', label: 'Material Usage', icon: Activity },
     { id: 'call-logs', label: 'Call Logs', icon: Phone },
+    { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
     { id: 'ai', label: 'AI Assistant', icon: Bot },
 ];
 

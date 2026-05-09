@@ -1,21 +1,22 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AdminDashBoard from '../../Components/AdminDashBoard/AdminDashBoard';
+import FinanceDashboard from '@/Components/FinanceDashboard/FinanceDashboard';
 
 interface UserRole { id: number; Name: string; }
-interface UserData { role?: UserRole[]; }
+interface UserData { telegram_user_name?: string; role?: UserRole[]; }
 
-export default function AdminPage() {
+export default function FinancePage() {
     const router = useRouter();
-    const [ready, setReady] = useState(false);
+    const [userData, setUserData] = useState<UserData | null>(null);
+    const [checking, setChecking] = useState(true);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
         const raw = localStorage.getItem('user_data');
 
         if (!token || !raw) {
-            router.replace('/');
+            router.replace('/finance/login');
             return;
         }
 
@@ -26,30 +27,35 @@ export default function AdminPage() {
             const isFinance = roles.some((r) => r.Name === 'Finance&Accounting');
 
             if (isAdmin) {
-                setReady(true);
+                // Admins use the full admin dashboard
+                router.replace('/admin');
                 return;
             }
 
-            // Not admin — redirect to finance if they have that role, else home
-            if (isFinance) {
-                router.replace('/finance');
-            } else {
-                router.replace('/');
+            if (!isFinance) {
+                // No valid role — back to login
+                router.replace('/finance/login');
+                return;
             }
+
+            setUserData(user);
         } catch {
-            router.replace('/');
+            router.replace('/finance/login');
+            return;
         }
+
+        setChecking(false);
     }, [router]);
 
-    if (!ready) {
+    if (checking || !userData) {
         return (
             <div style={{
                 minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#F9FAFB',
+                background: 'var(--admin-bg, #F9FAFB)',
             }}>
                 <div style={{
                     width: 40, height: 40, borderRadius: '50%',
-                    border: '4px solid #E5E7EB', borderTopColor: '#2563EB',
+                    border: '4px solid #E5E7EB', borderTopColor: '#7C3AED',
                     animation: 'spin 0.8s linear infinite',
                 }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -57,5 +63,9 @@ export default function AdminPage() {
         );
     }
 
-    return <AdminDashBoard />;
+    return (
+        <FinanceDashboard
+            userName={userData.telegram_user_name ?? 'user'}
+        />
+    );
 }

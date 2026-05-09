@@ -19,6 +19,7 @@ import AiChat from './Ai/AiChat';
 import StockRecord from '../StockRecord/StockRecord';
 import MaterialUsageProgress from './MaterialUsageProgress';
 import CallLogList from './CallLogs/CallLogList';
+import AttendanceDashboard from './Attendance/AttendanceDashboard';
 import { DashboardData, Filters } from './types';
 
 
@@ -83,6 +84,7 @@ export default function AdminDashBoard() {
         'stock-records': 'Stock Records',
         'material-usage': 'Material Usage Progress',
         'call-logs': 'Call Logs Dashboard',
+        attendance: 'Attendance Dashboard',
         ai: 'AI Assistant',
     };
 
@@ -91,6 +93,7 @@ export default function AdminDashBoard() {
         if (activeSection === 'stock-records') return <StockRecord />;
         if (activeSection === 'material-usage') return <MaterialUsageProgress />;
         if (activeSection === 'call-logs') return <CallLogList />;
+        if (activeSection === 'attendance') return <AttendanceDashboard />;
         if (activeSection === 'ai') return <AiChat onBack={() => setActiveSection('overview')} />;
 
         if (loading) {
@@ -153,7 +156,7 @@ export default function AdminDashBoard() {
                         </div>
                     </div>
                 )}
-                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && (
+                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && activeSection !== 'attendance' && (
                     <FilterBar
                         filters={filters}
                         onApply={handleApplyFilters}
