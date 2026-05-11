@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "@/api";
 import { Loader2, Check, X, Flame, Snowflake } from "lucide-react";
 
@@ -23,6 +23,7 @@ interface LeadListProps {
   userId: number | null;
   onLeadClick?: (leadId: number) => void;
   showCreateOverlay: any;
+  searchQuery: string;
 }
 
 const LeadList = ({
@@ -31,15 +32,16 @@ const LeadList = ({
   userId,
   onLeadClick,
   showCreateOverlay,
+  searchQuery,
 }: LeadListProps) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nextPage, setNextPage] = useState<string | null>(null);
-
   const [hasMore, setHasMore] = useState(false);
   const [updatingLeadId, setUpdatingLeadId] = useState<number | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleStatusChange = async (
     e: React.MouseEvent,
@@ -75,14 +77,19 @@ const LeadList = ({
     fetchLeads(true);
   }, [activeTab, filters, userId, showCreateOverlay]);
 
-  // useEffect(() => {
-  //   if (!showCreateOverlay) {
-  //     if (leads){
-  //       setLeads([])
-  //     }
-  //     fetchLeads();
-  //   }
-  // }, [showCreateOverlay]);
+  // Debounce searchQuery changes
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setLeads([]);
+      setNextPage(null);
+      setHasMore(false);
+      fetchLeads(true);
+    }, 300);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [searchQuery]);
 
   const fetchLeads = async (reset: boolean = false) => {
     if (!userId && activeTab === "your") {
@@ -121,6 +128,10 @@ const LeadList = ({
 
       if (filters.status) {
         params.status = filters.status;
+      }
+
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
       }
 
       if (!reset && nextPage) {
@@ -278,7 +289,11 @@ const LeadList = ({
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <p className="text-gray-500 dark:text-gray-400">No leads found</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          {searchQuery.trim()
+            ? "No leads found matching your search."
+            : "No leads found"}
+        </p>
       </div>
     );
   }

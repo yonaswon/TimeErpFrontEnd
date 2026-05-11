@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MockupCard from "./MockupCard";
 import SubmitMockupOverlay from "./SubmitMockupOverlay";
 import SubmitModificationOverlay from "./SubmitModificationOverlay";
@@ -9,10 +9,16 @@ import api from "@/api";
 
 const MockupPage = () => {
   const [mockups, setMockups] = useState<Mockup[]>([]);
-  const [modifications, setModifications] = useState<{
-    [key: number]: Modification[];
-  }>({});
-  const [loading, setLoading] = useState(true);
+  const [modifications, setModifications] = useState<{ [key: number]: Modification[] }>({});
+
+  // Pagination & search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Overlay state
   const [showSubmitOverlay, setShowSubmitOverlay] = useState(false);
   const [showSubmitModificationOverlay, setShowSubmitModificationOverlay] = useState(false);
   const [showDetailOverlay, setShowDetailOverlay] = useState(false);
@@ -22,39 +28,56 @@ const MockupPage = () => {
   const [startingMockupId, setStartingMockupId] = useState<number | null>(null);
   const [startingModificationId, setStartingModificationId] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchMockups();
-  }, []);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchMockups = async () => {
+  // ── Core fetch helper ────────────────────────────────────────────────────────
+  const fetchMockups = async (page: number, term: string, append: boolean) => {
     try {
       const userData = localStorage.getItem("user_data");
       if (!userData) return;
+      const designerId = JSON.parse(userData).id;
 
-      const user = JSON.parse(userData);
-      const designerId = user.id;
+      let url = `/lead/mockups/?p=${page}&designer=${designerId}&ordering=-date`;
+      if (term.trim()) url += `&search=${encodeURIComponent(term.trim())}`;
 
-      const response = await api.get(
-        `/lead/mockups/?designer=${designerId}&ordering=-date`
-      );
+      const response = await api.get(url);
+      if (!response.data) return;
 
-      if (response.data) {
-        setMockups(response.data.results || response.data);
+      const results: Mockup[] = response.data.results ?? response.data;
+      const next: string | null = response.data.next ?? null;
 
-        // Fetch modifications for returned mockups
-        const returnedMockups = (response.data.results || response.data).filter(
-          (mockup: Mockup) => mockup.request_status === "RETURNED"
-        );
-
-        returnedMockups.forEach((mockup: Mockup) => {
-          fetchModifications(mockup.id);
+      if (append) {
+        setMockups((prev) => [...prev, ...results]);
+      } else {
+        setMockups(results);
+        // Discard modification data for mockups no longer in the list
+        const newIds = new Set(results.map((m) => m.id));
+        setModifications((prev) => {
+          const cleaned: { [key: number]: Modification[] } = {};
+          for (const id of Object.keys(prev)) {
+            if (newIds.has(Number(id))) cleaned[Number(id)] = prev[Number(id)];
+          }
+          return cleaned;
         });
       }
+
+      setNextUrl(next);
+      setCurrentPage(page);
+      fetchModificationsForNew(results);
     } catch (error) {
       console.error("Error fetching mockups:", error);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  // ── Modifications helpers ────────────────────────────────────────────────────
+  const fetchModificationsForNew = (newMockups: Mockup[]) => {
+    setModifications((prev) => {
+      const toFetch = newMockups.filter(
+        (m) => m.request_status === "RETURNED" && !(m.id in prev)
+      );
+      toFetch.forEach((m) => fetchModifications(m.id));
+      return prev;
+    });
   };
 
   const fetchModifications = async (mockupId: number) => {
@@ -63,18 +86,67 @@ const MockupPage = () => {
         `/lead/modifications/?ordering=requested_date&mockup=${mockupId}`
       );
       if (response.data) {
-        setModifications((prev) => ({ ...prev, [mockupId]: response.data.results || response.data }));
+        setModifications((prev) => ({
+          ...prev,
+          [mockupId]: response.data.results ?? response.data,
+        }));
       }
     } catch (error) {
       console.error("Error fetching modifications:", error);
     }
   };
 
+  // ── Mount: load page 1 ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setSearchLoading(true);
+      await fetchMockups(1, "", false);
+      setSearchLoading(false);
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Debounced search ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      await fetchMockups(1, searchTerm, false);
+      setSearchLoading(false);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  // ── Load More ────────────────────────────────────────────────────────────────
+  const handleLoadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      await fetchMockups(currentPage + 1, searchTerm, true);
+    } catch (error) {
+      console.error("Error loading more mockups:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // ── Refresh helper (used by overlays / start actions) ───────────────────────
+  const refreshMockups = async () => {
+    setSearchLoading(true);
+    await fetchMockups(1, searchTerm, false);
+    setSearchLoading(false);
+  };
+
+  // ── Action handlers ──────────────────────────────────────────────────────────
   const startMockup = async (mockupId: number) => {
     try {
       setStartingMockupId(mockupId);
       await api.post(`/lead/mockups/${mockupId}/start/`);
-      await fetchMockups();
+      await refreshMockups();
     } catch (error) {
       console.error("Error starting mockup:", error);
     } finally {
@@ -94,7 +166,8 @@ const MockupPage = () => {
     }
   };
 
-  if (loading) {
+  // ── Render ───────────────────────────────────────────────────────────────────
+  if (searchLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -104,7 +177,17 @@ const MockupPage = () => {
 
   return (
     <div className="p-2 sm:p-4 flex flex-col gap-3">
-      {/* Mockup List (Mobile-first stack) */}
+      {/* Search input */}
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        disabled={searchLoading}
+        placeholder="Search by name or code…"
+        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+      />
+
+      {/* Mockup list */}
       {mockups.length > 0 ? (
         <div className="flex flex-col gap-3">
           {mockups.map((mockup) => (
@@ -128,18 +211,32 @@ const MockupPage = () => {
               }}
               onShowDetail={(mockup) => {
                 setSelectedMockup(mockup);
-                // We need a separate state for Detail Overlay vs Submit Overlay
-                // Reusing selectedMockup is fine, but we need a boolean for the detail view
                 setShowDetailOverlay(true);
               }}
             />
           ))}
         </div>
       ) : (
-        // Empty state
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-          No mockup requests found. New requests will appear here.
+          {searchTerm.trim()
+            ? "No mockups found matching your search."
+            : "No mockup requests found. New requests will appear here."}
         </div>
+      )}
+
+      {/* Load More */}
+      {nextUrl && (
+        <button
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+          className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-600 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {loadingMore ? (
+            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500" />
+          ) : (
+            "Load More"
+          )}
+        </button>
       )}
 
       {/* Detail Overlay */}
@@ -155,12 +252,12 @@ const MockupPage = () => {
           startingModificationId={startingModificationId}
           onStartModification={(id) => startModification(id, selectedMockup.id)}
           onShowSubmitOverlay={(m) => {
-            setShowDetailOverlay(false); // Close detail first
+            setShowDetailOverlay(false);
             setSelectedMockup(m);
             setShowSubmitOverlay(true);
           }}
           onShowSubmitModificationOverlay={(m) => {
-            setShowDetailOverlay(false); // Close detail first
+            setShowDetailOverlay(false);
             setSelectedModification(m);
             setShowSubmitModificationOverlay(true);
           }}
@@ -174,12 +271,12 @@ const MockupPage = () => {
           onClose={() => {
             setShowSubmitOverlay(false);
             setSelectedMockup(null);
-            fetchMockups();
+            refreshMockups();
           }}
           onSuccess={() => {
             setShowSubmitOverlay(false);
             setSelectedMockup(null);
-            fetchMockups();
+            refreshMockups();
           }}
         />
       )}
@@ -191,12 +288,12 @@ const MockupPage = () => {
           onClose={() => {
             setShowSubmitModificationOverlay(false);
             setSelectedModification(null);
-            fetchMockups();
+            refreshMockups();
           }}
           onSuccess={() => {
             setShowSubmitModificationOverlay(false);
             setSelectedModification(null);
-            fetchMockups();
+            refreshMockups();
           }}
         />
       )}

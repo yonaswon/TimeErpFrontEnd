@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import StatisticsCard from "./StatisticsCard";
 import FilterBar from "./FilterBar";
 import LeadList from "./LeadList";
@@ -17,6 +18,7 @@ const Home = () => {
   const [userId, setUserId] = useState<number | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const userData = localStorage.getItem("user_data");
@@ -69,6 +71,29 @@ const Home = () => {
           </nav>
         </div>
 
+        {/* Search Input */}
+        <div className="px-4 pb-2">
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, phone, mockup or ID…"
+              aria-label="Search leads"
+              className="w-full pl-4 pr-9 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border border-transparent focus:border-blue-400 dark:focus:border-blue-500 focus:outline-none transition-colors"
+            />
+            {searchQuery.length > 0 && (
+              <button
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-gray-300 dark:bg-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-slate-500 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Filter Bar - Animated Expand */}
         {/* Filter Bar - Animated Expand */}
         <div className="px-4 pb-3 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -86,6 +111,7 @@ const Home = () => {
           userId={userId}
           showCreateOverlay={showCreateOverlay}
           onLeadClick={handleLeadClick}
+          searchQuery={searchQuery}
         />
       </div>
 

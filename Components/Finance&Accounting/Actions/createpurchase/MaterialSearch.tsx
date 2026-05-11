@@ -29,14 +29,14 @@ export const MaterialSearch = ({ value, onChange, disabled = false }: MaterialSe
   const selectedMaterial = materials.find(m => m.id === value)
 
   useEffect(() => {
+    // Only run when the dropdown is open and the user has typed something
+    if (!isOpen || !searchTerm) return
+
     const fetchMaterials = async () => {
-      if (!searchTerm && !isOpen) return // Don't fetch when dropdown is closed and no search term
-      
       setLoading(true)
       setError(null)
       try {
-        const url = searchTerm ? `/materials/?search=${encodeURIComponent(searchTerm)}` : '/materials/'
-        const response = await api.get(url)
+        const response = await api.get(`/materials/?search=${encodeURIComponent(searchTerm)}`)
         setMaterials(response.data.results || [])
       } catch (err: any) {
         console.error('Error fetching materials:', err)
@@ -49,7 +49,7 @@ export const MaterialSearch = ({ value, onChange, disabled = false }: MaterialSe
 
     const timeoutId = setTimeout(fetchMaterials, 300)
     return () => clearTimeout(timeoutId)
-  }, [searchTerm, isOpen])
+  }, [searchTerm]) // isOpen intentionally excluded — initial load is handled by handleFocus
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -111,7 +111,7 @@ export const MaterialSearch = ({ value, onChange, disabled = false }: MaterialSe
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full min-w-[320px] mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
           {loading ? (
             <div className="flex items-center justify-center px-3 py-4">
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
