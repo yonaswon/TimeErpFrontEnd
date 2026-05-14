@@ -19,6 +19,9 @@ import AiChat from './Ai/AiChat';
 import StockRecord from '../StockRecord/StockRecord';
 import MaterialUsageProgress from './MaterialUsageProgress';
 import CallLogList from './CallLogs/CallLogList';
+import CallRecordingsList from './CallRecordings/CallRecordingsList';
+import CrmManager from './CRM/CrmManager';
+import FollowUpsPanel from './CRM/FollowUpsPanel';
 import AttendanceDashboard from './Attendance/AttendanceDashboard';
 import { DashboardData, Filters } from './types';
 
@@ -84,6 +87,11 @@ export default function AdminDashBoard() {
         'stock-records': 'Stock Records',
         'material-usage': 'Material Usage Progress',
         'call-logs': 'Call Logs Dashboard',
+        'call-recordings': 'Call Recordings & Transcripts',
+        crm: 'CRM Manager',
+        'crm-leads': 'CRM · Leads',
+        'crm-conversations': 'CRM · Conversations',
+        'crm-followups': 'CRM · AI Follow-ups',
         attendance: 'Attendance Dashboard',
         ai: 'AI Assistant',
     };
@@ -93,6 +101,11 @@ export default function AdminDashBoard() {
         if (activeSection === 'stock-records') return <StockRecord />;
         if (activeSection === 'material-usage') return <MaterialUsageProgress />;
         if (activeSection === 'call-logs') return <CallLogList />;
+        if (activeSection === 'call-recordings') return <CallRecordingsList />;
+        if (activeSection === 'crm') return <CrmManager />;
+        if (activeSection === 'crm-leads') return <CrmManager initialMode="leads" />;
+        if (activeSection === 'crm-conversations') return <CrmManager initialMode="conversations" />;
+        if (activeSection === 'crm-followups') return <FollowUpsPanel />;
         if (activeSection === 'attendance') return <AttendanceDashboard />;
         if (activeSection === 'ai') return <AiChat onBack={() => setActiveSection('overview')} />;
 
@@ -156,7 +169,7 @@ export default function AdminDashBoard() {
                         </div>
                     </div>
                 )}
-                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && activeSection !== 'attendance' && (
+                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && activeSection !== 'attendance' && activeSection !== 'call-recordings' && activeSection !== 'call-logs' && activeSection !== 'crm' && activeSection !== 'crm-leads' && activeSection !== 'crm-conversations' && activeSection !== 'crm-followups' && (
                     <FilterBar
                         filters={filters}
                         onApply={handleApplyFilters}

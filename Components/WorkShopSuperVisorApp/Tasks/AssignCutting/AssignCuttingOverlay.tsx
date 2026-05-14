@@ -1,7 +1,7 @@
 // AssignCutting/AssignCuttingOverlay.tsx
 import { useState, useEffect } from "react";
-import { X, Scissors, User, Package, AlertCircle, CheckCircle, Lock, Loader2 } from "lucide-react";
-import api from "@/api";
+import { X, Scissors, User, Package, AlertCircle, CheckCircle, Lock, Loader2, Clock } from "lucide-react";
+import api, { base_url } from "@/api";
 
 interface CuttingFile {
   id: number;
@@ -11,6 +11,7 @@ interface CuttingFile {
   old_material: { id: number; name: string } | null;
   crv3d: string;
   image: string;
+  line_image: string | null;
   status: string;
   assigned_to: any;
   schedule_start_date: string | null;
@@ -18,6 +19,9 @@ interface CuttingFile {
   start_date: string | null;
   complate_date: string | null;
   date: string;
+  analysis_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  analysis_error: string | null;
+  total_usage_percentage: string | null;
 }
 
 interface Order {
@@ -73,8 +77,62 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
     }
   };
 
-  const areAllOrdersPaymentConfirmed = (file: CuttingFile) => file.orders.every((o) => o.order_status !== "PRE-ACCEPTED");
+  // WebSocket: real-time analysis status updates
+  useEffect(() => {
+    const wsProtocol = base_url.startsWith('https') ? 'wss' : 'ws';
+    const wsHost = base_url.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/ws/cutting-file-analysis/`;
+
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.cutting_file_id) {
+            const toAbsolute = (url: string | null) =>
+              url && url.startsWith('/') ? `${base_url}${url}` : url;
+
+            setCuttingFiles(prev => prev.map(cf =>
+              cf.id === data.cutting_file_id
+                ? {
+                    ...cf,
+                    analysis_status: data.analysis_status,
+                    image: toAbsolute(data.image) || cf.image,
+                    line_image: toAbsolute(data.line_image) || cf.line_image,
+                    analysis_error: data.analysis_error,
+                    total_usage_percentage: data.total_usage_percentage || cf.total_usage_percentage,
+                  }
+                : cf
+            ));
+          }
+        } catch (e) {
+          console.error('WS parse error:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => {
+        ws?.close();
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }, []);
+
   const hasPreAcceptedOrders = (file: CuttingFile) => file.orders.some((o) => o.order_status === "PRE-ACCEPTED");
+  const isAnalysisReady = (file: CuttingFile) => file.analysis_status === 'COMPLETED';
 
   const handleAssign = async (fileId: number) => {
     if (!selectedMember || !scheduleStartDate || !scheduleCompleteDate) { setError("Please fill all required fields"); return; }
@@ -107,6 +165,31 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
+  };
+
+  const getAnalysisBadge = (file: CuttingFile) => {
+    switch (file.analysis_status) {
+      case 'PENDING':
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+            <Clock className="w-2.5 h-2.5" /> Queued
+          </span>
+        );
+      case 'PROCESSING':
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Processing
+          </span>
+        );
+      case 'FAILED':
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+            <AlertCircle className="w-2.5 h-2.5" /> Failed
+          </span>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -160,12 +243,23 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
             <div className="space-y-3">
               {cuttingFiles.map((file) => {
                 const paymentPending = hasPreAcceptedOrders(file);
+                const analysisReady = isAnalysisReady(file);
+                const canAssign = analysisReady && !paymentPending;
                 return (
-                  <div key={file.id} className={`bg-gray-50 dark:bg-zinc-900/50 rounded-xl border ${paymentPending ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-zinc-700'} overflow-hidden`}>
+                  <div key={file.id} className={`bg-gray-50 dark:bg-zinc-900/50 rounded-xl border ${
+                    !analysisReady ? 'border-blue-200 dark:border-blue-800/40' : paymentPending ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-zinc-700'
+                  } overflow-hidden`}>
                     <div className="p-4">
                       {/* File Header */}
                       <div className="flex items-start gap-3 mb-3">
-                        <img src={file.image} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-zinc-600 shrink-0" />
+                        {/* Image or spinner placeholder */}
+                        {file.image && analysisReady ? (
+                          <img src={file.image} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-zinc-600 shrink-0" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg border border-gray-200 dark:border-zinc-600 shrink-0 flex items-center justify-center bg-gray-100 dark:bg-zinc-700">
+                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.crv3d.split("/").pop()}</h4>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -176,12 +270,17 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
                           <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300">
                             {file.orders.length} order(s)
                           </span>
-                          {paymentPending ? (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
-                              <Lock className="w-2.5 h-2.5" /> Payment Pending
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Ready</span>
+                          {/* Analysis status badge */}
+                          {getAnalysisBadge(file)}
+                          {/* Payment status badge (only show if analysis is done) */}
+                          {analysisReady && (
+                            paymentPending ? (
+                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+                                <Lock className="w-2.5 h-2.5" /> Payment Pending
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Ready</span>
+                            )
                           )}
                         </div>
                       </div>
@@ -199,7 +298,7 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
                         ))}
                       </div>
 
-                      {/* Assignment Form */}
+                      {/* Assignment Form or Button */}
                       {selectedFile?.id === file.id ? (
                         <div className="space-y-3 p-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700">
                           <div>
@@ -233,11 +332,19 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
                             </button>
                           </div>
                         </div>
-                      ) : (
+                      ) : canAssign ? (
                         <button onClick={() => setSelectedFile(file)}
                           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 active:scale-[0.98] transition-all">
                           <User className="w-4 h-4" /> <span>Assign Task</span>
                         </button>
+                      ) : (
+                        <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 text-sm font-medium cursor-not-allowed">
+                          {!analysisReady ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /><span>{file.analysis_status === 'FAILED' ? 'Analysis failed — cannot assign' : 'Waiting for analysis...'}</span></>
+                          ) : (
+                            <><Lock className="w-4 h-4" /><span>Payment pending</span></>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

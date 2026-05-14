@@ -1,8 +1,8 @@
 // CuttingFile.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers, Target } from 'lucide-react';
+import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers, Target, Clock, AlertCircle } from 'lucide-react';
 import { CuttingFile, CuttingFileResponse, Material } from '@/types/cutting';
-import api from '@/api';
+import api, { base_url } from '@/api';
 import { CuttingFileDetailOverlay } from './CuttingFileDetailOverlay';
 import { CreateCuttingFileOverlay } from './CreateCuttingFileOverlay';
 import { EditCuttingFileOverlay } from './EditCuttingFileOverlay';
@@ -123,6 +123,64 @@ export const CuttingFileComponent = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [searchQuery, filterMaterial, filterSheet]);
+
+  // WebSocket: real-time analysis status updates (no polling, no list reload)
+  useEffect(() => {
+    // Build WebSocket URL from the API base URL
+    const wsProtocol = base_url.startsWith('https') ? 'wss' : 'ws';
+    const wsHost = base_url.replace(/^https?:\/\//, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/ws/cutting-file-analysis/`;
+
+    let ws: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.cutting_file_id) {
+            // Celery sends relative URLs (/media/...) — make them absolute
+            const toAbsolute = (url: string | null) =>
+              url && url.startsWith('/') ? `${base_url}${url}` : url;
+
+            // Merge the update into the existing list — only the changed card re-renders
+            setCuttingFiles(prev => prev.map(cf =>
+              cf.id === data.cutting_file_id
+                ? {
+                    ...cf,
+                    analysis_status: data.analysis_status,
+                    image: toAbsolute(data.image) || cf.image,
+                    line_image: toAbsolute(data.line_image) || cf.line_image,
+                    analysis_error: data.analysis_error,
+                    total_usage_percentage: data.total_usage_percentage || cf.total_usage_percentage,
+                  }
+                : cf
+            ));
+          }
+        } catch (e) {
+          console.error('WS parse error:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        // Auto-reconnect after 3 seconds
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => {
+        ws?.close();
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }, []);
 
   const handleDownload = (fileUrl: string, fileName: string) => {
     if ((window as any).Telegram?.WebApp) {
@@ -476,7 +534,13 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
         {/* Preview thumbnail(s) */}
         <div className={`flex gap-1 ${file.line_image ? 'w-[164px]' : 'w-20'} shrink-0`}>
           <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600">
-            <img src={file.image} alt="Cutting preview" className="w-full h-full object-contain" />
+            {file.image ? (
+              <img src={file.image} alt="Cutting preview" className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+              </div>
+            )}
           </div>
           {file.line_image && (
             <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600">
@@ -518,6 +582,21 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
             <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
               {statusBadge.label}
             </span>
+            {(file.analysis_status === 'PENDING' || file.analysis_status === 'PROCESSING') && (
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 ${
+                file.analysis_status === 'PROCESSING'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+              }`}>
+                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                {file.analysis_status === 'PROCESSING' ? 'Processing' : 'Queued'}
+              </span>
+            )}
+            {file.analysis_status === 'FAILED' && (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 flex items-center gap-1">
+                <AlertCircle className="w-2.5 h-2.5" />Failed
+              </span>
+            )}
             {file.assigned_to && (
               <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-0.5">
                 <User className="w-2.5 h-2.5" />@{file.assigned_to.telegram_user_name}

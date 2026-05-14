@@ -11,6 +11,8 @@ import {
     ClipboardList,
     Activity,
     Phone,
+    Mic,
+    MessageSquare,
     CalendarCheck
 } from 'lucide-react';
 
@@ -21,16 +23,24 @@ interface AdminSidebarProps {
     setIsOpen: (isOpen: boolean) => void;
 }
 
-const sections = [
+// Section metadata. `parent` makes a row visually nested under its parent.
+const sections: Array<{ id: string; label: string; icon: any; parent?: string }> = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'orders', label: 'Orders', icon: ShoppingCart },
     { id: 'sales', label: 'Sales & Leads', icon: TrendingUp },
+    // ── CRM group ──
+    { id: 'crm', label: 'CRM', icon: MessageSquare },
+    { id: 'crm-leads', label: 'Leads', icon: TrendingUp, parent: 'crm' },
+    { id: 'crm-conversations', label: 'Conversations', icon: MessageSquare, parent: 'crm' },
+    { id: 'call-logs', label: 'Call Logs', icon: Phone, parent: 'crm' },
+    { id: 'call-recordings', label: 'Call Recordings', icon: Mic, parent: 'crm' },
+    { id: 'crm-followups', label: 'Follow-ups', icon: CalendarCheck, parent: 'crm' },
+    // ── rest ──
     { id: 'production', label: 'Production', icon: Factory },
     { id: 'finance', label: 'Finance', icon: DollarSign },
     { id: 'stock', label: 'Stock', icon: Package },
     { id: 'stock-records', label: 'Stock Records', icon: ClipboardList },
     { id: 'material-usage', label: 'Material Usage', icon: Activity },
-    { id: 'call-logs', label: 'Call Logs', icon: Phone },
     { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
     { id: 'ai', label: 'AI Assistant', icon: Bot },
 ];
@@ -55,10 +65,13 @@ export default function AdminSidebar({ activeSection, onSectionChange, isOpen, s
             <nav className="admin-sidebar-nav">
                 {sections.map((section) => {
                     const Icon = section.icon;
+                    const isChild = !!section.parent;
+                    const indent = isChild && isOpen ? { paddingLeft: 28 } : undefined;
                     return (
                         <button
                             key={section.id}
                             className={`admin-sidebar-item ${activeSection === section.id ? 'active' : ''}`}
+                            style={indent}
                             onClick={() => onSectionChange(section.id)}
                             title={!isOpen ? section.label : undefined}
                         >

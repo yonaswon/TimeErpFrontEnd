@@ -215,26 +215,42 @@ export const CuttingFileDetailOverlay = ({ file, onClose, onDownload }: CuttingF
           {/* Preview Image */}
           <Section title="Design Preview">
             <div className="bg-[#FFFFFF] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] rounded-[12px] p-[16px]">
-              <div className="flex flex-col md:flex-row gap-[16px] justify-center items-center">
-                <div className="flex-1 w-full flex flex-col items-center">
-                  <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">Layer Highlighting</span>
-                  <img
-                    src={file.image}
-                    alt="Cutting preview"
-                    className="w-full h-auto max-h-64 object-contain rounded-[8px]"
-                  />
-                </div>
-                {file.line_image && (
-                  <div className="flex-1 w-full flex flex-col items-center border-t md:border-t-0 md:border-l border-[#E5E7EB] dark:border-[#334155] pt-[16px] md:pt-0 md:pl-[16px]">
-                    <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">Wireframe Preview</span>
-                    <img
-                      src={file.line_image}
-                      alt="Wireframe preview"
-                      className="w-full h-auto max-h-64 object-contain rounded-[8px]"
-                    />
+              {(file.analysis_status === 'PENDING' || file.analysis_status === 'PROCESSING') && !file.image ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#2563EB]"></div>
+                  <div className="text-center">
+                    <p className="text-[16px] font-medium text-[#111827] dark:text-[#F1F5F9]">Generating Preview...</p>
+                    <p className="text-[14px] text-[#6B7280] dark:text-[#94A3B8] mt-1">DXF analysis is running in the background. Images will appear automatically.</p>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="flex flex-col md:flex-row gap-[16px] justify-center items-center">
+                  <div className="flex-1 w-full flex flex-col items-center">
+                    <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">Layer Highlighting</span>
+                    {file.image ? (
+                      <img
+                        src={file.image}
+                        alt="Cutting preview"
+                        className="w-full h-auto max-h-64 object-contain rounded-[8px]"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-48 w-full bg-[#F9FAFB] dark:bg-[#0F172A] rounded-[8px] text-[#6B7280] dark:text-[#94A3B8] text-[14px]">
+                        No preview available
+                      </div>
+                    )}
+                  </div>
+                  {file.line_image && (
+                    <div className="flex-1 w-full flex flex-col items-center border-t md:border-t-0 md:border-l border-[#E5E7EB] dark:border-[#334155] pt-[16px] md:pt-0 md:pl-[16px]">
+                      <span className="text-[14px] font-medium text-[#6B7280] dark:text-[#94A3B8] mb-[8px]">Wireframe Preview</span>
+                      <img
+                        src={file.line_image}
+                        alt="Wireframe preview"
+                        className="w-full h-auto max-h-64 object-contain rounded-[8px]"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </Section>
 
@@ -677,7 +693,8 @@ const PercentageBar = ({
 
 const AnalysisStatusBadge = ({ status, small = false }: { status: string; small?: boolean }) => {
   const config = {
-    'PENDING': { bg: 'bg-[#FEF3C7] dark:bg-amber-900/30', text: 'text-[#F59E0B] dark:text-[#FBBF24]', label: 'Pending' },
+    'PENDING': { bg: 'bg-[#FEF3C7] dark:bg-amber-900/30', text: 'text-[#F59E0B] dark:text-[#FBBF24]', label: 'Queued' },
+    'PROCESSING': { bg: 'bg-[#EFF6FF] dark:bg-blue-900/30', text: 'text-[#2563EB] dark:text-[#3B82F6]', label: 'Processing' },
     'COMPLETED': { bg: 'bg-[#DCFCE7] dark:bg-green-900/30', text: 'text-[#16A34A] dark:text-[#22C55E]', label: 'Completed' },
     'FAILED': { bg: 'bg-[#FEF2F2] dark:bg-red-900/30', text: 'text-[#DC2626] dark:text-[#EF4444]', label: 'Failed' },
   }[status] || { bg: 'bg-[#F9FAFB]', text: 'text-[#6B7280]', label: status };

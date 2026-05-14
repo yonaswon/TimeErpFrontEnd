@@ -11,8 +11,8 @@ export interface DxfFileType {
 export interface DxfLayer {
   name: string;
   entity_count: number;
-  color: string;
-  preview_image: string; // base64 data URI
+  color?: string;
+  preview_image?: string; // base64 data URI (only from analyze_dxf_upload)
 }
 
 export interface DxfLayerData {
@@ -24,6 +24,11 @@ export interface DxfLayerData {
 export interface DxfAnalyzeResponse {
   layers: DxfLayer[];
   full_preview: string; // base64 data URI
+  layer_count: number;
+}
+
+export interface DxfLayerNamesResponse {
+  layers: { name: string; entity_count: number }[];
   layer_count: number;
 }
 
@@ -62,7 +67,7 @@ export interface CuttingFileOrderDxf {
   detected_width: string | null;
   detected_height: string | null;
   is_active: boolean;
-  analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  analysis_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   analysis_notes: string | null;
   date: string;
   // DXF verification fields
@@ -80,7 +85,7 @@ export interface SheetAnalysisResponse {
   sheet_width: string | null;
   sheet_height: string | null;
   total_usage_percentage: string | null;
-  analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  analysis_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   analysis_error: string | null;
   previous_cutting_file: {
     id: number;
@@ -116,7 +121,7 @@ export interface CuttingFile {
   sheet_width: string | null;
   sheet_height: string | null;
   total_usage_percentage: string | null;
-  analysis_status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  analysis_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   analysis_error: string | null;
   previous_cutting_file: number | null;
   previous_cutting_file_image: string | null;

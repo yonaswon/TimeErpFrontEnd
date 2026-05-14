@@ -16,6 +16,9 @@ import {
   CheckCircle,
   XCircle,
   PhoneOutgoing,
+  FileText,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import api from "@/api";
 
@@ -27,6 +30,7 @@ interface CallLog {
   duration: number;
   date: string;
   recording_url?: string;
+  transcript?: string | null;
   sales_name?: string;
   sales_id?: number;
   note?: string;
@@ -74,6 +78,9 @@ export default function MobileCRMContent({ onBack }: { onBack: () => void }) {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
     null
   );
+
+  // Transcript expand
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState<number | null>(null);
 
   // Fetch users list
   const fetchUsers = useCallback(async () => {
@@ -501,6 +508,35 @@ export default function MobileCRMContent({ onBack }: { onBack: () => void }) {
                       </div>
                     </div>
                     <Voicemail size={20} className="text-gray-400" />
+                  </div>
+                )}
+
+                {/* Transcript */}
+                {call.transcript && (
+                  <div className="mt-2">
+                    <button
+                      onClick={() =>
+                        setExpandedTranscriptId(
+                          expandedTranscriptId === call.id ? null : call.id
+                        )
+                      }
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 dark:bg-zinc-900/50 rounded-lg text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FileText size={14} />
+                        Transcript
+                      </span>
+                      {expandedTranscriptId === call.id ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </button>
+                    {expandedTranscriptId === call.id && (
+                      <div className="mt-2 p-3 bg-gray-50 dark:bg-zinc-900/50 rounded-lg text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {call.transcript}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

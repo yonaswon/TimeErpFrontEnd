@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw, AlertTriangle, FileText, CheckCircle2, ChevronRight,
   X, Calendar, MapPin, Phone, Loader2, Package, Palette, BarChart2,
-  ShoppingBag, Wrench, Filter, Users
+  ShoppingBag, Wrench, Filter, Users, Camera
 } from "lucide-react";
 import api from "@/api";
 
@@ -14,6 +14,8 @@ interface OrderRow {
   delivery_date: string; container_id: number; mockup_url: string | null;
   advance_payment: number; remaining_payment: number; full_payment: number;
   is_delayed: boolean;
+  today_status_image: string | null;
+  status_duration_seconds: number | null;
 }
 interface MockupRow {
   id: number; name: string | null; lead_name: string | null;
@@ -55,6 +57,19 @@ const MOCKUP_COLOR: Record<string, string> = {
 };
 const PIPELINE = ["PRE-ACCEPTED","PRE-CONFIRMED","CNC-STARTED","CNC-COMPLETED","ASSEMBLY-STARTED","ASSEMBLY-COMPLETED","DANDI-STARTED"];
 const REASON_LABEL: Record<string, string> = { PRE: "Pre-Payment", REM: "Remaining", FULL: "Full", SALES: "Sales", MAINTENANCE: "Maintenance" };
+
+const ACTIVE_PRODUCTION_STATUSES = ["CNC-STARTED","CNC-COMPLETED","ASSEMBLY-STARTED","ASSEMBLY-COMPLETED","DANDI-STARTED"];
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null || seconds === undefined) return "";
+  if (seconds < 60) return `${seconds}s`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
 
 function fmtBirr(n: number) { return `${Math.round(n).toLocaleString()} ETB`; }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }); }
@@ -101,12 +116,32 @@ function Sheet({ title, onClose, children }: { title: React.ReactNode; onClose: 
 
 // ─── Order Detail Sheet ───────────────────────────────────────────────────────
 function OrderSheet({ order, onClose }: { order: OrderRow; onClose: () => void }) {
+  const [statusImages, setStatusImages] = useState<any[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [imagesError, setImagesError] = useState(false);
+  const isActive = ACTIVE_PRODUCTION_STATUSES.includes(order.order_status);
+
+  useEffect(() => {
+    if (!isActive) return;
+    setImagesLoading(true);
+    setImagesError(false);
+    api.get(`/api/order-status-images/?order=${order.order_code}&status=${order.order_status}`)
+      .then(res => setStatusImages(res.data?.results || res.data || []))
+      .catch(() => setImagesError(true))
+      .finally(() => setImagesLoading(false));
+  }, [order.order_code, order.order_status, isActive]);
+
   return (
     <Sheet title={<span className="flex items-center gap-2">ORD-{order.order_code} {order.order_name && <span className="font-normal text-gray-400">{order.order_name}</span>}</span>} onClose={onClose}>
       <div className="px-5 pt-4 space-y-4">
         {order.is_delayed && <div className="flex items-center gap-2 text-xs bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-lg"><AlertTriangle size={13} /> Delivery overdue</div>}
         {order.mockup_url && <img src={order.mockup_url} alt="Mockup" className="w-full rounded-xl object-contain max-h-48 bg-gray-50 dark:bg-zinc-800" />}
-        <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[order.order_status] || "bg-gray-100 text-gray-600"}`}>{STATUS_LABEL[order.order_status] || order.order_status}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[order.order_status] || "bg-gray-100 text-gray-600"}`}>{STATUS_LABEL[order.order_status] || order.order_status}</span>
+          {order.status_duration_seconds != null && (
+            <span className="text-xs text-gray-400">{formatDuration(order.status_duration_seconds)} in this status</span>
+          )}
+        </div>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300"><Phone size={13} className="text-gray-400 shrink-0" />{order.client} · {order.contact}</div>
           <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300"><MapPin size={13} className="text-gray-400 shrink-0" />{order.location}</div>
@@ -117,6 +152,35 @@ function OrderSheet({ order, onClose }: { order: OrderRow; onClose: () => void }
           <div><div className="text-gray-400 mb-0.5">Advance</div><div className="font-semibold text-green-600 dark:text-green-400">{fmtBirr(order.advance_payment)}</div></div>
           <div><div className="text-gray-400 mb-0.5">Remaining</div><div className="font-semibold text-orange-600 dark:text-orange-400">{fmtBirr(order.remaining_payment)}</div></div>
         </div>
+
+        {/* Status image gallery */}
+        {isActive && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status Images</h3>
+              {!order.today_status_image && (
+                <span className="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full font-medium">No image today</span>
+              )}
+            </div>
+            {imagesLoading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-blue-500" /></div>}
+            {imagesError && <p className="text-xs text-red-400 text-center py-2">Failed to load images</p>}
+            {!imagesLoading && !imagesError && statusImages.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-2">No images yet</p>
+            )}
+            {!imagesLoading && statusImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {statusImages.map((img: any) => (
+                  <a key={img.id} href={img.image} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                    <div className="relative">
+                      <img src={img.image} alt={img.upload_date} className="w-20 h-20 rounded-lg object-cover border border-gray-200 dark:border-zinc-700" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 rounded-b-lg">{img.upload_date}</div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Sheet>
   );
@@ -277,6 +341,7 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
   const [paymentSheet, setPaymentSheet] = useState<{ title: string; reason: string; totalAmount?: number } | null>(null);
   const [delayedSheet, setDelayedSheet] = useState(false);
   const [newOrdersSheet, setNewOrdersSheet] = useState(false);
+  const [missingImageSheet, setMissingImageSheet] = useState(false);
 
   const getRange = useCallback(() => {
     if (datePreset === "custom") return { from: appliedCustomRange.from, to: appliedCustomRange.to };
@@ -312,6 +377,8 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
               remaining_payment: parseFloat(c.remaining_payment || 0),
               full_payment: parseFloat(c.full_payment || 0),
               is_delayed: c.is_delayed === true,
+              today_status_image: o.today_status_image || null,
+              status_duration_seconds: o.status_duration_seconds ?? null,
             };
             allRows.push(row);
             if (c.is_delayed) delayed.push(row);
@@ -351,6 +418,10 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
   const visibleOrders = pipelineFilter
     ? productionOrders.filter(o => o.order_status === pipelineFilter)
     : productionOrders;
+
+  const missingImageCount = productionOrders.filter(
+    o => ACTIVE_PRODUCTION_STATUSES.includes(o.order_status) && !o.today_status_image
+  ).length;
 
   // ── Payment helpers ──
   const openPaymentSheet = (reason: string, label: string, totalAmount: number) => {
@@ -472,7 +543,17 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
             {(["production","mockups"] as const).map(t => (
               <button key={t} onClick={() => setActiveTab(t)}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${activeTab === t ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>
-                {t === "production" ? `In Production (${visibleOrders.length})` : `Mockups (${mockups.length})`}
+                {t === "production" ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span>In Production ({visibleOrders.length})</span>
+                    {missingImageCount > 0 && (
+                      <span className="flex items-center gap-0.5 text-red-500">
+                        <span className="font-bold">{missingImageCount}</span>
+                        <Camera size={11} className="text-red-500" />
+                      </span>
+                    )}
+                  </span>
+                ) : `Mockups (${mockups.length})`}
               </button>
             ))}
           </div>
@@ -480,21 +561,37 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
           {activeTab === "production" && (
             <div className="bg-white dark:bg-zinc-800 rounded-xl divide-y divide-gray-100 dark:divide-zinc-700 overflow-hidden border border-gray-100 dark:border-zinc-700">
               {visibleOrders.length === 0 && <div className="px-4 py-6 text-center text-sm text-gray-400">{pipelineFilter ? `No orders at ${STATUS_LABEL[pipelineFilter]}` : "No active orders"}</div>}
-              {visibleOrders.slice(0, 50).map(o => (
-                <button key={o.order_code} onClick={() => setSelectedOrder(o)}
-                  className="w-full flex items-center px-3 py-2.5 gap-3 hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors text-left">
-                  {o.is_delayed && <AlertTriangle size={11} className="text-red-400 shrink-0" />}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white shrink-0">ORD-{o.order_code}</span>
-                      {o.order_name && <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{o.order_name}</span>}
+              {visibleOrders.slice(0, 50).map(o => {
+                const isActive = ACTIVE_PRODUCTION_STATUSES.includes(o.order_status);
+                const dur = formatDuration(o.status_duration_seconds);
+                return (
+                  <button key={o.order_code} onClick={() => setSelectedOrder(o)}
+                    className="w-full flex items-center px-3 py-2.5 gap-2 hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors text-left">
+                    {o.is_delayed && <AlertTriangle size={11} className="text-red-400 shrink-0" />}
+                    {/* Status image thumbnail or missing badge */}
+                    {isActive && (
+                      o.today_status_image
+                        ? <img src={o.today_status_image} alt="status" className="w-8 h-8 rounded-md object-cover shrink-0 border border-green-300 dark:border-green-700" />
+                        : <div className="w-8 h-8 rounded-md bg-orange-50 dark:bg-orange-900/20 border border-dashed border-orange-300 dark:border-orange-700 flex items-center justify-center shrink-0">
+                            <Camera size={12} className="text-orange-400" />
+                          </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white shrink-0">ORD-{o.order_code}</span>
+                        {o.order_name && <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{o.order_name}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400 truncate">
+                        <span className="truncate">{o.client}</span>
+                        {dur && <span className="shrink-0 text-gray-300">·</span>}
+                        {dur && <span className="shrink-0 font-medium text-gray-500 dark:text-gray-400">{dur}</span>}
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-400 truncate">{o.client} · {fmtDate(o.delivery_date)}</div>
-                  </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLOR[o.order_status] || "bg-gray-100 text-gray-600"}`}>{STATUS_LABEL[o.order_status] || o.order_status}</span>
-                  <ChevronRight size={13} className="text-gray-300 shrink-0" />
-                </button>
-              ))}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLOR[o.order_status] || "bg-gray-100 text-gray-600"}`}>{STATUS_LABEL[o.order_status] || o.order_status}</span>
+                    <ChevronRight size={13} className="text-gray-300 shrink-0" />
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -566,6 +663,8 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
                       remaining_payment: parseFloat(c.remaining_payment || 0),
                       full_payment: parseFloat(c.full_payment || 0),
                       is_delayed: c.is_delayed === true,
+                      today_status_image: o.today_status_image || null,
+                      status_duration_seconds: o.status_duration_seconds ?? null,
                     };
                     return (
                       <button key={o.order_code} onClick={() => { setNewOrdersSheet(false); setSelectedOrder(row); }}
@@ -587,6 +686,28 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
 
       {paymentSheet && <PaymentSheet reason={paymentSheet.reason} dateRange={getRange()} title={paymentSheet.title} totalAmount={paymentSheet.totalAmount} onClose={() => setPaymentSheet(null)} />}
       {selectedOrder && <OrderSheet order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
+
+      {missingImageSheet && (
+        <Sheet title={<span className="flex items-center gap-2"><Camera size={14} className="text-orange-500" /> Missing Today's Image ({missingImageCount})</span>} onClose={() => setMissingImageSheet(false)}>
+          <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+            {productionOrders
+              .filter(o => ACTIVE_PRODUCTION_STATUSES.includes(o.order_status) && !o.today_status_image)
+              .map(o => (
+                <button key={o.order_code} onClick={() => { setMissingImageSheet(false); setSelectedOrder(o); }}
+                  className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">ORD-{o.order_code}</span>
+                      {o.order_name && <span className="text-sm text-gray-500 truncate">{o.order_name}</span>}
+                    </div>
+                    <div className="text-xs text-orange-500 mt-0.5">{STATUS_LABEL[o.order_status]} · {formatDuration(o.status_duration_seconds)}</div>
+                  </div>
+                  <ChevronRight size={13} className="text-gray-300 shrink-0" />
+                </button>
+              ))}
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
