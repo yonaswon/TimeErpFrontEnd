@@ -5,7 +5,8 @@ export const base_url = "https://timeerp.duckdns.org";
 
 // export const base_url = "http://127.0.0.1:8000";
 
-// export const base_url = "https://automobiles-lets-configure-enhancing.trycloudflare.com";
+// export const base_url = "https://api.trycloudflare.com";
+
 
 const api = axios.create({
   baseURL: base_url,

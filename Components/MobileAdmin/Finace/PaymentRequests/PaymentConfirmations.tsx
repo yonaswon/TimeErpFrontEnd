@@ -14,15 +14,18 @@ import {
   AlertTriangle,
   Copy,
   Check,
+  TrendingUp,
 } from "lucide-react";
 import { Payment, PaymentResponse } from "@/types/finance";
 import api from "@/api";
 import { PaymentDetailOverlay } from "./PaymentDetailOverlay";
+import { ReconciliationOverlay } from "./ReconciliationOverlay";
 
 type PaymentStatus = "P" | "C" | "all";
 
 export const PaymentConfirmations = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [showReconciliation, setShowReconciliation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,9 +154,18 @@ export const PaymentConfirmations = () => {
               </span>
             )}
           </div>
-          <span className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
-            {totalCount} total
-          </span>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowReconciliation(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold rounded-lg transition-all active:scale-[0.98] shadow-sm"
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Reconcile</span>
+            </button>
+            <span className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
+              {totalCount} total
+            </span>
+          </div>
         </div>
 
         <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
@@ -244,6 +256,14 @@ export const PaymentConfirmations = () => {
           onClose={() => setSelectedPayment(null)}
           onConfirm={handleConfirmPayment}
           isConfirming={confirmingPayments[selectedPayment.id]}
+        />
+      )}
+
+      {/* Reconciliation Overlay */}
+      {showReconciliation && (
+        <ReconciliationOverlay
+          onClose={() => setShowReconciliation(false)}
+          onRefreshPayments={() => fetchPayments()}
         />
       )}
     </div>

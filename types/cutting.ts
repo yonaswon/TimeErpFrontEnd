@@ -32,7 +32,7 @@ export interface DxfLayerNamesResponse {
   layer_count: number;
 }
 
-// Search & Fit types
+// Search & Fit types (legacy)
 export interface PlacementSuggestion {
   sheet_id: number;
   sheet_code: number;
@@ -49,6 +49,45 @@ export interface PlacementSuggestion {
 export interface SearchFitResponse {
   results: PlacementSuggestion[];
   sheets_searched: number;
+}
+
+// ─── Advanced Nesting types ───
+export interface NestingResult {
+  rank: number;
+  sheet_id: number;
+  sheet_code: number;
+  material_name: string;
+  cutting_file_id: number;
+  position: { x: number; y: number };
+  rotation: number;
+  design_width: number;
+  design_height: number;
+  current_usage_pct: number;
+  new_usage_pct: number;
+  waste_reduction_pct: number;
+  score: number;
+  compactness_score: number;
+  edge_score: number;
+  fragmentation_score: number;
+  preview_image: string | null;
+}
+
+export interface NestingProgressUpdate {
+  session_id: number;
+  status: 'PENDING' | 'ANALYZING' | 'COMPUTING' | 'COMPLETED' | 'FAILED';
+  progress_pct: number;
+  progress_message: string;
+  sheets_analyzed: number;
+  total_sheets: number;
+  results: NestingResult[] | null;
+  error_message: string | null;
+}
+
+export interface StartNestingResponse {
+  session_id: number;
+  status: string;
+  message: string;
+  ws_url: string;
 }
 
 export interface CuttingFileOrderDxf {
