@@ -123,6 +123,7 @@
   /* keep consistent height */
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .admin-sidebar-logo h2 {
@@ -145,10 +146,28 @@
 
 .admin-sidebar-nav {
   flex: 1;
+  min-height: 0;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .admin-sidebar-item {

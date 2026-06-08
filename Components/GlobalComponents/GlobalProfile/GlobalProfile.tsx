@@ -6,6 +6,7 @@ import { BarChart3 } from 'lucide-react'
 import { AdminUserManager } from '../../Admin/AdminUserManager/AdminUserManager'
 import PerformanceDashboard from './PerformanceDashboard'
 import AttendanceDashboard from './AttendanceDashboard'
+import { clearWebDashboardChoice } from '@/lib/webDashboardAuth'
 
 interface GlobalProfileProps {
     user: any;
@@ -22,6 +23,7 @@ export const GlobalProfile = ({ user, userData, selectedRole, onRoleSelect }: Gl
     const handleLogout = () => {
         localStorage.removeItem('access_token')
         localStorage.removeItem('user_data')
+        clearWebDashboardChoice()
 
         if (typeof window !== 'undefined' && window?.Telegram?.WebApp?.close) {
             window.Telegram.WebApp.close()

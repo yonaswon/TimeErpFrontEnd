@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AlertTriangle, Search, CalendarCheck, DollarSign, UserX } from 'lucide-react';
 import api from '../../../api';
 import {
@@ -342,6 +342,19 @@ export default function AttendanceDashboard() {
         exportAttendanceExcel(enrichedStats, localEdits, holidays, exemptions, period);
     };
 
+    /** Payroll month key for OT/loan storage — month of the attendance range end date */
+    const payrollPeriod = useMemo(() => {
+        if (!attendanceData?.end_date) {
+            return new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        }
+        const end = new Date(attendanceData.end_date);
+        return end.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }, [attendanceData?.end_date]);
+
+    const exportPeriodLabel = attendanceData
+        ? `${attendanceData.start_date} to ${attendanceData.end_date}`
+        : payrollPeriod;
+
     // ── Derived state ─────────────────────────────────────────────────────────
 
     const enrichedStats: EmployeeStat[] = (attendanceData?.stats ?? []).map((emp) => {
@@ -435,6 +448,8 @@ export default function AttendanceDashboard() {
                             <PayrollDashboard
                                 employees={enrichedStats} localEdits={localEdits}
                                 holidays={holidays} exemptions={exemptions}
+                                payrollPeriod={payrollPeriod}
+                                exportPeriodLabel={exportPeriodLabel}
                             />
                         )}
                     </>

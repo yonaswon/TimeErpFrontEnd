@@ -73,7 +73,7 @@ export interface OvertimeEntry {
     id: string;          // client-side uuid
     hours: number;
     type: OvertimeType;
-    amount: number;      // calculated: netSalary/30/8 * hours * multiplier
+    amount: number;      // calculated: basicSalary/30/8 * hours * multiplier
 }
 
 export interface PayrollExtra {
@@ -87,41 +87,59 @@ export type PayrollExtrasMap = Record<string, PayrollExtra>;
 // ─── Payroll types ───────────────────────────────────────────────────────────
 
 export interface PayrollConfig {
-    /** Per-employee target net pay, keyed by zkt_user_id */
-    targetNetPays: Record<string, string>;
-    /** Per-employee transport allowance overrides */
+    /** Per-employee agreed net pay at full attendance (no OT, no penalty), keyed by zkt_user_id */
+    agreedNetPays: Record<string, string>;
+    /** Per-employee working days (col E, default 30) */
+    workingDays: Record<string, string>;
+    /** Per-employee non-taxable transport allowance (col G) */
     transports: Record<string, string>;
-    /** Global default transport allowance (ETB) */
+    /** Per-employee taxable transport allowance (col H) */
+    taxableTransports: Record<string, string>;
+    /** Global default non-taxable transport allowance (ETB) */
     defaultTransport: string;
-    /** Employees whose time penalty is ignored (always get full target net pay) */
+    /** Employees whose time penalty is ignored */
     ignoreTimePenalty: Record<string, boolean>;
 }
 
+/** Payroll row matching Payroll_May_2026.xlsx column layout */
 export interface PayrollRow {
     zkt_user_id: string;
     name: string;
-    /** What admin entered — the desired take-home pay */
-    targetNetPay: number;
-    transport: number;
-    actualHours: number;
-    expectedHours: number;
-    hourDiff: number;
-    /** Total penalty in hours (late arrival + early departure + absences) */
-    penaltyHours: number;
-    /** Penalty deducted from net for missing hours (always <= 0) */
-    hourPenalty: number;
-    /** targetNetPay + hourPenalty (the actual net after penalty, before overtime/loan) */
-    finalNetPay: number;
-    /** Total overtime pay added to net */
+    position: string;
+    /** What admin enters — agreed take-home at full attendance (no OT, no penalty) */
+    agreedNetPay: number;
+    /** D: Basic Salary (gross monthly) — derived from agreedNetPay */
+    basicSalary: number;
+    /** E: Working days */
+    workingDays: number;
+    /** F: Salary for working days = D/30 × E */
+    salaryForWorkingDays: number;
+    /** G: Non-taxable transportation allowance */
+    nonTaxableTransport: number;
+    /** H: Taxable transportation allowance */
+    taxableTransport: number;
+    /** I: Over Time Payment */
     overtimeTotal: number;
-    /** Loan deducted from net */
-    loanAmount: number;
-    /** finalNetPay + overtimeTotal - loanAmount */
-    totalNetPay: number;
-    /** Back-calculated gross so that gross - tax - pension7% + transport = totalNetPay */
-    grossSalary: number;
+    /** J: Hour Penalty (ETB, negative) */
+    hourPenaltyAmount: number;
+    /** K: Gross pay = F+G+H+I+J */
+    grossPay: number;
+    /** L: Taxable income = F+H+I (penalty excluded) */
+    taxableIncome: number;
+    /** M: Income Tax (PAYE on L) */
     incomeTax: number;
-    pensionEmployee: number;   // 7% of gross
-    pensionEmployer: number;   // 11% of gross
-    totalDeduction: number;    // incomeTax + pensionEmployee
+    /** N: Pension 7% */
+    pensionEmployee: number;
+    /** O: Pension 11% */
+    pensionEmployer: number;
+    /** P: Loan Deduction */
+    loanAmount: number;
+    /** Q: Total Deductions = M+N+P */
+    totalDeduction: number;
+    /** R: Net Pay = K − Q */
+    netPay: number;
+    /** Attendance: total penalty hours (for display) */
+    penaltyHours: number;
+    /** Attendance: expected hours in period */
+    expectedHours: number;
 }

@@ -6,7 +6,7 @@ import { calculateOvertimeAmount, formatSalary } from './attendanceUtils';
 
 interface OvertimeModalProps {
     employeeName: string;
-    targetNetPay: number;
+    basicSalary: number;
     entries: OvertimeEntry[];
     onSave: (entries: OvertimeEntry[]) => void;
     onClose: () => void;
@@ -22,7 +22,7 @@ function newEntry(): OvertimeEntry {
     return { id: Math.random().toString(36).slice(2), hours: 0, type: 'after_work', amount: 0 };
 }
 
-export default function OvertimeModal({ employeeName, targetNetPay, entries, onSave, onClose }: OvertimeModalProps) {
+export default function OvertimeModal({ employeeName, basicSalary, entries, onSave, onClose }: OvertimeModalProps) {
     const [rows, setRows] = useState<OvertimeEntry[]>(() =>
         entries.length > 0 ? entries.map((e) => ({ ...e })) : [newEntry()]
     );
@@ -31,16 +31,16 @@ export default function OvertimeModal({ employeeName, targetNetPay, entries, onS
     useEffect(() => {
         setRows((prev) => prev.map((r) => ({
             ...r,
-            amount: calculateOvertimeAmount(targetNetPay, r.hours, r.type),
+            amount: calculateOvertimeAmount(basicSalary, r.hours, r.type),
         })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [targetNetPay]);
+    }, [basicSalary]);
 
     const updateRow = (id: string, field: keyof OvertimeEntry, value: string | number | OvertimeType) => {
         setRows((prev) => prev.map((r) => {
             if (r.id !== id) return r;
             const updated = { ...r, [field]: value };
-            updated.amount = calculateOvertimeAmount(targetNetPay, Number(updated.hours), updated.type);
+            updated.amount = calculateOvertimeAmount(basicSalary, Number(updated.hours), updated.type);
             return updated;
         }));
     };
@@ -49,7 +49,7 @@ export default function OvertimeModal({ employeeName, targetNetPay, entries, onS
     const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
 
     const total = rows.reduce((s, r) => s + r.amount, 0);
-    const hourlyRate = targetNetPay > 0 ? targetNetPay / 30 / 8 : 0;
+    const hourlyRate = basicSalary > 0 ? basicSalary / 30 / 8 : 0;
 
     return (
         <div
@@ -77,7 +77,7 @@ export default function OvertimeModal({ employeeName, targetNetPay, entries, onS
                                 Overtime — {employeeName}
                             </p>
                             <p className="text-xs" style={{ color: 'var(--admin-text-secondary)' }}>
-                                Hourly rate: {formatSalary(hourlyRate)} &nbsp;·&nbsp; Net salary: {formatSalary(targetNetPay)}
+                                Hourly rate: {formatSalary(hourlyRate)} &nbsp;·&nbsp; Basic salary: {formatSalary(basicSalary)}
                             </p>
                         </div>
                     </div>

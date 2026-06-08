@@ -2,6 +2,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import api from '@/api'
+import {
+    applyWebDashboardChoice,
+    resolvePostLoginRoute,
+    type WebUserData,
+} from '@/lib/webDashboardAuth'
+import { WebDashboardRolePicker } from './WebDashboardRolePicker'
 
 type OtpClient = 'web' | 'finance'
 
@@ -10,11 +16,12 @@ interface OtpLoginProps {
 }
 
 export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
-    const [step, setStep] = useState<1 | 2>(1)
+    const [step, setStep] = useState<1 | 2 | 3>(1)
     const [username, setUsername] = useState('')
     const [otp, setOtp] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [loggedInUser, setLoggedInUser] = useState<WebUserData | null>(null)
     const router = useRouter()
 
     const isFinance = client === 'finance'
@@ -38,6 +45,17 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
         }
     }
 
+    const routeAfterLogin = (user: WebUserData) => {
+        const destination = resolvePostLoginRoute(user)
+        if (destination === 'picker') {
+            setLoggedInUser(user)
+            setStep(3)
+            return
+        }
+        const choice = destination === '/admin' ? 'admin' : 'finance'
+        router.push(applyWebDashboardChoice(choice))
+    }
+
     const handleVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!otp) {
@@ -51,18 +69,26 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
             if (response.data.access && response.data.user) {
                 localStorage.setItem('access_token', response.data.access)
                 localStorage.setItem('user_data', JSON.stringify(response.data.user))
-                // Route based on client
-                if (isFinance) {
-                    router.push('/finance')
-                } else {
-                    router.push('/admin')
-                }
+                routeAfterLogin(response.data.user as WebUserData)
             }
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to verify OTP')
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleDashboardSelect = (choice: 'admin' | 'finance') => {
+        router.push(applyWebDashboardChoice(choice))
+    }
+
+    if (step === 3 && loggedInUser) {
+        return (
+            <WebDashboardRolePicker
+                userName={loggedInUser.telegram_user_name}
+                onSelect={handleDashboardSelect}
+            />
+        )
     }
 
     return (

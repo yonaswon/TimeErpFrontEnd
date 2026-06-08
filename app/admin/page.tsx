@@ -2,46 +2,69 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminDashBoard from '../../Components/AdminDashBoard/AdminDashBoard';
+import { WebDashboardRolePicker } from '@/Components/AuthComponents/WebDashboardRolePicker';
+import {
+    applyWebDashboardChoice,
+    getWebDashboardChoice,
+    getWebDashboardRoles,
+    parseUserData,
+    type WebUserData,
+} from '@/lib/webDashboardAuth';
 
-interface UserRole { id: number; Name: string; }
-interface UserData { role?: UserRole[]; }
+type PageState = 'loading' | 'picker' | 'ready';
 
 export default function AdminPage() {
     const router = useRouter();
-    const [ready, setReady] = useState(false);
+    const [state, setState] = useState<PageState>('loading');
+    const [userData, setUserData] = useState<WebUserData | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
-        const raw = localStorage.getItem('user_data');
+        const user = parseUserData();
 
-        if (!token || !raw) {
+        if (!token || !user) {
             router.replace('/');
             return;
         }
 
-        try {
-            const user: UserData = JSON.parse(raw);
-            const roles = user.role ?? [];
-            const isAdmin = roles.some((r) => r.Name === 'Admin');
-            const isFinance = roles.some((r) => r.Name === 'Finance&Accounting');
+        const { isAdmin, isFinance, isDual } = getWebDashboardRoles(user);
 
-            if (isAdmin) {
-                setReady(true);
+        if (!isAdmin && isFinance) {
+            router.replace('/finance');
+            return;
+        }
+
+        if (!isAdmin && !isFinance) {
+            router.replace('/');
+            return;
+        }
+
+        if (isDual) {
+            const choice = getWebDashboardChoice();
+            if (choice === 'finance') {
+                router.replace('/finance');
                 return;
             }
-
-            // Not admin — redirect to finance if they have that role, else home
-            if (isFinance) {
-                router.replace('/finance');
-            } else {
-                router.replace('/');
+            if (!choice) {
+                setUserData(user);
+                setState('picker');
+                return;
             }
-        } catch {
-            router.replace('/');
         }
+
+        setState('ready');
     }, [router]);
 
-    if (!ready) {
+    const handleDashboardSelect = (choice: 'admin' | 'finance') => {
+        const path = applyWebDashboardChoice(choice);
+        if (choice === 'finance') {
+            router.replace(path);
+        } else {
+            setState('ready');
+        }
+    };
+
+    if (state === 'loading') {
         return (
             <div style={{
                 minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -53,6 +76,17 @@ export default function AdminPage() {
                     animation: 'spin 0.8s linear infinite',
                 }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
+
+    if (state === 'picker' && userData) {
+        return (
+            <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex items-center justify-center p-4">
+                <WebDashboardRolePicker
+                    userName={userData.telegram_user_name}
+                    onSelect={handleDashboardSelect}
+                />
             </div>
         );
     }

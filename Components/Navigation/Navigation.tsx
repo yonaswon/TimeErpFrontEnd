@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes'
 import { useEffect, useState, useRef } from 'react'
 import { UserData } from '@/hooks/useTelegramAuth'
+import { clearWebDashboardChoice } from '@/lib/webDashboardAuth'
 
 interface NavigationProps {
   userData?: UserData | null
@@ -40,6 +41,7 @@ export const Navigation = ({ userData, selectedRole, onRoleSelect }: NavigationP
     // Clear local storage
     localStorage.removeItem('access_token')
     localStorage.removeItem('user_data')
+    clearWebDashboardChoice()
     
     // Close Telegram Mini App
     if (typeof window !== 'undefined' && window?.Telegram?.WebApp?.close) {

@@ -1,6 +1,6 @@
 // AssignCutting/AssignCuttingOverlay.tsx
 import { useState, useEffect } from "react";
-import { X, Scissors, User, Package, AlertCircle, CheckCircle, Lock, Loader2, Clock } from "lucide-react";
+import { X, Scissors, User, Package, AlertCircle, CheckCircle, Loader2, Clock } from "lucide-react";
 import api, { base_url } from "@/api";
 
 interface CuttingFile {
@@ -131,7 +131,6 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
     };
   }, []);
 
-  const hasPreAcceptedOrders = (file: CuttingFile) => file.orders.some((o) => o.order_status === "PRE-ACCEPTED");
   const isAnalysisReady = (file: CuttingFile) => file.analysis_status === 'COMPLETED';
 
   const handleAssign = async (fileId: number) => {
@@ -242,12 +241,11 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
           ) : (
             <div className="space-y-3">
               {cuttingFiles.map((file) => {
-                const paymentPending = hasPreAcceptedOrders(file);
                 const analysisReady = isAnalysisReady(file);
-                const canAssign = analysisReady && !paymentPending;
+                const canAssign = analysisReady;
                 return (
                   <div key={file.id} className={`bg-gray-50 dark:bg-zinc-900/50 rounded-xl border ${
-                    !analysisReady ? 'border-blue-200 dark:border-blue-800/40' : paymentPending ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-zinc-700'
+                    !analysisReady ? 'border-blue-200 dark:border-blue-800/40' : 'border-gray-200 dark:border-zinc-700'
                   } overflow-hidden`}>
                     <div className="p-4">
                       {/* File Header */}
@@ -272,16 +270,6 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
                           </span>
                           {/* Analysis status badge */}
                           {getAnalysisBadge(file)}
-                          {/* Payment status badge (only show if analysis is done) */}
-                          {analysisReady && (
-                            paymentPending ? (
-                              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
-                                <Lock className="w-2.5 h-2.5" /> Payment Pending
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">Ready</span>
-                            )
-                          )}
                         </div>
                       </div>
 
@@ -339,10 +327,10 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
                         </button>
                       ) : (
                         <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 text-sm font-medium cursor-not-allowed">
-                          {!analysisReady ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /><span>{file.analysis_status === 'FAILED' ? 'Analysis failed — cannot assign' : 'Waiting for analysis...'}</span></>
+                          {file.analysis_status === 'FAILED' ? (
+                            <><AlertCircle className="w-4 h-4" /><span>Analysis failed — cannot assign</span></>
                           ) : (
-                            <><Lock className="w-4 h-4" /><span>Payment pending</span></>
+                            <><Loader2 className="w-4 h-4 animate-spin" /><span>Waiting for analysis...</span></>
                           )}
                         </div>
                       )}

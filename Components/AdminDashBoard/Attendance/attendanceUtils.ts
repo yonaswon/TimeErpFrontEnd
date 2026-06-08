@@ -144,9 +144,17 @@ export function mergeEditsIntoLogs(
         // Normal day with no edit
         if (!edit) return log;
 
-        // Normal day with edit
-        const checkIn  = edit.check_in  ? convertTo12Hour(edit.check_in)  : log.check_in;
-        const checkOut = edit.check_out ? convertTo12Hour(edit.check_out) : log.check_out;
+        // Normal day with edit — fall back to stored originals when only one punch was corrected
+        const checkIn  = edit.check_in
+            ? convertTo12Hour(edit.check_in)
+            : (edit.original_check_in && edit.original_check_in !== 'Missed' && edit.original_check_in !== 'Absent'
+                ? edit.original_check_in
+                : log.check_in);
+        const checkOut = edit.check_out
+            ? convertTo12Hour(edit.check_out)
+            : (edit.original_check_out && edit.original_check_out !== 'Missed' && edit.original_check_out !== 'Absent'
+                ? edit.original_check_out
+                : log.check_out);
         const hours = calculateHoursWorked(checkIn, checkOut);
 
         return {
@@ -230,124 +238,176 @@ export function calculateEthiopianIncomeTax(monthlyIncome: number): number {
 }
 
 /**
- * Back-calculate gross salary from a desired net pay.
+ * Derive basic gross salary (col D) from agreed net pay at full attendance.
  *
- * For each tax bracket with rate r and deduction d:
- *   net = gross - (gross*r - d) - gross*0.07 + transport
- *   net = gross*(1 - r - 0.07) + d + transport
- *   gross = (net - d - transport) / (1 - r - 0.07)
- *
- * We try each bracket and accept the result that falls within that bracket's range.
- * Returns 0 if no valid solution found (e.g. net <= 0).
+ * Excel identity (E=30, no OT, no penalty, no loan):
+ *   R = D + G − tax(D) − D×7%
+ *   D = (R − G − deduction) / (1 − rate − 0.07)
  */
-export function solveGrossFromNet(desiredNet: number, transport: number): number {
-    if (desiredNet <= 0) return 0;
-    const netMinusTransport = desiredNet - transport;
+export function solveBasicFromAgreedNet(agreedNet: number, nonTaxableTransport: number): number {
+    if (agreedNet <= 0) return 0;
+    const netMinusTransport = agreedNet - nonTaxableTransport;
 
     for (const bracket of ETH_TAX_BRACKETS) {
         const divisor = 1 - bracket.rate - 0.07;
         if (divisor <= 0) continue;
-        const gross = (netMinusTransport - bracket.deduction) / divisor;
-        if (gross >= bracket.min && gross <= bracket.max) {
-            return Math.round(gross * 100) / 100;
+        const basic = (netMinusTransport - bracket.deduction) / divisor;
+        if (basic >= bracket.min && basic <= bracket.max) {
+            const tax = calculateEthiopianIncomeTax(basic);
+            const pension = round2(basic * 0.07);
+            const net = round2(basic + nonTaxableTransport - tax - pension);
+            if (Math.abs(net - agreedNet) < 0.05) {
+                return round2(basic);
+            }
         }
     }
 
-    // Fallback: if net is very small (below tax threshold), gross ≈ net - transport + transport
-    // i.e. no tax, no pension deduction scenario — shouldn't normally happen
-    return Math.max(0, Math.round((netMinusTransport / 0.93) * 100) / 100);
+    if (netMinusTransport > 0) {
+        return round2(netMinusTransport / 0.93);
+    }
+    return 0;
+}
+
+const MONTHLY_WORKING_DAYS = 30;
+
+function round2(n: number): number {
+    return Math.round(n * 100) / 100;
+}
+
+/** F = D/30 × E */
+export function calculateSalaryForWorkingDays(basicSalary: number, workingDays = MONTHLY_WORKING_DAYS): number {
+    if (basicSalary <= 0 || workingDays <= 0) return 0;
+    return round2((basicSalary / MONTHLY_WORKING_DAYS) * workingDays);
+}
+
+/** L = F + H + I (penalty does not reduce taxable income) */
+export function calculateTaxableIncome(
+    salaryForWorkingDays: number,
+    taxableTransport: number,
+    overtimeTotal: number
+): number {
+    return round2(salaryForWorkingDays + taxableTransport + overtimeTotal);
+}
+
+/** J = −(D/30/8) × penaltyHours */
+export function calculateHourPenaltyAmount(basicSalary: number, penaltyHours: number): number {
+    if (basicSalary <= 0 || penaltyHours <= 0) return 0;
+    const hourlyRate = basicSalary / MONTHLY_WORKING_DAYS / 8;
+    return round2(-hourlyRate * penaltyHours);
+}
+
+/** K = F + G + H + I + J */
+export function calculateGrossPay(
+    salaryForWorkingDays: number,
+    nonTaxableTransport: number,
+    taxableTransport: number,
+    overtimeTotal: number,
+    hourPenaltyAmount: number
+): number {
+    return round2(
+        salaryForWorkingDays + nonTaxableTransport + taxableTransport + overtimeTotal + hourPenaltyAmount
+    );
+}
+
+/** Pension basis: D when full month (E=30), F when prorated */
+function pensionBasis(basicSalary: number, salaryForWorkingDays: number, workingDays: number): number {
+    return workingDays >= MONTHLY_WORKING_DAYS ? basicSalary : salaryForWorkingDays;
 }
 
 /**
  * Calculate overtime pay for a single entry.
- * Hourly rate = targetNetPay / 30 / 8
+ * Hourly rate = basicSalary / 30 / 8
  * Multipliers: after_work=1.75, sunday=2.0, holiday=2.5
  */
 export function calculateOvertimeAmount(
-    targetNetPay: number,
+    basicSalary: number,
     hours: number,
     type: import('./attendanceTypes').OvertimeType
 ): number {
-    if (targetNetPay <= 0 || hours <= 0) return 0;
-    const hourlyRate = targetNetPay / 30 / 8;
+    if (basicSalary <= 0 || hours <= 0) return 0;
+    const hourlyRate = basicSalary / MONTHLY_WORKING_DAYS / 8;
     const multiplier = type === 'holiday' ? 2.5 : type === 'sunday' ? 2.0 : 1.75;
-    return Math.round(hourlyRate * hours * multiplier * 100) / 100;
+    return round2(hourlyRate * hours * multiplier);
+}
+
+export interface PayrollRowInput {
+    emp: import('./attendanceTypes').EmployeeStat;
+    /** Agreed net pay at full attendance — primary admin input */
+    agreedNetPay?: number;
+    /** Direct basic salary override (tests only; agreedNetPay takes precedence) */
+    basicSalary?: number;
+    workingDays?: number;
+    nonTaxableTransport?: number;
+    taxableTransport?: number;
+    penaltyHours?: number;
+    overtimeTotal?: number;
+    loanAmount?: number;
+    expectedHours?: number;
+    position?: string;
 }
 
 /**
- * Calculate payroll row using penalty-based time calculation.
+ * Forward payroll calculation matching Payroll_May_2026.xlsx formulas.
  *
- * The admin enters the TARGET NET PAY (what the employee takes home at full attendance).
- * Logic:
- *   1. expectedHours = non-exempted days × 8
- *   2. penaltyHours  = total late/early/absent penalty hours
- *   3. effectiveActual = expectedHours - penaltyHours
- *   4. hourDiff = -penaltyHours  (always ≤ 0)
- *   5. hourPenalty = hourDiff × hourlyRate  (always ≤ 0)
- *   6. finalNetPay = targetNetPay + hourPenalty
- *   7. totalNetPay = finalNetPay + overtimeTotal - loanAmount
- *   8. grossSalary = solveGrossFromNet(totalNetPay, transport)
- *
- * @param penaltyHoursOverride - if provided, use this instead of calculating from logs
- * @param overtimeTotal - total overtime pay to add
- * @param loanAmount - loan deduction
+ * Input: agreedNetPay → derive D via solveBasicFromAgreedNet
+ * D = basicSalary, E = workingDays, F = D/30×E, G/H = transport, I = OT,
+ * J = hour penalty ETB, K = F+G+H+I+J, L = F+H+I,
+ * M = PAYE(L), N = pension 7%, O = pension 11%, P = loan, Q = M+N+P, R = K−Q
  */
-export function calculatePayrollRow(
-    emp: import('./attendanceTypes').EmployeeStat,
-    targetNetPay: number,
-    transport: number,
-    actualHours: number,
-    expectedHours?: number,
-    penaltyHoursOverride?: number,
-    overtimeTotal = 0,
-    loanAmount = 0,
-): import('./attendanceTypes').PayrollRow {
-    const expected = expectedHours !== undefined
-        ? expectedHours
-        : calculateExpectedHours(emp.working_days);
+export function calculatePayrollRow(input: PayrollRowInput): import('./attendanceTypes').PayrollRow {
+    const {
+        emp,
+        agreedNetPay: agreedInput = 0,
+        basicSalary: basicInput,
+        workingDays = MONTHLY_WORKING_DAYS,
+        nonTaxableTransport = 0,
+        taxableTransport = 0,
+        penaltyHours = 0,
+        overtimeTotal = 0,
+        loanAmount = 0,
+        expectedHours,
+        position = '',
+    } = input;
 
-    const penaltyHours = penaltyHoursOverride !== undefined
-        ? penaltyHoursOverride
-        : Math.max(0, expected - actualHours);
+    const agreedNetPay = agreedInput > 0 ? agreedInput : 0;
+    const basicSalary = agreedNetPay > 0
+        ? solveBasicFromAgreedNet(agreedNetPay, nonTaxableTransport)
+        : (basicInput ?? 0);
 
-    const hourDiff = -penaltyHours;
-    const hourlyRate = expected > 0 ? targetNetPay / expected : 0;
-    const hourPenalty = penaltyHours > 0 ? Math.round(hourDiff * hourlyRate * 100) / 100 : 0;
-    const finalNetPay = Math.max(0, Math.round((targetNetPay + hourPenalty) * 100) / 100);
-
-    // grossBase = the net the employee should receive (before loan deduction).
-    // Loan doesn't affect gross — it was already paid out, just recovered from this month's payout.
-    const grossBase = Math.max(0, Math.round((finalNetPay + overtimeTotal) * 100) / 100);
-
-    // Back-calculate gross so that: gross - tax - pension(7%) + transport = grossBase
-    const grossSalary = solveGrossFromNet(grossBase, transport);
-    const incomeTax = calculateEthiopianIncomeTax(grossSalary);
-    const pensionEmployee = Math.round(grossSalary * 0.07 * 100) / 100;
-    const pensionEmployer = Math.round(grossSalary * 0.11 * 100) / 100;
-    const totalDeduction = Math.round((incomeTax + pensionEmployee) * 100) / 100;
-
-    // totalNetPay = what the employee physically receives (grossBase minus loan recovery)
-    const totalNetPay = Math.max(0, Math.round((grossBase - loanAmount) * 100) / 100);
+    const expected = expectedHours ?? calculateExpectedHours(emp.working_days);
+    const salaryForWD = calculateSalaryForWorkingDays(basicSalary, workingDays);
+    const hourPenaltyAmount = calculateHourPenaltyAmount(basicSalary, penaltyHours);
+    const taxableIncome = calculateTaxableIncome(salaryForWD, taxableTransport, overtimeTotal);
+    const incomeTax = calculateEthiopianIncomeTax(taxableIncome);
+    const penBasis = pensionBasis(basicSalary, salaryForWD, workingDays);
+    const pensionEmployee = round2(penBasis * 0.07);
+    const pensionEmployer = round2(penBasis * 0.11);
+    const grossPay = calculateGrossPay(salaryForWD, nonTaxableTransport, taxableTransport, overtimeTotal, hourPenaltyAmount);
+    const totalDeduction = round2(incomeTax + pensionEmployee + loanAmount);
+    const netPay = round2(grossPay - totalDeduction);
 
     return {
         zkt_user_id: emp.zkt_user_id,
         name: emp.name,
-        targetNetPay,
-        transport,
-        actualHours: expected - penaltyHours,
-        expectedHours: expected,
-        hourDiff,
-        penaltyHours,
-        hourPenalty,
-        finalNetPay,
-        overtimeTotal,
-        loanAmount,
-        totalNetPay,
-        grossSalary,
+        position,
+        agreedNetPay: round2(agreedNetPay),
+        basicSalary: round2(basicSalary),
+        workingDays,
+        salaryForWorkingDays: salaryForWD,
+        nonTaxableTransport: round2(nonTaxableTransport),
+        taxableTransport: round2(taxableTransport),
+        overtimeTotal: round2(overtimeTotal),
+        hourPenaltyAmount,
+        grossPay,
+        taxableIncome,
         incomeTax,
         pensionEmployee,
         pensionEmployer,
+        loanAmount: round2(loanAmount),
         totalDeduction,
+        netPay,
+        penaltyHours,
+        expectedHours: expected,
     };
 }
 

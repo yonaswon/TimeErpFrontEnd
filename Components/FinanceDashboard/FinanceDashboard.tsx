@@ -6,6 +6,7 @@ import FinanceSidebar from './FinanceSidebar';
 import AttendanceDashboard from '../AdminDashBoard/Attendance/AttendanceDashboard';
 // Reuse the same CSS as AdminDashBoard for identical look & feel
 import '../AdminDashBoard/AdminDashBoard.css';
+import { clearWebDashboardChoice } from '@/lib/webDashboardAuth';
 
 interface FinanceDashboardProps {
     userName: string;
@@ -23,6 +24,7 @@ export default function FinanceDashboard({ userName }: FinanceDashboardProps) {
     const handleLogout = () => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user_data');
+        clearWebDashboardChoice();
         router.push('/finance/login');
     };
 
