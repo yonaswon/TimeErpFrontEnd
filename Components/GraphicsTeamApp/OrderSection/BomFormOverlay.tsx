@@ -124,9 +124,17 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
       };
 
       if (isEditMode) {
-        await api.post(`/api/orders/${order.order_code}/editbom/`, bomData);
+        const response = await api.post(`/api/orders/${order.order_code}/editbom/`, bomData);
+        const synced = response.data?.duplicates_synced;
+        if (synced > 0) {
+          alert(`BOM updated and synced to ${synced} duplicate order(s).`);
+        }
       } else {
-        await api.post(`/api/orders/${order.order_code}/fillbom/`, bomData);
+        const response = await api.post(`/api/orders/${order.order_code}/fillbom/`, bomData);
+        const synced = response.data?.duplicates_synced;
+        if (synced > 0) {
+          alert(`BOM filled and synced to ${synced} duplicate order(s).`);
+        }
       }
 
       onSuccess();
@@ -225,6 +233,17 @@ const BomFormOverlay = ({ order, onClose, onSuccess }: BomFormOverlayProps) => {
           {error && (
             <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-sm whitespace-pre-line">
               {error}
+            </div>
+          )}
+
+          {order.duplicate_group && (order.duplicate_group_size ?? 0) > 1 && (
+            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-sm">
+              <p className="text-amber-900 dark:text-amber-100 font-medium">
+                {order.duplicate_group_size}× duplicate — same design
+              </p>
+              <p className="text-amber-800 dark:text-amber-200 mt-1">
+                BOM will apply to all {order.duplicate_group_size} linked copies in this group.
+              </p>
             </div>
           )}
 

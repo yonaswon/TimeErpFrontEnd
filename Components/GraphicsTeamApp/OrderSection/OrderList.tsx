@@ -42,7 +42,7 @@ const OrderList = () => {
       } else if (activeFilter === "FILLED") {
         query += `&is_filled=true`;
       } else if (activeFilter === "PENDING") {
-        query += `&is_filled=false`;
+        query += `&is_filled=false&hide_duplicate_siblings=true`;
       }
       // "ALL" doesn't need extra params
 

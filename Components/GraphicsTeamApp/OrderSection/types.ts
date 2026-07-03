@@ -111,6 +111,10 @@ export interface Order {
   design_type: number;
   dxf_files?: OrderDxfFile[];
   dxf_file_ready?: boolean;
+  duplicate_group?: string | null;
+  duplicate_index?: number | null;
+  duplicate_group_size?: number | null;
+  order_name?: string | null;
 }
 
 export interface OrdersResponse {

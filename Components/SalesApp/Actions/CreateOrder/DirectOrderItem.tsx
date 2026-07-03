@@ -7,6 +7,7 @@ interface DirectOrderItemProps {
         mockup_image: File | null
         design_type: number
         price: number
+        duplicate_count: number
         note: string
         order_name: string
     }
@@ -116,7 +117,7 @@ export default function DirectOrderItem({
 
                         <div>
                             <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                Price *
+                                Price (per copy) *
                             </label>
                             <input
                                 type="number"
@@ -128,6 +129,31 @@ export default function DirectOrderItem({
                                 placeholder="0"
                                 required
                             />
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                Duplicate (same design)
+                            </label>
+                            <input
+                                type="number"
+                                value={item.duplicate_count ?? 1}
+                                min={1}
+                                max={100}
+                                onChange={(e) =>
+                                    onItemChange(
+                                        index,
+                                        'duplicate_count',
+                                        Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1))
+                                    )
+                                }
+                                className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+                            />
+                            {(item.duplicate_count ?? 1) > 1 && (
+                                <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
+                                    → {item.duplicate_count} orders will be created
+                                </p>
+                            )}
                         </div>
                     </div>
 

@@ -43,6 +43,34 @@ interface OrderDetailProps {
   onOrderUpdate?: (updatedOrder: any) => void; // Optional callback for parent
 }
 
+function groupOrdersForDisplay(orders: any[]) {
+  const groups: { key: string; items: any[]; isDuplicate: boolean }[] = [];
+  const seenDuplicateGroups = new Set<string>();
+
+  const sorted = [...orders].sort((a, b) => a.order_code - b.order_code);
+
+  for (const item of sorted) {
+    if (item.duplicate_group) {
+      const groupKey = String(item.duplicate_group);
+      if (seenDuplicateGroups.has(groupKey)) continue;
+      seenDuplicateGroups.add(groupKey);
+      const members = sorted.filter((o) => o.duplicate_group === item.duplicate_group);
+      groups.push({
+        key: groupKey,
+        items: members,
+        isDuplicate: members.length > 1,
+      });
+    } else {
+      groups.push({
+        key: `single-${item.order_code}`,
+        items: [item],
+        isDuplicate: false,
+      });
+    }
+  }
+  return groups;
+}
+
 const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   const [activeTab, setActiveTab] = useState<
     "overview" | "orders" | "payments"
@@ -594,7 +622,16 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                   No sub-orders found.
                 </div>
               ) : (
-                order.orders.map((item: any) => (
+                groupOrdersForDisplay(order.orders).map((group) => (
+                  <div key={group.key} className="space-y-3">
+                    {group.isDuplicate && (
+                      <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm font-medium text-amber-900 dark:text-amber-100">
+                        Same design ×{group.items.length} (ORD-
+                        {group.items[0].order_code}–ORD-
+                        {group.items[group.items.length - 1].order_code})
+                      </div>
+                    )}
+                    {group.items.map((item: any) => (
                   <div
                     key={item.order_code}
                     className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg overflow-hidden hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
@@ -754,6 +791,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                           </div>
                         )}
                     </div>
+                  </div>
+                    ))}
                   </div>
                 ))
               )}

@@ -26,6 +26,7 @@ export interface FormItem {
   mockup_image: string | File | null
   design_type: number
   price: number
+  duplicate_count: number
   note: string
   original_boms: any[]
   boms: BomItem[]

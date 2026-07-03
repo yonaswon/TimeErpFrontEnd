@@ -5,6 +5,7 @@ interface DirectOrderItem {
     mockup_image: File | null
     design_type: number
     price: number
+    duplicate_count: number
     note: string
     order_name: string
 }
@@ -27,9 +28,12 @@ interface UseDirectOrderFormParams {
 }
 
 export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirectOrderFormParams) {
+    const lineTotal = (item: DirectOrderItem) =>
+        (item.price || 0) * (item.duplicate_count ?? 1)
+
     // Order items
     const [items, setItems] = useState<DirectOrderItem[]>([
-        { mockup_image: null, design_type: 0, price: 0, note: '', order_name: '' }
+        { mockup_image: null, design_type: 0, price: 0, duplicate_count: 1, note: '', order_name: '' }
     ])
 
     // Container details
@@ -63,14 +67,14 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
     // Add new order item
     const addItem = () => {
         const defaultDesignType = designTypes.length > 0 ? designTypes[0].id : 0
-        setItems(prev => [...prev, { mockup_image: null, design_type: defaultDesignType, price: 0, note: '', order_name: '' }])
+        setItems(prev => [...prev, { mockup_image: null, design_type: defaultDesignType, price: 0, duplicate_count: 1, note: '', order_name: '' }])
     }
 
     // Remove order item
     const removeItem = (index: number) => {
         setItems(prev => {
             const newItems = prev.filter((_, i) => i !== index)
-            const full = newItems.reduce((sum, i) => sum + i.price, 0)
+            const full = newItems.reduce((sum, i) => sum + lineTotal(i), 0)
             const ratio = totalPayment > 0 ? advancePayment / totalPayment : 0.5
             setTotalPayment(Math.round(full))
             setAdvancePayment(Math.round(full * ratio))
@@ -85,12 +89,14 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
             const newItems = [...prev]
             if (field === 'price') {
                 (newItems[index] as any)[field] = Math.round(parseFloat(value) || 0)
+            } else if (field === 'duplicate_count') {
+                (newItems[index] as any)[field] = Math.min(100, Math.max(1, parseInt(value, 10) || 1))
             } else {
                 (newItems[index] as any)[field] = value
             }
 
-            if (field === 'price') {
-                const full = newItems.reduce((sum, i) => sum + i.price, 0)
+            if (field === 'price' || field === 'duplicate_count') {
+                const full = newItems.reduce((sum, i) => sum + lineTotal(i), 0)
                 const ratio = totalPayment > 0 ? advancePayment / totalPayment : 0.5
                 setTotalPayment(Math.round(full))
                 setAdvancePayment(Math.round(full * ratio))
@@ -174,6 +180,7 @@ export function useDirectOrderForm({ designTypes, wallets, onSuccess }: UseDirec
                     mockup: null,
                     mockup_modification: null,
                     price: item.price || 0,
+                    duplicate_count: item.duplicate_count ?? 1,
                     boms_data: [],
                 }
             })

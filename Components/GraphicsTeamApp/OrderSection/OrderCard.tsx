@@ -131,6 +131,11 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
                   Assigned to You
                 </span>
               )}
+              {order.duplicate_group && (order.duplicate_group_size ?? 0) > 1 && (
+                <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-2 py-1 rounded">
+                  {order.duplicate_group_size}× duplicate
+                </span>
+              )}
             </div>
 
             {order.mockup && (

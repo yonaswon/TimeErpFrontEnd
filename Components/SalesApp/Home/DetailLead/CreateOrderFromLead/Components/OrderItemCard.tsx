@@ -105,7 +105,7 @@ export default function OrderItemCard({
 
             <div>
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                Price
+                Price (per copy)
               </label>
               <input
                 type="number"
@@ -118,6 +118,34 @@ export default function OrderItemCard({
                 className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
                 required
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Duplicate (same design)
+              </label>
+              <input
+                type="number"
+                value={item.duplicate_count ?? 1}
+                min={1}
+                max={100}
+                onChange={(e) =>
+                  onItemChange(
+                    index,
+                    "duplicate_count",
+                    Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1))
+                  )
+                }
+                className="w-full p-2 text-sm border border-gray-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-gray-900 dark:text-white"
+              />
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                Creates separate order IDs with the same design
+              </p>
+              {(item.duplicate_count ?? 1) > 1 && (
+                <span className="inline-block mt-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                  → {item.duplicate_count} orders will be created
+                </span>
+              )}
             </div>
           </div>
         </div>

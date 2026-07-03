@@ -50,6 +50,9 @@ export function useOrderForm({
   const [withholdingDeductFrom, setWithholdingDeductFrom] = useState('REMAINING');
   const [withholdingPaymentIndex, setWithholdingPaymentIndex] = useState(0);
 
+  const lineTotal = (item: FormItem) =>
+    (item.price || 0) * (item.duplicate_count ?? 1);
+
   // Initialize items from selectedItems and set default delivery date
   useEffect(() => {
     const initItems: FormItem[] = selectedItems.map((item) => {
@@ -63,6 +66,7 @@ export function useOrderForm({
         mockup_image: item.mockup_image || null,
         design_type: item.design_type || defaultDesignType,
         price: Math.round(item.price || 0),
+        duplicate_count: 1,
         note: item.note || "",
         original_boms: [],
         boms: [],
@@ -71,7 +75,7 @@ export function useOrderForm({
 
     setItems(initItems);
 
-    const full = initItems.reduce((sum, i) => sum + i.price, 0);
+    const full = initItems.reduce((sum, i) => sum + lineTotal(i), 0);
     setTotalPayment(Math.round(full));
     setAdvancePayment(Math.round(full * 0.5));
     setRemainingPayment(Math.round(full * 0.5));
@@ -85,18 +89,23 @@ export function useOrderForm({
     field: keyof FormItem,
     value: any
   ) => {
-    const newItems: any = [...items];
+    const newItems: FormItem[] = [...items];
 
     if (field === "price") {
       newItems[index][field] = Math.round(parseFloat(value) || 0);
+    } else if (field === "duplicate_count") {
+      newItems[index][field] = Math.min(
+        100,
+        Math.max(1, parseInt(value, 10) || 1)
+      );
     } else {
-      newItems[index][field] = value;
+      (newItems[index] as any)[field] = value;
     }
 
     setItems(newItems);
 
-    if (field === "price") {
-      const full = newItems.reduce((sum: any, i: any) => sum + i.price, 0);
+    if (field === "price" || field === "duplicate_count") {
+      const full = newItems.reduce((sum, i) => sum + lineTotal(i), 0);
       const ratio = totalPayment > 0 ? advancePayment / totalPayment : 0.4;
       setTotalPayment(Math.round(full));
       setAdvancePayment(Math.round(full * ratio));
@@ -181,6 +190,7 @@ export function useOrderForm({
           mockup_modification: item.type === "modification" ? item.id : null,
           price: price,
           note: item.note || "",
+          duplicate_count: item.duplicate_count ?? 1,
           boms_data: [],
         };
       });
