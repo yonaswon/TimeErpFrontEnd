@@ -1,6 +1,6 @@
 // CuttingFile.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers, Target, Clock, AlertCircle } from 'lucide-react';
+import { Download, Plus, FileText, Package, Calendar, Edit, User, Play, CheckCircle, Scissors, FileUp, Loader2, Search, Filter, X, ChevronDown, Layers, Target, Clock, AlertCircle, Trash2 } from 'lucide-react';
 import { CuttingFile, CuttingFileResponse, Material } from '@/types/cutting';
 import api, { base_url } from '@/api';
 import { CuttingFileDetailOverlay } from './CuttingFileDetailOverlay';
@@ -30,6 +30,9 @@ export const CuttingFileComponent = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filterMaterial, setFilterMaterial] = useState('');
   const [filterSheet, setFilterSheet] = useState('');
+  const [filterOrderCode, setFilterOrderCode] = useState('');
+  const [deletingFile, setDeletingFile] = useState<CuttingFile | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Materials list for filter dropdown
   const [materials, setMaterials] = useState<{ id: number; name: string }[]>([]);
@@ -44,10 +47,11 @@ export const CuttingFileComponent = () => {
     if (searchQuery.trim()) params.set('search', searchQuery.trim());
     if (filterMaterial) params.set('material', filterMaterial);
     if (filterSheet) params.set('sheet', filterSheet);
+    if (filterOrderCode.trim()) params.set('order_code', filterOrderCode.trim());
     let url = `/api/cuttingfiles/?${params.toString()}`;
     if (extraParams) url += `&${extraParams}`;
     return url;
-  }, [searchQuery, filterMaterial, filterSheet]);
+  }, [searchQuery, filterMaterial, filterSheet, filterOrderCode]);
 
   const fetchCuttingFiles = useCallback(async (url?: string, isLoadMore: boolean = false) => {
     try {
@@ -122,7 +126,7 @@ export const CuttingFileComponent = () => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery, filterMaterial, filterSheet]);
+  }, [searchQuery, filterMaterial, filterSheet, filterOrderCode]);
 
   // WebSocket: real-time analysis status updates (no polling, no list reload)
   useEffect(() => {
@@ -202,12 +206,30 @@ export const CuttingFileComponent = () => {
     }
   };
 
-  const hasActiveFilters = searchQuery || filterMaterial || filterSheet;
+  const hasActiveFilters = searchQuery || filterMaterial || filterSheet || filterOrderCode;
 
   const clearAllFilters = () => {
     setSearchQuery('');
     setFilterMaterial('');
     setFilterSheet('');
+    setFilterOrderCode('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingFile) return;
+    try {
+      setDeleteLoading(true);
+      await api.delete(`/api/cuttingfiles/${deletingFile.id}/`);
+      setCuttingFiles(prev => prev.filter(cf => cf.id !== deletingFile.id));
+      setTotalCount(prev => Math.max(0, prev - 1));
+      if (selectedFile?.id === deletingFile.id) setSelectedFile(null);
+      if (editingFile?.id === deletingFile.id) setEditingFile(null);
+      setDeletingFile(null);
+    } catch {
+      setError('Failed to delete cutting file');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   return (
@@ -288,16 +310,16 @@ export const CuttingFileComponent = () => {
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`h-11 px-3 flex items-center gap-1.5 border rounded-xl text-sm font-medium transition-all shrink-0 ${
-                  showFilters || filterMaterial || filterSheet
+                  showFilters || filterMaterial || filterSheet || filterOrderCode
                     ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40 text-blue-600 dark:text-blue-400'
                     : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-600 text-gray-600 dark:text-gray-400'
                 }`}
               >
                 <Filter className="w-4 h-4" />
                 <span className="hidden sm:inline">Filters</span>
-                {(filterMaterial || filterSheet) && (
+                {(filterMaterial || filterSheet || filterOrderCode) && (
                   <span className="w-5 h-5 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                    {(filterMaterial ? 1 : 0) + (filterSheet ? 1 : 0)}
+                    {(filterMaterial ? 1 : 0) + (filterSheet ? 1 : 0) + (filterOrderCode ? 1 : 0)}
                   </span>
                 )}
               </button>
@@ -314,7 +336,19 @@ export const CuttingFileComponent = () => {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Order Code</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={filterOrderCode}
+                      onChange={(e) => setFilterOrderCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="e.g. 12345"
+                      className="w-full h-10 px-3 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Material</label>
                     <select
@@ -355,6 +389,12 @@ export const CuttingFileComponent = () => {
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-xs text-blue-700 dark:text-blue-300 font-medium border border-blue-200 dark:border-blue-800/40">
                     Search: "{searchQuery}"
                     <button onClick={() => setSearchQuery('')}><X className="w-3 h-3" /></button>
+                  </span>
+                )}
+                {filterOrderCode && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-xs text-orange-700 dark:text-orange-300 font-medium border border-orange-200 dark:border-orange-800/40">
+                    Order: ORD-{filterOrderCode}
+                    <button onClick={() => setFilterOrderCode('')}><X className="w-3 h-3" /></button>
                   </span>
                 )}
                 {filterMaterial && (
@@ -427,6 +467,7 @@ export const CuttingFileComponent = () => {
                     file={file}
                     onViewDetails={() => setSelectedFile(file)}
                     onEdit={() => setEditingFile(file)}
+                    onDelete={() => setDeletingFile(file)}
                     onDownload={handleDownload}
                   />
                 ))}
@@ -481,6 +522,40 @@ export const CuttingFileComponent = () => {
             />
           )}
 
+          {/* Delete Confirmation Modal */}
+          {deletingFile && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Delete Cutting File</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Delete cutting file #CF-{deletingFile.id}? This cannot be undone.
+                  {deletingFile.orders.length > 0 && (
+                    <span className="block mt-2">
+                      Orders: {deletingFile.orders.map(o => `ORD-${o.order_code}`).join(', ')}
+                    </span>
+                  )}
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setDeletingFile(null)}
+                    disabled={deleteLoading}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    disabled={deleteLoading}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+                  >
+                    {deleteLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Search & Fit Sidebar */}
           <SearchFitSidebar
             isOpen={showSearchFit}
@@ -497,10 +572,11 @@ interface CuttingFileCardProps {
   file: CuttingFile;
   onViewDetails: () => void;
   onEdit: (file: CuttingFile) => void;
+  onDelete: (file: CuttingFile) => void;
   onDownload: (fileUrl: string, fileName: string) => void;
 }
 
-const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFileCardProps) => {
+const CuttingFileCard = ({ file, onViewDetails, onEdit, onDelete, onDownload }: CuttingFileCardProps) => {
   const fileName = file.crv3d.split('/').pop() || 'file.crv3d';
 
   const handleDownloadClick = (e: React.MouseEvent) => {
@@ -511,6 +587,11 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit(file);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(file);
   };
 
   const getStatusBadge = (status: string) => {
@@ -567,6 +648,12 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDownload }: CuttingFil
                 className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
               >
                 <Edit className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleDeleteClick}
+                className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleDownloadClick}

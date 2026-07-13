@@ -170,6 +170,7 @@ export interface CuttingFile {
   dxf_file: string | null;
   dxf_layers_data: DxfLayerData | null;
   selected_layers: string[] | null;
+  selected_layer_number: number | null;
   // History integrity
   history_integrity_status: 'PENDING' | 'MATCHED' | 'MISMATCHED' | 'N/A' | null;
   history_integrity_score: string | null;
