@@ -4,6 +4,7 @@ import { X, Upload, FileText, Package, AlertCircle, Layers, Check, Loader2 } fro
 import { CuttingFile, Material, EachArealMaterial, Order } from '@/types/cutting';
 import api from '@/api';
 import axios from 'axios';
+import { cuttingFileMaterialLabel } from '@/utils/cuttingFileMaterial';
 
 const STEP_LABELS = [
   'Upload Files',
@@ -48,7 +49,15 @@ export const CuttingFileWizardOverlay = ({
   const [selectedEachArealMaterial, setSelectedEachArealMaterial] = useState<EachArealMaterial | null>(
     initialFile?.on || null
   );
-  const [oldMaterialNumber, setOldMaterialNumber] = useState<string>(initialFile?.old_material_number || '');
+  const [oldMaterialNumber, setOldMaterialNumber] = useState<string>(
+    initialFile && !initialFile.is_outside_material ? (initialFile.old_material_number || '') : ''
+  );
+  const [isOutsideMaterial, setIsOutsideMaterial] = useState<boolean>(
+    Boolean(initialFile?.is_outside_material)
+  );
+  const [outsideNote, setOutsideNote] = useState<string>(
+    initialFile?.is_outside_material ? (initialFile.old_material_number || '') : ''
+  );
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<number[]>(
     initialFile?.orders.map(o => o.order_code) || []
@@ -68,6 +77,11 @@ export const CuttingFileWizardOverlay = ({
   const [orderTab, setOrderTab] = useState<'Active' | 'All'>('Active');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [debouncedOrderSearchQuery, setDebouncedOrderSearchQuery] = useState('');
+
+  // Mass cutting file state
+  const [massRangeStart, setMassRangeStart] = useState<number>(1);
+  const [massRangeEnd, setMassRangeEnd] = useState<number>(1);
+  const [isMassMode, setIsMassMode] = useState(false);
 
   const [tempId, setTempId] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -144,7 +158,7 @@ export const CuttingFileWizardOverlay = ({
   }, [selectedMaterial, initialFile, isEdit]);
 
   useEffect(() => {
-    if ((selectedEachArealMaterial || oldMaterialNumber.trim() !== '') && selectedMaterial) {
+    if ((selectedEachArealMaterial || oldMaterialNumber.trim() !== '' || isOutsideMaterial) && selectedMaterial) {
       const fetchOrders = async () => {
         try {
           setLoadingStates(prev => ({ ...prev, orders: true }));
@@ -178,13 +192,13 @@ export const CuttingFileWizardOverlay = ({
       };
       fetchOrders();
     }
-  }, [selectedEachArealMaterial, oldMaterialNumber, selectedMaterial, orderTab, debouncedOrderSearchQuery]);
+  }, [selectedEachArealMaterial, oldMaterialNumber, isOutsideMaterial, selectedMaterial, orderTab, debouncedOrderSearchQuery]);
 
   useEffect(() => {
     if (!isEdit) {
       setSelectedOrders([]);
     }
-  }, [selectedEachArealMaterial, oldMaterialNumber, selectedMaterial, isEdit]);
+  }, [selectedEachArealMaterial, oldMaterialNumber, isOutsideMaterial, selectedMaterial, isEdit]);
 
   const handleCrv3dFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -268,12 +282,61 @@ export const CuttingFileWizardOverlay = ({
   }, []);
 
   const handleOrderToggle = (orderCode: number) => {
-    setSelectedOrders(prev =>
-      prev.includes(orderCode)
+    setSelectedOrders(prev => {
+      const next = prev.includes(orderCode)
         ? prev.filter(code => code !== orderCode)
-        : [...prev, orderCode]
-    );
+        : [...prev, orderCode];
+
+      // Reset mass mode when deselecting all — never auto-enable
+      if (next.length === 0) {
+        setIsMassMode(false);
+        setMassRangeStart(1);
+        setMassRangeEnd(1);
+      }
+
+      return next;
+    });
   };
+
+  const selectedDuplicateOrder = (() => {
+    if (selectedOrders.length === 0) return null;
+    const order = orders.find(o => o.order_code === selectedOrders[0]);
+    if (order?.duplicate_group && (order.duplicate_group_size ?? 0) > 1) {
+      return order;
+    }
+    return null;
+  })();
+
+  const enableMassMode = () => {
+    const groupSize = selectedDuplicateOrder?.duplicate_group_size ?? 1;
+    setIsMassMode(true);
+    setMassRangeStart(1);
+    setMassRangeEnd(groupSize);
+  };
+
+  const disableMassMode = () => {
+    setIsMassMode(false);
+    setMassRangeStart(1);
+    setMassRangeEnd(1);
+  };
+
+  const massRangeLabel = (() => {
+    if (!isMassMode || !selectedDuplicateOrder) {
+      return `#${massRangeStart}–#${massRangeEnd}`;
+    }
+    const group = selectedDuplicateOrder.duplicate_group;
+    const siblings = group
+      ? orders.filter(o => o.duplicate_group === group)
+      : [];
+    const startOrd = siblings.find(o => o.duplicate_index === massRangeStart) || selectedDuplicateOrder;
+    const endOrd = siblings.find(o => o.duplicate_index === massRangeEnd);
+    const count = massRangeEnd - massRangeStart + 1;
+    const startPart = `ORD-${startOrd.order_code} (#${massRangeStart})`;
+    const endPart = endOrd
+      ? `ORD-${endOrd.order_code} (#${massRangeEnd})`
+      : `#${massRangeEnd}`;
+    return `${startPart} – ${endPart} (${count} orders)`;
+  })();
 
   const filesReady = isEdit
     ? hasExistingFiles || (crv3dFile !== null && dxfFile !== null)
@@ -284,8 +347,18 @@ export const CuttingFileWizardOverlay = ({
   const filesChanged = crv3dFile !== null || dxfFile !== null;
 
   const handleSubmit = async () => {
-    if (!filesReady || (!selectedEachArealMaterial && oldMaterialNumber.trim() === '') || selectedOrders.length === 0 || selectedLayerNumber === null) {
+    if (
+      !filesReady ||
+      (!selectedEachArealMaterial && oldMaterialNumber.trim() === '' && !isOutsideMaterial) ||
+      selectedOrders.length === 0 ||
+      selectedLayerNumber === null
+    ) {
       setError('Please fill all required fields');
+      return;
+    }
+
+    if (isOutsideMaterial && !selectedMaterial) {
+      setError('Please select a material type for outside material');
       return;
     }
 
@@ -319,22 +392,40 @@ export const CuttingFileWizardOverlay = ({
         }
       }
 
-      if (selectedEachArealMaterial) {
-        formData.append('on', selectedEachArealMaterial.id.toString());
-      } else if (isEdit) {
+      if (isOutsideMaterial && selectedMaterial) {
+        formData.append('is_outside_material', 'true');
+        formData.append('old_material', selectedMaterial.id.toString());
+        formData.append('old_material_number', outsideNote.trim());
         formData.append('on', '');
-      }
-
-      if (oldMaterialNumber.trim() !== '' && selectedMaterial) {
+      } else if (selectedEachArealMaterial) {
+        formData.append('on', selectedEachArealMaterial.id.toString());
+        formData.append('is_outside_material', 'false');
+        if (isEdit) {
+          formData.append('old_material_number', '');
+          formData.append('old_material', '');
+        }
+      } else if (oldMaterialNumber.trim() !== '' && selectedMaterial) {
         formData.append('old_material_number', oldMaterialNumber.trim());
         formData.append('old_material', selectedMaterial.id.toString());
+        formData.append('is_outside_material', 'false');
+        if (isEdit) {
+          formData.append('on', '');
+        }
       } else if (isEdit) {
+        formData.append('on', '');
         formData.append('old_material_number', '');
+        formData.append('is_outside_material', 'false');
       }
 
       selectedOrders.forEach(orderCode => {
         formData.append('orders', orderCode.toString());
       });
+
+      // Mass cutting file params
+      if (isMassMode && !isEdit) {
+        formData.append('mass_order_range_start', massRangeStart.toString());
+        formData.append('mass_order_range_end', massRangeEnd.toString());
+      }
 
       if (selectedLayerNumber !== null) {
         formData.append('selected_layer_number', selectedLayerNumber.toString());
@@ -364,7 +455,7 @@ export const CuttingFileWizardOverlay = ({
     switch (step) {
       case 1: return filesReady;
       case 2: return selectedMaterial !== null;
-      case 3: return selectedEachArealMaterial !== null || oldMaterialNumber.trim() !== '';
+      case 3: return selectedEachArealMaterial !== null || oldMaterialNumber.trim() !== '' || isOutsideMaterial;
       case 4: return selectedOrders.length > 0;
       case 5: return selectedLayerNumber !== null;
       case 6: return true;
@@ -555,6 +646,55 @@ export const CuttingFileWizardOverlay = ({
 
           {step === 3 && (
             <div className="space-y-6">
+              {/* Outside material (client-supplied) */}
+              <div className={`p-4 rounded-xl border transition-colors ${isOutsideMaterial ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Outside Material (from client)</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Use when the sheet is supplied by the client — not from stock or old warehouse sheets.
+                      Material type: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedMaterial?.name || 'Select in previous step'}</span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOutsideMaterial(true);
+                      setSelectedEachArealMaterial(null);
+                      setOldMaterialNumber('');
+                    }}
+                    className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      isOutsideMaterial
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-teal-100 dark:hover:bg-teal-900/40'
+                    }`}
+                  >
+                    {isOutsideMaterial ? 'Selected' : 'Use outside'}
+                  </button>
+                </div>
+                {isOutsideMaterial && (
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium text-teal-700 dark:text-teal-300 mb-1">Optional client note / reference</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. client sheet ref"
+                      value={outsideNote}
+                      onChange={(e) => setOutsideNote(e.target.value)}
+                      className="w-full h-[44px] px-4 rounded-lg border border-teal-200 dark:border-teal-800 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-600 focus:border-transparent transition-colors"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-200 dark:border-zinc-700"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-gray-500 dark:text-gray-400">OR</span>
+                </div>
+              </div>
+
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Old Material</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -566,7 +706,11 @@ export const CuttingFileWizardOverlay = ({
                   value={oldMaterialNumber}
                   onChange={(e) => {
                     setOldMaterialNumber(e.target.value);
-                    if (e.target.value.trim() !== '') setSelectedEachArealMaterial(null);
+                    if (e.target.value.trim() !== '') {
+                      setSelectedEachArealMaterial(null);
+                      setIsOutsideMaterial(false);
+                      setOutsideNote('');
+                    }
                   }}
                   className="w-full h-[44px] px-4 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors"
                 />
@@ -593,6 +737,8 @@ export const CuttingFileWizardOverlay = ({
                         onClick={() => {
                           setSelectedEachArealMaterial(eam);
                           setOldMaterialNumber('');
+                          setIsOutsideMaterial(false);
+                          setOutsideNote('');
                         }}
                         className={`p-4 text-left rounded-lg border transition-colors ${selectedEachArealMaterial?.id === eam.id
                           ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
@@ -675,7 +821,8 @@ export const CuttingFileWizardOverlay = ({
                               <div className="space-y-1">
                                 {order.cutting_files.map(cf => (
                                   <div key={cf.id} className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800 p-1.5 rounded border border-gray-100 dark:border-zinc-700">
-                                    {cf.on ? `${cf.on.material_name} - Code: ${cf.on.code}` : cf.old_material ? `${cf.old_material.name} - ${cf.old_material_number}` : 'Unknown Material'}
+                                    {cuttingFileMaterialLabel(cf).text}
+                                    {cf.is_outside_material ? ' · Outside' : ''}
                                   </div>
                                 ))}
                               </div>
@@ -687,6 +834,81 @@ export const CuttingFileWizardOverlay = ({
                   })}
                 </div>
               )}
+
+              {/* Mass cutting file — opt-in only */}
+              {!isEdit && selectedDuplicateOrder && !isMassMode && (
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-700 rounded-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">Duplicate group available</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                        This order is part of a {selectedDuplicateOrder.duplicate_group_size}× duplicate group.
+                        Create a single cutting file for a range of copies if needed.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={enableMassMode}
+                      className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                    >
+                      Create as mass
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isMassMode && !isEdit && (() => {
+                const groupSize = selectedDuplicateOrder?.duplicate_group_size ?? massRangeEnd;
+                const rangeCount = Math.max(0, massRangeEnd - massRangeStart + 1);
+                return (
+                  <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">🗂️</span>
+                      <div>
+                        <p className="text-sm font-semibold text-purple-800 dark:text-purple-200">Mass Cutting File</p>
+                        <p className="text-xs text-purple-600 dark:text-purple-400">
+                          Specify the duplicate index range to cover in one cutting file (group size: {groupSize}).
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">From #</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={massRangeEnd}
+                          value={massRangeStart}
+                          onChange={e => setMassRangeStart(Math.max(1, Math.min(parseInt(e.target.value) || 1, massRangeEnd)))}
+                          className="w-full h-10 px-3 border border-purple-300 dark:border-purple-700 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                      </div>
+                      <div className="text-purple-500 dark:text-purple-400 font-medium mt-5">→</div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">To #</label>
+                        <input
+                          type="number"
+                          min={massRangeStart}
+                          max={groupSize}
+                          value={massRangeEnd}
+                          onChange={e => setMassRangeEnd(Math.min(groupSize, Math.max(parseInt(e.target.value) || massRangeStart, massRangeStart)))}
+                          className="w-full h-10 px-3 border border-purple-300 dark:border-purple-700 rounded-lg bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs font-medium text-purple-700 dark:text-purple-300">
+                      This cutting file will cover <span className="font-bold">{rangeCount} order{rangeCount !== 1 ? 's' : ''}</span>: {massRangeLabel}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={disableMassMode}
+                      className="mt-2 text-xs text-purple-500 dark:text-purple-400 underline hover:text-purple-700"
+                    >
+                      Use single order only
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -751,7 +973,11 @@ export const CuttingFileWizardOverlay = ({
                 <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
                   <div className="text-gray-500 dark:text-gray-400">Sheet</div>
                   <div className="font-medium text-gray-900 dark:text-white">
-                    {selectedEachArealMaterial ? `${selectedEachArealMaterial.code} - ${selectedEachArealMaterial.material_name}` : oldMaterialNumber || 'N/A'}
+                    {isOutsideMaterial
+                      ? `Outside — ${selectedMaterial?.name || 'N/A'}${outsideNote.trim() ? ` (${outsideNote.trim()})` : ''}`
+                      : selectedEachArealMaterial
+                        ? `${selectedEachArealMaterial.code} - ${selectedEachArealMaterial.material_name}`
+                        : oldMaterialNumber || 'N/A'}
                   </div>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
@@ -760,9 +986,24 @@ export const CuttingFileWizardOverlay = ({
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-zinc-900 rounded-lg">
                   <div className="text-gray-500 dark:text-gray-400">Orders</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''}</div>
+                  {isMassMode && !isEdit ? (
+                    <div className="font-medium text-purple-700 dark:text-purple-300">
+                      🗂️ Mass: {massRangeLabel}
+                    </div>
+                  ) : (
+                    <div className="font-medium text-gray-900 dark:text-white">{selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''}</div>
+                  )}
                 </div>
               </div>
+              {isMassMode && !isEdit && (
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 rounded-xl text-sm">
+                  <p className="text-purple-700 dark:text-purple-300 font-medium">🗂️ Mass Cutting File</p>
+                  <p className="text-purple-600 dark:text-purple-400 text-xs mt-1">
+                    One cutting file will be created and linked to {massRangeLabel}.
+                    A single Telegram notification will be sent for the entire batch.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

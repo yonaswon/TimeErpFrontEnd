@@ -6,6 +6,7 @@ import { EditAssignmentOverlay } from "./AssignCutting/EditAssignmentOverlay";
 import { AssemblyTasks } from "./AssignAssembly/AssemblyTasks";
 import { MaintenanceTasks } from "./Maintenance/MaintenanceTasks";
 import { DeliveryTasks } from "./AssignDandI/DeliveryTasks";
+import { cuttingFileMaterialLabel } from "@/utils/cuttingFileMaterial";
 
 type TaskType = "cutting" | "assembly" | "delivery" | "maintenance";
 
@@ -15,6 +16,7 @@ interface CuttingFile {
   on: EachArealMaterial | null;
   old_material_number: string | null;
   old_material: { id: number; name: string } | null;
+  is_outside_material?: boolean;
   crv3d: string;
   image: string;
   status: string;
@@ -281,8 +283,11 @@ const CuttingTaskCard = ({ file, onEdit }: CuttingTaskCardProps) => {
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                 {file.crv3d.split("/").pop()}
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>{cuttingFileMaterialLabel(file).text}</span>
+                {file.is_outside_material && (
+                  <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400">Outside</span>
+                )}
               </p>
             </div>
           </div>

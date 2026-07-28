@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { X, Scissors, User, Package, AlertCircle, CheckCircle, Loader2, Clock } from "lucide-react";
 import api, { base_url } from "@/api";
+import { cuttingFileMaterialLabel } from "@/utils/cuttingFileMaterial";
 
 interface CuttingFile {
   id: number;
@@ -9,6 +10,7 @@ interface CuttingFile {
   on: EachArealMaterial | null;
   old_material_number: string | null;
   old_material: { id: number; name: string } | null;
+  is_outside_material?: boolean;
   crv3d: string;
   image: string;
   line_image: string | null;
@@ -22,6 +24,14 @@ interface CuttingFile {
   analysis_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   analysis_error: string | null;
   total_usage_percentage: string | null;
+  // Mass cutting file
+  is_mass?: boolean;
+  mass_order_range_start?: number | null;
+  mass_order_range_end?: number | null;
+  order_count?: number;
+  mass_start_order_code?: number | null;
+  mass_end_order_code?: number | null;
+  mass_range_label?: string | null;
 }
 
 interface Order {
@@ -260,30 +270,66 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
                         )}
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.crv3d.split("/").pop()}</h4>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {file.on ? `${file.on.material_name} - ${file.on.code}` : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                            <span>{cuttingFileMaterialLabel(file).text}</span>
+                            {file.is_outside_material && (
+                              <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400">Outside</span>
+                            )}
+                            {!file.on && !file.is_outside_material && file.old_material && (
+                              <span className="text-[10px] text-amber-500">Unreg.</span>
+                            )}
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300">
-                            {file.orders.length} order(s)
+                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${file.is_mass ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'bg-gray-200 dark:bg-zinc-600 text-gray-700 dark:text-gray-300'}`}>
+                            {file.is_mass && file.mass_order_range_start && file.mass_order_range_end
+                              ? (file.mass_range_label
+                                  || `${file.mass_order_range_end - file.mass_order_range_start + 1} orders (mass)`)
+                              : `${file.orders.length} order(s)`}
                           </span>
                           {/* Analysis status badge */}
                           {getAnalysisBadge(file)}
                         </div>
                       </div>
 
+                      {/* Mass banner */}
+                      {file.is_mass && file.mass_order_range_start && file.mass_order_range_end && (
+                        <div className="flex items-center gap-2 mb-3 p-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 rounded-lg">
+                          <span className="text-base">🗂️</span>
+                          <div>
+                            <p className="text-xs font-bold text-purple-700 dark:text-purple-300">Mass Cutting File</p>
+                            <p className="text-[11px] text-purple-600 dark:text-purple-400">
+                              {file.mass_range_label
+                                || (file.mass_start_order_code != null && file.mass_end_order_code != null
+                                  ? `ORD-${file.mass_start_order_code} (#${file.mass_order_range_start}) – ORD-${file.mass_end_order_code} (#${file.mass_order_range_end}) (${file.mass_order_range_end - file.mass_order_range_start + 1} orders)`
+                                  : `Orders #${file.mass_order_range_start}–#${file.mass_order_range_end} (${file.mass_order_range_end - file.mass_order_range_start + 1} orders)`)}
+                              {' · Assign one operator for all'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Orders */}
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                        {file.orders.map((order) => (
-                          <span key={order.order_code} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                            order.order_status === "PRE-ACCEPTED" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                          }`}>
+                        {file.is_mass && file.mass_order_range_start && file.mass_order_range_end ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                             <Package className="w-2.5 h-2.5" />
-                            ORD-{order.order_code}
-                            {order.order_name && <span className="opacity-70">— {order.order_name}</span>}
+                            {file.mass_range_label
+                              || (file.mass_start_order_code != null && file.mass_end_order_code != null
+                                ? `ORD-${file.mass_start_order_code} (#${file.mass_order_range_start}) – ORD-${file.mass_end_order_code} (#${file.mass_order_range_end})`
+                                : `${file.mass_order_range_end - file.mass_order_range_start + 1} orders (#${file.mass_order_range_start}–#${file.mass_order_range_end})`)}
                           </span>
-                        ))}
+                        ) : (
+                          file.orders.map((order) => (
+                            <span key={order.order_code} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                              order.order_status === "PRE-ACCEPTED" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                            }`}>
+                              <Package className="w-2.5 h-2.5" />
+                              ORD-{order.order_code}
+                              {order.order_name && <span className="opacity-70">— {order.order_name}</span>}
+                            </span>
+                          ))
+                        )}
                       </div>
 
                       {/* Assignment Form or Button */}

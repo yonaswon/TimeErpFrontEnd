@@ -1,11 +1,11 @@
 import axios from "axios";
 
-export const base_url = "https://timeerp.duckdns.org";
+// export const base_url = "https://hunt-elegant-periodically-discover.trycloudflare.com";
 
 
 // export const base_url = "https://pre-architects-earn-conditioning.trycloudflare.com";
 
-// export const base_url = "https://api.trycloudflare.com";
+export const base_url = "https://timeerp.duckdns.org";
 
 
 const api = axios.create({

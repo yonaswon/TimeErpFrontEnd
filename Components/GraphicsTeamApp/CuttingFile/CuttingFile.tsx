@@ -8,6 +8,7 @@ import { CreateCuttingFileOverlay } from './CreateCuttingFileOverlay';
 import { EditCuttingFileOverlay } from './EditCuttingFileOverlay';
 import { DxfOrdersList } from './DxfOrdersList';
 import { SearchFitSidebar } from './SearchFitSidebar';
+import { cuttingFileMaterialLabel } from '@/utils/cuttingFileMaterial';
 
 type TopTab = 'cutting_files' | 'dxf_orders'
 
@@ -693,27 +694,53 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDelete, onDownload }: 
 
           {/* Material info */}
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            {file.on ? (
-              <span className="flex items-center gap-1">
-                <Layers className="w-3 h-3 text-blue-500 shrink-0" />
-                <span className="truncate">{file.on.material_name} #{file.on.code}</span>
-                <span className="text-gray-400 dark:text-gray-500">• {file.on.current_width}×{file.on.current_height}</span>
-              </span>
-            ) : file.old_material && file.old_material_number ? (
-              <span className="flex items-center gap-1">
-                <Layers className="w-3 h-3 text-amber-500 shrink-0" />
-                <span className="truncate">{file.old_material.name} #{file.old_material_number}</span>
-                <span className="text-amber-500 text-[10px]">Unreg.</span>
-              </span>
-            ) : (
-              <span className="text-gray-400 dark:text-gray-500">Unknown Material</span>
-            )}
+            {(() => {
+              const mat = cuttingFileMaterialLabel(file);
+              if (mat.kind === 'stock' && file.on) {
+                return (
+                  <span className="flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-blue-500 shrink-0" />
+                    <span className="truncate">{file.on.material_name} #{file.on.code}</span>
+                    <span className="text-gray-400 dark:text-gray-500">• {file.on.current_width}×{file.on.current_height}</span>
+                  </span>
+                );
+              }
+              if (mat.kind === 'outside') {
+                return (
+                  <span className="flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-teal-500 shrink-0" />
+                    <span className="truncate">{mat.text}</span>
+                    <span className="text-teal-600 dark:text-teal-400 text-[10px] font-semibold">Outside</span>
+                  </span>
+                );
+              }
+              if (mat.kind === 'old') {
+                return (
+                  <span className="flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-amber-500 shrink-0" />
+                    <span className="truncate">{mat.text}</span>
+                    <span className="text-amber-500 text-[10px]">Unreg.</span>
+                  </span>
+                );
+              }
+              return <span className="text-gray-400 dark:text-gray-500">Unknown Material</span>;
+            })()}
           </div>
         </div>
       </div>
 
       {/* Orders */}
       <div className="px-3 pb-3">
+        {file.is_mass && file.mass_order_range_start && file.mass_order_range_end ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40">
+              🗂️ MASS: {file.mass_range_label
+                || (file.mass_start_order_code != null && file.mass_end_order_code != null
+                  ? `ORD-${file.mass_start_order_code} (#${file.mass_order_range_start}) – ORD-${file.mass_end_order_code} (#${file.mass_order_range_end}) (${file.mass_order_range_end - file.mass_order_range_start + 1} orders)`
+                  : `Orders #${file.mass_order_range_start}–#${file.mass_order_range_end} (${file.mass_order_range_end - file.mass_order_range_start + 1} orders)`)}
+            </span>
+          </div>
+        ) : (
         <div className="flex flex-wrap gap-1.5">
           {file.orders.map((order) => (
             <span
@@ -733,6 +760,7 @@ const CuttingFileCard = ({ file, onViewDetails, onEdit, onDelete, onDownload }: 
             </span>
           ))}
         </div>
+        )}
 
         {/* Timeline */}
         {(file.start_date || file.complate_date) && (

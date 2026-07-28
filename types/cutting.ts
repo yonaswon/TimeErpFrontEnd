@@ -174,6 +174,15 @@ export interface CuttingFile {
   // History integrity
   history_integrity_status: 'PENDING' | 'MATCHED' | 'MISMATCHED' | 'N/A' | null;
   history_integrity_score: string | null;
+  // Mass cutting file
+  is_mass: boolean;
+  mass_order_range_start: number | null;
+  mass_order_range_end: number | null;
+  order_count: number;
+  mass_start_order_code?: number | null;
+  mass_end_order_code?: number | null;
+  mass_range_label?: string | null;
+  is_outside_material?: boolean;
 }
 export interface Order {
   order_code: number;
@@ -198,6 +207,9 @@ export interface Order {
   cutting_files: CuttingFile[];
   dxf_files?: any[];
   dxf_file_ready?: boolean;
+  duplicate_group?: string | null;
+  duplicate_index?: number | null;
+  duplicate_group_size?: number | null;
 }
 
 export interface Bom {

@@ -314,7 +314,12 @@ const StartTaskOverlay = ({
                 Start Cutting Task
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Order #{mainOrder.order_code}
+                {task.is_mass
+                  ? `🗂️ Mass: ${task.mass_range_label
+                      || (task.mass_start_order_code != null && task.mass_end_order_code != null
+                        ? `ORD-${task.mass_start_order_code} (#${task.mass_order_range_start}) – ORD-${task.mass_end_order_code} (#${task.mass_order_range_end})`
+                        : `Orders #${task.mass_order_range_start}–#${task.mass_order_range_end}`)}`
+                  : `Order #${mainOrder?.order_code ?? ''}`}
               </p>
             </div>
           </div>

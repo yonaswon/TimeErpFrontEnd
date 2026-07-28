@@ -1,4 +1,5 @@
 import { Download, Play, CheckCircle, Clock } from "lucide-react";
+import { cuttingFileMaterialLabel } from "@/utils/cuttingFileMaterial";
 
 export interface CuttingTask {
     id: number;
@@ -10,6 +11,14 @@ export interface CuttingTask {
     start_date: string | null;
     complate_date: string | null;
     date: string;
+    is_mass?: boolean;
+    mass_order_range_start?: number | null;
+    mass_order_range_end?: number | null;
+    order_count?: number;
+    mass_start_order_code?: number | null;
+    mass_end_order_code?: number | null;
+    mass_range_label?: string | null;
+    is_outside_material?: boolean;
     orders: {
         order_code: number;
         boms: Array<{
@@ -136,11 +145,24 @@ export const TaskCard = ({ task, status, onAction, isProcessing = false }: TaskC
             {/* Header with Download */}
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        CUT-{task.id}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Material: {task.on ? `${task.on.material_name}-${task.on.code}` : task.old_material ? `${task.old_material.name} (${task.old_material_number})` : 'Unknown'}
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            CUT-{task.id}
+                        </h3>
+                        {task.is_mass && (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                                🗂️ MASS {task.mass_range_label
+                                    || (task.mass_start_order_code != null && task.mass_end_order_code != null
+                                        ? `ORD-${task.mass_start_order_code} (#${task.mass_order_range_start}) – ORD-${task.mass_end_order_code} (#${task.mass_order_range_end})`
+                                        : `#${task.mass_order_range_start}–#${task.mass_order_range_end}`)}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                        Material: {cuttingFileMaterialLabel(task).text}
+                        {task.is_outside_material && (
+                            <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400">Outside</span>
+                        )}
                     </p>
                     {status === 'STARTED' && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-1">
@@ -343,8 +365,21 @@ export const TaskListItem = ({ task, status, onAction, isProcessing = false }: T
                         <span className="font-medium text-gray-900 dark:text-white text-sm">
                             CUT-{task.id}
                         </span>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
-                            {task.on ? `${task.on.material_name}-${task.on.code}` : task.old_material ? `${task.old_material.name} (${task.old_material_number})` : 'Unknown'}
+                        {task.is_mass && (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                                🗂️ MASS {task.mass_range_label
+                                    || (task.mass_start_order_code != null && task.mass_end_order_code != null
+                                        ? `ORD-${task.mass_start_order_code} (#${task.mass_order_range_start}) – ORD-${task.mass_end_order_code} (#${task.mass_order_range_end})`
+                                        : `#${task.mass_order_range_start}–#${task.mass_order_range_end}`)}
+                            </span>
+                        )}
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                            task.is_outside_material
+                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        }`}>
+                            {cuttingFileMaterialLabel(task).text}
+                            {task.is_outside_material ? ' · Outside' : ''}
                         </span>
                         {status === 'STARTED' && (
                             <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-full text-xs">

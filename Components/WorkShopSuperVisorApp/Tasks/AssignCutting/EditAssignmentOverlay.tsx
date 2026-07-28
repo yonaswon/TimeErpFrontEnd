@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, Loader2, User } from 'lucide-react';
 import api from '@/api';
+import { cuttingFileMaterialLabel } from '@/utils/cuttingFileMaterial';
 
 interface EditAssignmentOverlayProps {
   file: any;
@@ -99,7 +100,8 @@ export const EditAssignmentOverlay = ({ file, onClose, onSuccess }: EditAssignme
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Task Details</h4>
             <p className="text-xs text-gray-500 dark:text-gray-400">{file.crv3d.split('/').pop()}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {file.orders.length} order(s) • {file.on ? file.on.material_name : file.old_material ? `${file.old_material.name} - ${file.old_material_number}` : 'Unknown Material'}
+              {file.orders.length} order(s) • {cuttingFileMaterialLabel(file).text}
+              {file.is_outside_material ? ' · Outside' : ''}
             </p>
           </div>
 
