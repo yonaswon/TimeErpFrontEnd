@@ -20,6 +20,8 @@ interface ArealPromptItem {
     bom_width: string | null;
     bom_height: string | null;
     available_pieces: EachArealPiece[];
+    assembly_assign_id?: number;
+    order_code?: number;
 }
 
 interface ArealMaterialPromptOverlayProps {
@@ -190,6 +192,7 @@ export const ArealMaterialPromptOverlay = ({
                                             <div className="flex items-center gap-2 mb-3">
                                                 <Package className="w-5 h-5 text-purple-500" />
                                                 <h3 className="font-semibold text-gray-900 dark:text-white">
+                                                    {item.order_code != null ? `ORD-${item.order_code} · ` : ''}
                                                     {item.material_name}
                                                 </h3>
                                                 {item.bom_width && item.bom_height && (

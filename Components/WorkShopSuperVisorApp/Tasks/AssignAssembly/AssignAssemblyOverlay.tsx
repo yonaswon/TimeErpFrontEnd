@@ -27,6 +27,9 @@ interface Order {
   pre_accepted_date: string;
   created_at: string;
   design_type: number;
+  duplicate_group?: string | null;
+  duplicate_index?: number | null;
+  duplicate_group_size?: number | null;
 }
 
 interface Bom {
@@ -102,6 +105,9 @@ export const AssignAssemblyOverlay = ({
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [deliveryDateMap, setDeliveryDateMap] = useState<Record<number, string>>({});
+  const [isMassAssign, setIsMassAssign] = useState(false);
+  const [massRangeStart, setMassRangeStart] = useState(1);
+  const [massRangeEnd, setMassRangeEnd] = useState(1);
 
   useEffect(() => {
     fetchOrders(1, true);
@@ -222,11 +228,23 @@ export const AssignAssemblyOverlay = ({
       return;
     }
 
+    if (isMassAssign) {
+      const groupSize = selectedOrder.duplicate_group_size ?? 1;
+      if (!selectedOrder.duplicate_group || groupSize <= 1) {
+        setError("Selected order is not part of a duplicate group");
+        return;
+      }
+      if (massRangeStart < 1 || massRangeEnd < massRangeStart || massRangeEnd > groupSize) {
+        setError(`Mass range must be between 1 and ${groupSize}`);
+        return;
+      }
+    }
+
     try {
       setAssigning(true);
       setError(null);
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         order: selectedOrder.id || selectedOrder.order_code,
         assigned_to: selectedMembers,
         schedule_start_date: startDate.toISOString(),
@@ -236,11 +254,33 @@ export const AssignAssemblyOverlay = ({
         status: "ASSIGNED",
       };
 
-      await api.post("/api/assembly-assign/", payload);
+      if (isMassAssign) {
+        payload.is_mass = true;
+        payload.mass_order_range_start = massRangeStart;
+        payload.mass_order_range_end = massRangeEnd;
+      }
 
-      setSuccess(
-        `Assembly task for ORD-${selectedOrder.order_code} assigned successfully!`
-      );
+      const response = await api.post("/api/assembly-assign/", payload);
+      const data = response.data || {};
+
+      if (isMassAssign) {
+        const skipped = data.skipped_count || 0;
+        const assigned = data.assigned_count || 0;
+        const label = data.mass_range_label || `#${massRangeStart}–#${massRangeEnd}`;
+        let msg = `Group assigned: ${assigned} order(s) (${label}).`;
+        if (skipped > 0) {
+          const reasons = (data.skipped || [])
+            .slice(0, 5)
+            .map((s: { order_code: number; reason: string }) => `ORD-${s.order_code} (${s.reason})`)
+            .join(', ');
+          msg += ` Skipped ${skipped}: ${reasons}${(data.skipped || []).length > 5 ? '…' : ''}`;
+        }
+        setSuccess(msg);
+      } else {
+        setSuccess(
+          `Assembly task for ORD-${selectedOrder.order_code} assigned successfully!`
+        );
+      }
 
       setTimeout(() => {
         fetchOrders(1, true);
@@ -248,14 +288,23 @@ export const AssignAssemblyOverlay = ({
         setSelectedMembers([]);
         setScheduleStartDate("");
         setScheduleCompleteDate("");
+        setIsMassAssign(false);
+        setMassRangeStart(1);
+        setMassRangeEnd(1);
         setSuccess(null);
-      }, 2000);
+        onSuccess();
+      }, 2500);
     } catch (err: any) {
       console.error("Assignment error:", err);
 
       if (err.response?.data) {
         if (typeof err.response.data === "object") {
-          setError(`Assignment failed: ${JSON.stringify(err.response.data)}`);
+          const d = err.response.data;
+          if (d.error && d.skipped) {
+            setError(`${d.error} (skipped ${d.skipped_count || d.skipped.length})`);
+          } else {
+            setError(`Assignment failed: ${JSON.stringify(d)}`);
+          }
         } else {
           setError(`Assignment failed: ${err.response.data}`);
         }
@@ -306,6 +355,10 @@ export const AssignAssemblyOverlay = ({
     setSelectedMembers([]);
     setScheduleStartDate("");
     setScheduleCompleteDate("");
+    setIsMassAssign(false);
+    const groupSize = order.duplicate_group_size ?? 1;
+    setMassRangeStart(1);
+    setMassRangeEnd(groupSize > 1 ? groupSize : 1);
     setError(null);
     setSuccess(null);
   };
@@ -315,6 +368,9 @@ export const AssignAssemblyOverlay = ({
     setSelectedMembers([]);
     setScheduleStartDate("");
     setScheduleCompleteDate("");
+    setIsMassAssign(false);
+    setMassRangeStart(1);
+    setMassRangeEnd(1);
     setError(null);
     setSuccess(null);
   };
@@ -403,6 +459,12 @@ export const AssignAssemblyOverlay = ({
                           <div className="min-w-0">
                             <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
                               ORD-{order.order_code}
+                              {order.duplicate_group && (order.duplicate_group_size ?? 0) > 1 && (
+                                <span className="ml-2 text-[10px] font-bold text-purple-600 dark:text-purple-300">
+                                  {order.duplicate_group_size}× dup
+                                  {order.duplicate_index != null ? ` #${order.duplicate_index}` : ''}
+                                </span>
+                              )}
                             </h4>
                             {order.order_name && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
@@ -535,6 +597,61 @@ export const AssignAssemblyOverlay = ({
                 <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 rounded-xl">
                   <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                   <p className="text-green-700 dark:text-green-300 text-sm">{success}</p>
+                </div>
+              )}
+
+              {/* Mass / group assign (opt-in for duplicate orders) */}
+              {selectedOrder.duplicate_group && (selectedOrder.duplicate_group_size ?? 0) > 1 && (
+                <div className={`p-3 rounded-xl border ${isMassAssign ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Mass / group assign</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        This order is part of a {selectedOrder.duplicate_group_size}× duplicate group.
+                        Only CNC-completed, ready orders in the range will be assigned; others are skipped.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsMassAssign((v) => !v)}
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                        isMassAssign
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      {isMassAssign ? 'On' : 'Off'}
+                    </button>
+                  </div>
+                  {isMassAssign && (
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">From #</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={selectedOrder.duplicate_group_size ?? 1}
+                          value={massRangeStart}
+                          onChange={(e) => setMassRangeStart(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-full h-10 px-2 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">To #</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={selectedOrder.duplicate_group_size ?? 1}
+                          value={massRangeEnd}
+                          onChange={(e) => setMassRangeEnd(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-full h-10 px-2 border border-gray-200 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-sm"
+                        />
+                      </div>
+                      <p className="col-span-2 text-xs text-purple-700 dark:text-purple-300">
+                        Will assign ready orders in #{massRangeStart}–#{massRangeEnd} (skips not ready).
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

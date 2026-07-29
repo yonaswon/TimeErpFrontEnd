@@ -14,6 +14,7 @@ interface AssemblyAssignment {
   id: number;
   order: {
     order_code: number;
+    order_name?: string;
     boms: Array<{
       id: number;
       amount: string;
@@ -63,6 +64,10 @@ interface AssemblyAssignment {
   start_date: string | null;
   complate_date: string | null;
   date: string;
+  is_mass?: boolean;
+  mass_group?: string | null;
+  order_count?: number;
+  mass_range_label?: string | null;
 }
 import { ReleaseOverlay } from "./ReleaseOverlay";
 import ReleaseContent from "./Release/ReleaseContent";
@@ -315,9 +320,16 @@ const StartedAssemblyCard = ({
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            ORD-{task.order.order_code}
-            {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
+            {task.is_mass && task.mass_range_label ? task.mass_range_label : `ORD-${task.order.order_code}`}
+            {!task.is_mass && task.order.order_name && (
+              <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {task.order.order_name}</span>
+            )}
           </h3>
+          {task.is_mass && (
+            <span className="inline-flex mt-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+              MASS{task.order_count ? ` · ${task.order_count}` : ''}
+            </span>
+          )}
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Design Type: {task.order.design_type}
           </p>
@@ -461,7 +473,7 @@ const StartedAssemblyCard = ({
           ) : (
             <>
               <CheckCircle className="w-4 h-4" />
-              <span>Complete</span>
+              <span>Complete{task.is_mass ? ' Group' : ''}</span>
             </>
           )}
         </button>
@@ -499,8 +511,15 @@ const StartedAssemblyListItem = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-3 mb-2">
             <span className="font-medium text-gray-900 dark:text-white text-sm">
-              ORD-{task.order.order_code}
-              {(task.order as any).order_name && <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>}
+              {task.is_mass && task.mass_range_label ? task.mass_range_label : `ORD-${task.order.order_code}`}
+              {task.is_mass && (
+                <span className="ml-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                  MASS
+                </span>
+              )}
+              {!task.is_mass && (task.order as any).order_name && (
+                <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">— {(task.order as any).order_name}</span>
+              )}
             </span>
             <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs">
               ${task.order.price}
@@ -553,7 +572,7 @@ const StartedAssemblyListItem = ({
             ) : (
               <CheckCircle className="w-3 h-3" />
             )}
-            <span>Complete</span>
+            <span>Complete{task.is_mass ? ' Group' : ''}</span>
           </button>
         </div>
       </div>

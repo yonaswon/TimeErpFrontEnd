@@ -23,6 +23,14 @@ interface AssemblyAssignment {
   start_date: string | null;
   complate_date: string | null;
   date: string;
+  is_mass?: boolean;
+  mass_group?: string | null;
+  mass_order_range_start?: number | null;
+  mass_order_range_end?: number | null;
+  order_count?: number;
+  mass_range_label?: string | null;
+  mass_start_order_code?: number | null;
+  mass_end_order_code?: number | null;
 }
 
 interface TeamMember {
@@ -308,8 +316,15 @@ export const AssemblyTasks = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                        ORD-{assignment.order.order_code}
+                        {assignment.is_mass && assignment.mass_range_label
+                          ? assignment.mass_range_label
+                          : `ORD-${assignment.order.order_code}`}
                       </h3>
+                      {assignment.is_mass && (
+                        <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                          MASS{assignment.order_count ? ` · ${assignment.order_count}` : ''}
+                        </span>
+                      )}
                       <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${statusBadge.bg} ${statusBadge.text}`}>
                         {statusBadge.label}
                       </span>
