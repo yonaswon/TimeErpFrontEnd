@@ -28,6 +28,7 @@ interface FlowEvent {
     sequence: number;
     event_type: string;
     delta: number;
+    display_delta?: number;
     balance_after: number;
     occurred_at: string;
     username: string | null;
@@ -36,6 +37,8 @@ interface FlowEvent {
     order_name?: string;
     order_code?: number | string;
     reason?: string;
+    pending?: boolean;
+    fixed_by?: boolean;
     from_inventory_name?: string;
     to_inventory_name?: string;
 }
@@ -262,6 +265,7 @@ function FlowView({
     const [events, setEvents] = useState<FlowEvent[]>([]);
     const [currentAvailable, setCurrentAvailable] = useState<number>(0);
     const [footprintBalance, setFootprintBalance] = useState<number>(0);
+    const [reconcileOk, setReconcileOk] = useState<boolean | null>(null);
     const [hasOlder, setHasOlder] = useState(false);
     const [loading, setLoading] = useState(true);
     const [loadingOlder, setLoadingOlder] = useState(false);
@@ -279,6 +283,9 @@ function FlowView({
             setEvents(res.data.events || []);
             setCurrentAvailable(res.data.current_available ?? 0);
             setFootprintBalance(res.data.footprint_balance ?? 0);
+            setReconcileOk(
+                typeof res.data.reconcile_ok === 'boolean' ? res.data.reconcile_ok : null
+            );
             setHasOlder(!!res.data.has_older);
         } catch (e) {
             console.error(e);
@@ -355,6 +362,11 @@ function FlowView({
                             </div>
                         </div>
                     </div>
+                    {reconcileOk === false && (
+                        <p className="stock-flow-reconcile-warn" title="Available and ledger still disagree">
+                            Available and ledger do not match yet — history may still be rebuilding.
+                        </p>
+                    )}
                 </div>
 
                 {building && loading && (
@@ -381,36 +393,83 @@ function FlowView({
                                 </div>
                             ) : (
                                 events.map((ev) => {
-                                    const isIn = ev.delta >= 0;
-                                    const sign = isIn ? '+' : '';
+                                    const shownDelta =
+                                        ev.display_delta !== undefined && ev.display_delta !== null
+                                            ? ev.display_delta
+                                            : ev.delta;
+                                    const isIn = shownDelta >= 0 && !ev.pending;
+                                    const sign = shownDelta > 0 ? '+' : '';
                                     const who = ev.username
                                         ? `@${String(ev.username).replace(/^@/, '')}`
                                         : '';
                                     const isAdditional = ev.reason === 'ADD';
+                                    const isPending = !!ev.pending || ev.event_type === 'PENDING_RELEASE';
+                                    const isFixedBy = !!ev.fixed_by || ev.event_type === 'FIXED_BY';
                                     const orderRef =
                                         ev.order_display ||
                                         (ev.order_code != null ? `ORD-${ev.order_code}` : '');
                                     const orderTitle = orderRef
                                         ? `${orderRef}${ev.order_name ? ` · ${ev.order_name}` : ''}`
                                         : ev.label;
-                                    const addTitle = `Additional release for ${orderTitle}`;
-                                    const displayLabel = isAdditional
-                                        ? (ev.label || '').replace(/^Additional release\s*·\s*/i, '') || orderTitle
-                                        : ev.label;
+                                    const addTitle = isPending
+                                        ? `Pending additional release for ${orderTitle} — stock not deducted until confirmed`
+                                        : `Additional release for ${orderTitle}`;
+                                    const displayLabel = isFixedBy
+                                        ? ev.label
+                                        : isAdditional
+                                          ? (ev.label || '').replace(/^Additional release\s*·\s*/i, '') ||
+                                            orderTitle
+                                          : ev.label;
+                                    const rowClass = [
+                                        'stock-flow-row',
+                                        isPending ? 'pending' : isIn ? 'in' : 'out',
+                                        isFixedBy ? 'fixed-by' : '',
+                                    ]
+                                        .filter(Boolean)
+                                        .join(' ');
 
                                     return (
                                         <div
                                             key={ev.id}
-                                            className={`stock-flow-row ${isIn ? 'in' : 'out'}`}
+                                            className={rowClass}
+                                            title={
+                                                isPending
+                                                    ? addTitle
+                                                    : isFixedBy
+                                                      ? ev.label
+                                                      : undefined
+                                            }
                                         >
                                             <span className="stock-flow-delta">
-                                                {sign}{ev.delta}
+                                                {sign}{shownDelta}
                                             </span>
                                             <span
                                                 className="stock-flow-label"
-                                                title={isAdditional ? addTitle : ev.label}
+                                                title={
+                                                    isAdditional || isPending
+                                                        ? addTitle
+                                                        : isFixedBy
+                                                          ? ev.label
+                                                          : ev.label
+                                                }
                                             >
-                                                {isAdditional && (
+                                                {isPending && (
+                                                    <span
+                                                        className="stock-flow-pending-badge"
+                                                        title={addTitle}
+                                                    >
+                                                        pending
+                                                    </span>
+                                                )}
+                                                {isFixedBy && (
+                                                    <span
+                                                        className="stock-flow-fixed-badge"
+                                                        title={ev.label}
+                                                    >
+                                                        fixed
+                                                    </span>
+                                                )}
+                                                {isAdditional && !isPending && !isFixedBy && (
                                                     <span className="stock-flow-add-badge" title={addTitle}>
                                                         <span className="plus">+</span>
                                                         ADD
@@ -422,7 +481,7 @@ function FlowView({
                                                 </span>
                                             </span>
                                             <span className="stock-flow-balance" title="Balance after">
-                                                → {ev.balance_after}
+                                                {isPending ? '—' : `→ ${ev.balance_after}`}
                                             </span>
                                             <span
                                                 className="stock-flow-when"

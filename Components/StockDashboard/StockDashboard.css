@@ -620,6 +620,58 @@
   background: var(--stock-delta-out);
 }
 
+.stock-flow-row.pending {
+  background: rgba(255, 200, 87, 0.12);
+}
+
+.stock-flow-row.pending .stock-flow-delta {
+  color: #b54708;
+  background: rgba(255, 200, 87, 0.35);
+}
+
+.stock-flow-row.fixed-by {
+  background: rgba(105, 65, 198, 0.06);
+}
+
+.stock-flow-row.fixed-by .stock-flow-delta {
+  color: #6941c6;
+  background: rgba(105, 65, 198, 0.12);
+}
+
+.stock-flow-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #b54708;
+  background: rgba(255, 200, 87, 0.35);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.stock-flow-fixed-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6941c6;
+  background: rgba(105, 65, 198, 0.15);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.stock-flow-reconcile-warn {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #b54708;
+}
+
 .stock-flow-delta {
   display: inline-flex;
   justify-content: center;
