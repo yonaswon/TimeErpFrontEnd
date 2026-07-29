@@ -8,6 +8,7 @@ import {
     getWebDashboardChoice,
     getWebDashboardRoles,
     parseUserData,
+    type WebDashboardChoice,
     type WebUserData,
 } from '@/lib/webDashboardAuth';
 
@@ -27,25 +28,29 @@ export default function FinancePage() {
             return;
         }
 
-        const { isAdmin, isFinance, isDual } = getWebDashboardRoles(user);
+        const { isAdmin, isFinance, availableChoices } = getWebDashboardRoles(user);
 
-        if (isAdmin && !isFinance) {
-            router.replace('/admin');
-            return;
-        }
-
-        if (!isAdmin && !isFinance) {
+        // Finance desktop requires Admin + Finance&Accounting
+        if (!isAdmin || !isFinance) {
+            if (availableChoices.includes('admin')) {
+                router.replace('/admin');
+                return;
+            }
+            if (availableChoices.includes('stock')) {
+                router.replace('/stock');
+                return;
+            }
             router.replace('/finance/login');
             return;
         }
 
-        if (isDual) {
+        if (availableChoices.length > 1) {
             const choice = getWebDashboardChoice();
-            if (choice === 'admin') {
-                router.replace('/admin');
+            if (choice && availableChoices.includes(choice) && choice !== 'finance') {
+                router.replace(applyWebDashboardChoice(choice));
                 return;
             }
-            if (!choice) {
+            if (!choice || !availableChoices.includes(choice)) {
                 setUserData(user);
                 setState('picker');
                 return;
@@ -56,12 +61,12 @@ export default function FinancePage() {
         setState('ready');
     }, [router]);
 
-    const handleDashboardSelect = (choice: 'admin' | 'finance') => {
+    const handleDashboardSelect = (choice: WebDashboardChoice) => {
         const path = applyWebDashboardChoice(choice);
-        if (choice === 'admin') {
-            router.replace(path);
-        } else {
+        if (choice === 'finance') {
             setState('ready');
+        } else {
+            router.replace(path);
         }
     };
 
@@ -82,10 +87,12 @@ export default function FinancePage() {
     }
 
     if (state === 'picker' && userData) {
+        const { availableChoices } = getWebDashboardRoles(userData);
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 flex items-center justify-center p-4">
                 <WebDashboardRolePicker
                     userName={userData.telegram_user_name}
+                    availableChoices={availableChoices}
                     onSelect={handleDashboardSelect}
                 />
             </div>

@@ -4,15 +4,23 @@ import { useRouter } from 'next/navigation'
 import api from '@/api'
 import {
     applyWebDashboardChoice,
+    getWebDashboardRoles,
     resolvePostLoginRoute,
+    type WebDashboardChoice,
     type WebUserData,
 } from '@/lib/webDashboardAuth'
 import { WebDashboardRolePicker } from './WebDashboardRolePicker'
 
-type OtpClient = 'web' | 'finance'
+type OtpClient = 'web' | 'finance' | 'stock'
 
 interface OtpLoginProps {
     client?: OtpClient
+}
+
+const CLIENT_META: Record<OtpClient, { title: string; letter: string; color: string }> = {
+    web: { title: 'Admin', letter: 'A', color: '#2563EB' },
+    finance: { title: 'Finance & Accounting', letter: 'F', color: '#7C3AED' },
+    stock: { title: 'Time Stock', letter: 'S', color: '#84CC16' },
 }
 
 export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
@@ -24,8 +32,7 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
     const [loggedInUser, setLoggedInUser] = useState<WebUserData | null>(null)
     const router = useRouter()
 
-    const isFinance = client === 'finance'
-    const title = isFinance ? 'Finance & Accounting' : 'Admin'
+    const meta = CLIENT_META[client]
 
     const handleRequestOtp = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -47,12 +54,17 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
 
     const routeAfterLogin = (user: WebUserData) => {
         const destination = resolvePostLoginRoute(user)
+        if (destination === 'denied') {
+            setError('No desktop dashboard access for this account.')
+            return
+        }
         if (destination === 'picker') {
             setLoggedInUser(user)
             setStep(3)
             return
         }
-        const choice = destination === '/admin' ? 'admin' : 'finance'
+        const choice: WebDashboardChoice =
+            destination === '/admin' ? 'admin' : destination === '/finance' ? 'finance' : 'stock'
         router.push(applyWebDashboardChoice(choice))
     }
 
@@ -78,14 +90,16 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
         }
     }
 
-    const handleDashboardSelect = (choice: 'admin' | 'finance') => {
+    const handleDashboardSelect = (choice: WebDashboardChoice) => {
         router.push(applyWebDashboardChoice(choice))
     }
 
     if (step === 3 && loggedInUser) {
+        const { availableChoices } = getWebDashboardRoles(loggedInUser)
         return (
             <WebDashboardRolePicker
                 userName={loggedInUser.telegram_user_name}
+                availableChoices={availableChoices}
                 onSelect={handleDashboardSelect}
             />
         )
@@ -93,17 +107,16 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
 
     return (
         <div className="w-full max-w-md p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
-            {/* Header */}
             <div className="flex items-center justify-center gap-3 mb-6">
                 <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm"
-                    style={{ background: isFinance ? '#7C3AED' : '#2563EB' }}
+                    style={{ background: meta.color }}
                 >
-                    {isFinance ? 'F' : 'A'}
+                    {meta.letter}
                 </div>
                 <div>
                     <h2 className="text-[18px] font-bold text-gray-900 dark:text-gray-100">
-                        {title} Login
+                        {meta.title} Login
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                         {step === 1 ? 'Enter your Telegram username' : 'Check Telegram for your code'}
@@ -129,7 +142,7 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="@username"
                             className="w-full h-[44px] px-4 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-[#0F172A] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
-                            style={{ '--tw-ring-color': isFinance ? '#7C3AED' : '#2563EB' } as React.CSSProperties}
+                            style={{ '--tw-ring-color': meta.color } as React.CSSProperties}
                             disabled={loading}
                         />
                     </div>
@@ -137,7 +150,7 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
                         type="submit"
                         disabled={loading}
                         className="w-full h-[44px] disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
-                        style={{ background: isFinance ? '#7C3AED' : '#2563EB' }}
+                        style={{ background: meta.color }}
                     >
                         {loading ? 'Sending...' : 'Request OTP'}
                     </button>
@@ -162,7 +175,7 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
                         type="submit"
                         disabled={loading}
                         className="w-full h-[44px] disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
-                        style={{ background: isFinance ? '#7C3AED' : '#2563EB' }}
+                        style={{ background: meta.color }}
                     >
                         {loading ? 'Verifying...' : 'Verify & Login'}
                     </button>
