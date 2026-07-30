@@ -11,7 +11,7 @@ import {
 } from '@/lib/webDashboardAuth'
 import { WebDashboardRolePicker } from './WebDashboardRolePicker'
 
-type OtpClient = 'web' | 'finance' | 'stock'
+type OtpClient = 'web' | 'finance' | 'stock' | 'workshop'
 
 interface OtpLoginProps {
     client?: OtpClient
@@ -21,6 +21,7 @@ const CLIENT_META: Record<OtpClient, { title: string; letter: string; color: str
     web: { title: 'Admin', letter: 'A', color: '#2563EB' },
     finance: { title: 'Finance & Accounting', letter: 'F', color: '#7C3AED' },
     stock: { title: 'Time Stock', letter: 'S', color: '#84CC16' },
+    workshop: { title: 'Time Workshop', letter: 'W', color: '#0D9488' },
 }
 
 export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
@@ -64,7 +65,13 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
             return
         }
         const choice: WebDashboardChoice =
-            destination === '/admin' ? 'admin' : destination === '/finance' ? 'finance' : 'stock'
+            destination === '/admin'
+                ? 'admin'
+                : destination === '/finance'
+                  ? 'finance'
+                  : destination === '/workshop'
+                    ? 'workshop'
+                    : 'stock'
         router.push(applyWebDashboardChoice(choice))
     }
 

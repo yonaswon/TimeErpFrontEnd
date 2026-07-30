@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Package, Wallet } from 'lucide-react';
+import { LayoutDashboard, Package, Wallet, Wrench } from 'lucide-react';
 import type { WebDashboardChoice } from '@/lib/webDashboardAuth';
 
 interface WebDashboardRolePickerProps {
@@ -45,6 +45,15 @@ const ALL_OPTIONS: Array<{
         bg: 'bg-lime-50 dark:bg-lime-900/20',
         Icon: Package,
     },
+    {
+        choice: 'workshop',
+        title: 'Time Workshop',
+        description: 'Workshop Supervisor — inventories and orders',
+        color: '#0D9488',
+        hoverBorder: 'hover:border-teal-500',
+        bg: 'bg-teal-50 dark:bg-teal-900/20',
+        Icon: Wrench,
+    },
 ];
 
 export function WebDashboardRolePicker({
@@ -54,7 +63,7 @@ export function WebDashboardRolePicker({
 }: WebDashboardRolePickerProps) {
     const choices = availableChoices?.length
         ? ALL_OPTIONS.filter((o) => availableChoices.includes(o.choice))
-        : ALL_OPTIONS.filter((o) => o.choice !== 'stock');
+        : ALL_OPTIONS.filter((o) => o.choice !== 'stock' && o.choice !== 'workshop');
 
     return (
         <div className="w-full max-w-md p-4 bg-white dark:bg-[#1E293B] rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">

@@ -40,6 +40,10 @@ export default function FinancePage() {
                 router.replace('/stock');
                 return;
             }
+            if (availableChoices.includes('workshop')) {
+                router.replace('/workshop');
+                return;
+            }
             router.replace('/finance/login');
             return;
         }

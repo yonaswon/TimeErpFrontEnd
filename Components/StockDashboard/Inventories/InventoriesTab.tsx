@@ -48,7 +48,11 @@ type View =
     | { kind: 'materials'; inventory: InventoryRow }
     | { kind: 'flow'; inventory: InventoryRow; material: InvMaterial };
 
-export default function InventoriesTab() {
+export default function InventoriesTab({
+    audience = 'stock',
+}: {
+    audience?: 'stock' | 'workshop';
+}) {
     const [view, setView] = useState<View>({ kind: 'list' });
     const [rows, setRows] = useState<InventoryRow[]>([]);
     const [search, setSearch] = useState('');
@@ -57,8 +61,11 @@ export default function InventoriesTab() {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const params = search ? `?search=${encodeURIComponent(search)}` : '';
-            const res = await api.get(`/stock-dashboard/inventories/${params}`);
+            const params = new URLSearchParams();
+            if (search) params.set('search', search);
+            if (audience === 'workshop') params.set('audience', 'workshop');
+            const qs = params.toString();
+            const res = await api.get(`/stock-dashboard/inventories/${qs ? `?${qs}` : ''}`);
             setRows(res.data.results || []);
         } catch (e) {
             console.error(e);
@@ -66,7 +73,7 @@ export default function InventoriesTab() {
         } finally {
             setLoading(false);
         }
-    }, [search]);
+    }, [search, audience]);
 
     useEffect(() => {
         if (view.kind === 'list') load();
@@ -77,6 +84,7 @@ export default function InventoriesTab() {
             <FlowView
                 inventory={view.inventory}
                 material={view.material}
+                audience={audience}
                 onBack={() => setView({ kind: 'materials', inventory: view.inventory })}
             />
         );
@@ -86,6 +94,7 @@ export default function InventoriesTab() {
         return (
             <InventoryMaterialsView
                 inventory={view.inventory}
+                audience={audience}
                 onBack={() => setView({ kind: 'list' })}
                 onSelectMaterial={(m) =>
                     setView({ kind: 'flow', inventory: view.inventory, material: m })
@@ -150,10 +159,12 @@ export default function InventoriesTab() {
 
 function InventoryMaterialsView({
     inventory,
+    audience = 'stock',
     onBack,
     onSelectMaterial,
 }: {
     inventory: InventoryRow;
+    audience?: 'stock' | 'workshop';
     onBack: () => void;
     onSelectMaterial: (m: InvMaterial) => void;
 }) {
@@ -170,6 +181,7 @@ function InventoryMaterialsView({
                 const params = new URLSearchParams({ page_size: '100' });
                 if (search) params.set('search', search);
                 if (typeFilter) params.set('type', typeFilter);
+                if (audience === 'workshop') params.set('audience', 'workshop');
                 const res = await api.get(
                     `/stock-dashboard/inventories/${inventory.id}/materials/?${params}`
                 );
@@ -183,7 +195,7 @@ function InventoryMaterialsView({
         return () => {
             cancelled = true;
         };
-    }, [inventory.id, search, typeFilter]);
+    }, [inventory.id, search, typeFilter, audience]);
 
     return (
         <motion.div
@@ -256,10 +268,12 @@ function InventoryMaterialsView({
 function FlowView({
     inventory,
     material,
+    audience = 'stock',
     onBack,
 }: {
     inventory: InventoryRow;
     material: InvMaterial;
+    audience?: 'stock' | 'workshop';
     onBack: () => void;
 }) {
     const [events, setEvents] = useState<FlowEvent[]>([]);
@@ -273,12 +287,14 @@ function FlowView({
     const listRef = useRef<HTMLDivElement>(null);
     const didScroll = useRef(false);
 
+    const audienceQs = audience === 'workshop' ? '&audience=workshop' : '';
+
     const load = useCallback(async () => {
         setLoading(true);
         setBuilding(true);
         try {
             const res = await api.get(
-                `/stock-dashboard/inventories/${inventory.id}/materials/${material.id}/flow/?page_size=50`
+                `/stock-dashboard/inventories/${inventory.id}/materials/${material.id}/flow/?page_size=50${audienceQs}`
             );
             setEvents(res.data.events || []);
             setCurrentAvailable(res.data.current_available ?? 0);
@@ -294,7 +310,7 @@ function FlowView({
             setLoading(false);
             setBuilding(false);
         }
-    }, [inventory.id, material.id]);
+    }, [inventory.id, material.id, audienceQs]);
 
     useEffect(() => {
         didScroll.current = false;
@@ -315,7 +331,7 @@ function FlowView({
         const prevHeight = listRef.current?.scrollHeight || 0;
         try {
             const res = await api.get(
-                `/stock-dashboard/inventories/${inventory.id}/materials/${material.id}/flow/?page_size=50&before_sequence=${oldest}`
+                `/stock-dashboard/inventories/${inventory.id}/materials/${material.id}/flow/?page_size=50&before_sequence=${oldest}${audienceQs}`
             );
             const older: FlowEvent[] = res.data.events || [];
             setEvents((prev) => [...older, ...prev]);
