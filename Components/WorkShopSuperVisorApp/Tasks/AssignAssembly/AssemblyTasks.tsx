@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Wrench, Users, Calendar, Edit, AlertCircle, CheckCircle, X, Save, Loader2, ChevronDown } from 'lucide-react';
 import api from '@/api';
+import AssemblyBomList from '@/Components/shared/AssemblyBomList';
 
 interface AssemblyAssignment {
   id: number;
@@ -15,6 +16,17 @@ interface AssemblyAssignment {
     mockup_modification: any;
     mockup_image: string | null;
     price: number;
+    boms?: Array<{
+      id: number;
+      amount?: string | number;
+      released?: boolean;
+      material: number | {
+        id: number;
+        name: string;
+        type: string;
+        code_name?: string | null;
+      };
+    }>;
   };
   assigned_to: TeamMember[];
   status: string;
@@ -379,6 +391,8 @@ export const AssemblyTasks = () => {
                       <span>Due: {formatDate(assignment.schedule_complate_date)}</span>
                     </div>
                   </div>
+
+                  <AssemblyBomList boms={assignment.order?.boms as any} />
                 </div>
               </div>
             );

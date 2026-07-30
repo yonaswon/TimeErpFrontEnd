@@ -3,6 +3,7 @@ import { Play, Grid, List, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 import api from '@/api';
 import { ArealMaterialPromptOverlay } from './ArealMaterialPromptOverlay';
+import AssemblyBomList from '@/Components/shared/AssemblyBomList';
 
 interface AssemblyAssignment {
   id: number;
@@ -18,7 +19,13 @@ interface AssemblyAssignment {
       total_price: string;
       estimated_price: string;
       date: string;
-      material: number;
+      released?: boolean;
+      material: number | {
+        id: number;
+        name: string;
+        type: string;
+        code_name?: string | null;
+      };
     }>;
     mockup: {
       id: number;
@@ -407,12 +414,14 @@ const AssemblyTaskCard = ({
         </div>
       )}
 
+      <AssemblyBomList boms={task.order?.boms as any} />
+
       {/* Start Button */}
       {canStart ? (
         <button
           onClick={() => onStart(task.id)}
           disabled={isStarting}
-          className="w-full flex items-center justify-center space-x-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="w-full flex items-center justify-center space-x-2 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           {isStarting ? (
             <>
@@ -486,6 +495,7 @@ const AssemblyTaskListItem = ({
             <span>Cutting: {completedCuttingFiles}/{totalCuttingFiles}</span>
             <span>Design: {task.order.design_type}</span>
           </div>
+          <AssemblyBomList boms={task.order?.boms as any} className="mt-2" />
         </div>
 
         <div className="flex items-center space-x-2 ml-4">

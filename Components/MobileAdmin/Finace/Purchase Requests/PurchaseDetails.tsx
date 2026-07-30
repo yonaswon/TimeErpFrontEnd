@@ -23,6 +23,7 @@ interface PurchaseDetailsProps {
 
 export const PurchaseDetails = ({ purchase, onClose, onConfirm, showConfirm = true }: PurchaseDetailsProps) => {
   const [expandedImage, setExpandedImage] = useState<string | null>(null)
+  const [copiedField, setCopiedField] = useState<'name' | 'number' | null>(null)
 
   const handleDownload = async (url: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -30,6 +31,18 @@ export const PurchaseDetails = ({ purchase, onClose, onConfirm, showConfirm = tr
       await downloadFileInTelegram(url, `purchase-document-${purchase.id}.jpg`)
     } catch (error) {
       console.error('Download failed:', error)
+    }
+  }
+
+  const copyText = async (text: string, field: 'name' | 'number') => {
+    const value = (text || '').trim()
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedField(field)
+      window.setTimeout(() => setCopiedField(null), 1500)
+    } catch (err) {
+      console.error('Copy failed:', err)
     }
   }
 
@@ -118,12 +131,32 @@ export const PurchaseDetails = ({ purchase, onClose, onConfirm, showConfirm = tr
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">Payment To</p>
-                  <p className="text-sm font-semibold text-[#111827] dark:text-[#F1F5F9]">
+                  <button
+                    type="button"
+                    onClick={() => copyText(purchase.to_account_name, 'name')}
+                    className="block w-full text-left text-sm font-semibold text-[#111827] dark:text-[#F1F5F9] min-h-[44px] py-1 active:opacity-70"
+                    title="Tap to copy"
+                  >
                     {purchase.to_account_name}
-                  </p>
-                  <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] font-mono mt-0.5">
+                    {copiedField === 'name' && (
+                      <span className="ml-2 text-xs font-medium text-[#16A34A] dark:text-[#22C55E]">
+                        Copied
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyText(purchase.to_account_number, 'number')}
+                    className="block w-full text-left text-xs text-[#6B7280] dark:text-[#94A3B8] font-mono mt-0.5 min-h-[44px] py-1 active:opacity-70"
+                    title="Tap to copy"
+                  >
                     {purchase.to_account_number}
-                  </p>
+                    {copiedField === 'number' && (
+                      <span className="ml-2 text-xs font-medium text-[#16A34A] dark:text-[#22C55E] font-sans">
+                        Copied
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

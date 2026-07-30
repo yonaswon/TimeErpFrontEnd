@@ -40,6 +40,9 @@ export const CuttingFileComponent = () => {
   const [sheets, setSheets] = useState<{ id: number; code: number; material_name: string; label: string }[]>([]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetchSeqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const isFirstFilterEffect = useRef(true);
 
   // Build the API URL with current search/filter params
   const buildApiUrl = useCallback((extraParams?: string) => {
@@ -55,15 +58,20 @@ export const CuttingFileComponent = () => {
   }, [searchQuery, filterMaterial, filterSheet, filterOrderCode]);
 
   const fetchCuttingFiles = useCallback(async (url?: string, isLoadMore: boolean = false) => {
+    const seq = ++fetchSeqRef.current;
+    if (!isLoadMore) {
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+    }
+    const signal = isLoadMore ? undefined : abortRef.current?.signal;
+
     try {
       if (isLoadMore) {
         setLoadingMore(true);
-      } else if (cuttingFiles.length > 0) {
-        setSearching(true);
       } else {
-        setInitialLoading(true);
+        setSearching(true);
+        setError(null);
       }
-      setError(null);
 
       let requestUrl = url || buildApiUrl();
       if (url) {
@@ -76,7 +84,13 @@ export const CuttingFileComponent = () => {
         }
       }
 
-      const response = await api.get<CuttingFileResponse>(requestUrl);
+      const response = await api.get<CuttingFileResponse>(requestUrl, {
+        signal,
+      });
+
+      // Ignore stale responses (e.g. slow unfiltered fetch after order_code filter)
+      if (seq !== fetchSeqRef.current) return;
+
       if (isLoadMore) {
         setCuttingFiles(prev => [...prev, ...response.data.results]);
       } else {
@@ -84,12 +98,24 @@ export const CuttingFileComponent = () => {
       }
       setNextPageUrl(response.data.next);
       setTotalCount(response.data.count || 0);
-    } catch (err) {
-      setError('Failed to fetch cutting files');
+    } catch (err: any) {
+      if (
+        err?.name === 'CanceledError' ||
+        err?.code === 'ERR_CANCELED' ||
+        err?.name === 'AbortError'
+      ) {
+        return;
+      }
+      if (seq !== fetchSeqRef.current) return;
+      if (!isLoadMore) {
+        setError('Failed to fetch cutting files');
+      }
     } finally {
-      setInitialLoading(false);
-      setLoadingMore(false);
-      setSearching(false);
+      if (seq === fetchSeqRef.current) {
+        setInitialLoading(false);
+        setLoadingMore(false);
+        setSearching(false);
+      }
     }
   }, [buildApiUrl]);
 
@@ -113,21 +139,18 @@ export const CuttingFileComponent = () => {
     fetchSheets();
   }, []);
 
-  // Initial load
-  useEffect(() => {
-    fetchCuttingFiles();
-  }, []);
-
-  // Debounced search — re-fetch when search/filter changes
+  // Single load path: initial + debounced search/filter changes (no double mount fetch)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const delay = isFirstFilterEffect.current ? 0 : 400;
+    isFirstFilterEffect.current = false;
     debounceRef.current = setTimeout(() => {
       fetchCuttingFiles();
-    }, 400);
+    }, delay);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchQuery, filterMaterial, filterSheet, filterOrderCode]);
+  }, [searchQuery, filterMaterial, filterSheet, filterOrderCode, fetchCuttingFiles]);
 
   // WebSocket: real-time analysis status updates (no polling, no list reload)
   useEffect(() => {

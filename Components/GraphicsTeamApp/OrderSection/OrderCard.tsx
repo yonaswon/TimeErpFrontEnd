@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Order } from './types'
+import { getBomEditMode } from './types'
 import OrderDetailOverlay from './OrderDetailOverlay'
 import BomFormOverlay from './BomFormOverlay'
 import { FileUp, Download, Trash2, CheckCircle, XCircle } from 'lucide-react'
@@ -18,12 +18,10 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
   const [togglingDxfReady, setTogglingDxfReady] = useState(false)
   const [deletingDxfId, setDeletingDxfId] = useState<number | null>(null)
 
-  // Sync local state when parent refetches new data
   useEffect(() => {
     setOrder(initialOrder)
   }, [initialOrder])
 
-  // Get user data from localStorage
   const getUserData = () => {
     try {
       return JSON.parse(localStorage.getItem('user_data') || '{}')
@@ -34,10 +32,10 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
 
   const userData = getUserData()
   const currentUserTelegramId = userData.telegram_id
-  const currentUserName = userData.telegram_user_name
 
   const isAssignedToMe = order.mockup?.designer.telegram_id === currentUserTelegramId
   const hasBom = order.boms.length > 0
+  const bomMode = getBomEditMode(order.order_status)
 
   const toggleDxfReady = async () => {
     try {
@@ -57,7 +55,6 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
     try {
       setDeletingDxfId(dxfId)
       await api.delete(`/api/orders/${order.order_code}/delete_dxf/${dxfId}/`)
-      // Re-fetch order to get updated dxf_files
       const orderResponse = await api.get(`/api/orders/${order.order_code}/`)
       setOrder(orderResponse.data)
       onRefresh()
@@ -86,13 +83,15 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
   }
 
   const formatStatus = (status: string) => {
-    return status.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    return status.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
   }
+
+  const bomButtonLabel =
+    bomMode === 'add_only' ? 'Add materials' : hasBom ? 'Edit BOM' : 'Fill BOM'
 
   return (
     <>
-      <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
-        {/* Header */}
+      <div className="bg-white dark:bg-zinc-800 rounded-xl p-4 border border-gray-200 dark:border-zinc-700 shadow-sm">
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -146,7 +145,6 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
           </div>
         </div>
 
-        {/* BOM Status */}
         <div className="mb-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -157,39 +155,55 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
             </span>
           </div>
 
-          {!hasBom && isAssignedToMe && (
+          {!hasBom && isAssignedToMe && bomMode === 'free' && (
             <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
               You need to fill the BOM for this order
             </div>
           )}
+          {bomMode === 'add_only' && (
+            <div className="mt-2 text-sm text-[#F59E0B]">
+              Assembly started — you can only add new materials; amounts of existing lines are locked.
+            </div>
+          )}
+          {bomMode === 'locked' && (
+            <div className="mt-2 text-sm text-[#6B7280] dark:text-[#94A3B8]">
+              Assembly completed — BOM editing is closed for graphic design.
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={() => setShowDetailOverlay(true)}
-            className="flex-1 px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors"
+            className="flex-1 min-h-[44px] px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors"
           >
             View Details
           </button>
 
-          <button
-            onClick={() => setShowBomOverlay(true)}
-            className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors ${hasBom
-              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
-              : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40'
+          {bomMode !== 'locked' && (
+            <button
+              type="button"
+              onClick={() => setShowBomOverlay(true)}
+              className={`flex-1 min-h-[44px] px-3 py-2 text-sm rounded-lg transition-colors ${
+                bomMode === 'add_only'
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/40'
+                  : hasBom
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40'
+                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40'
               }`}
-          >
-            {hasBom ? 'Edit BOM' : 'Fill BOM'}
-          </button>
+            >
+              {bomButtonLabel}
+            </button>
+          )}
 
-          {/* DXF Ready Toggle - only show when DXF files exist */}
           {(order.dxf_files?.flatMap((d: any) => d.dxf_file).length || 0) > 0 && (
             <button
+              type="button"
               onClick={toggleDxfReady}
               disabled={togglingDxfReady}
               title={order.dxf_file_ready ? 'DXF Ready — click to unmark' : 'Mark DXF as Ready'}
-              className={`px-2.5 py-2 rounded-lg transition-colors flex items-center justify-center ${order.dxf_file_ready
+              className={`min-h-[44px] px-2.5 py-2 rounded-lg transition-colors flex items-center justify-center ${order.dxf_file_ready
                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/40'
                 : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800/40'
                 } disabled:opacity-50`}
@@ -205,7 +219,6 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
           )}
         </div>
 
-        {/* DXF Files List at Bottom */}
         {(order.dxf_files?.flatMap((d: any) => d.dxf_file).length || 0) > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-700 space-y-2">
             <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
@@ -224,7 +237,6 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
                     </span>
 
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      {/* Download */}
                       <a
                         href={url}
                         download={fileName}
@@ -235,8 +247,8 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
                       >
                         <Download className="w-4 h-4" />
                       </a>
-                      {/* Delete */}
                       <button
+                        type="button"
                         onClick={() => deleteDxfFile(file.id)}
                         disabled={deletingDxfId === file.id}
                         className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md hover:bg-red-200 dark:hover:bg-red-800/40 transition-colors disabled:opacity-50"
@@ -257,7 +269,6 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
         )}
       </div>
 
-      {/* Overlays */}
       {showDetailOverlay && (
         <OrderDetailOverlay
           order={order}
@@ -266,7 +277,7 @@ const OrderCard = ({ order: initialOrder, onRefresh }: OrderCardProps) => {
         />
       )}
 
-      {showBomOverlay && (
+      {showBomOverlay && bomMode !== 'locked' && (
         <BomFormOverlay
           order={order}
           onClose={() => setShowBomOverlay(false)}

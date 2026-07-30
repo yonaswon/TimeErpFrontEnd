@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle, Grid, List, AlertCircle, Clock, Package } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { CheckCircle, Grid, List, AlertCircle, Clock, Package, Search } from 'lucide-react';
 import api from '@/api';
 import { useSidebar } from "@/Components/GlobalComponents/SideBar/SidebarContext";
 import { ReleaseOverlay } from "./ReleaseOverlay";
 import ReleaseContent from "./Release/ReleaseContent";
+import AssemblyBomList from '@/Components/shared/AssemblyBomList';
 
 interface AssemblyAssignment {
   id: number;
   order: {
     order_code: number;
+    order_name?: string;
     boms: Array<{
       id: number;
       amount: string;
@@ -18,7 +20,13 @@ interface AssemblyAssignment {
       total_price: string;
       estimated_price: string;
       date: string;
-      material: number;
+      released?: boolean;
+      material: number | {
+        id: number;
+        name: string;
+        type: string;
+        code_name?: string | null;
+      };
     }>;
     mockup: {
       id: number;
@@ -70,9 +78,14 @@ export const CompletedAssembly = () => {
   const [viewMode, setViewMode] = useState<TaskView>('card');
   const [tasks, setTasks] = useState<AssemblyAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [releaseOverlay, setReleaseOverlay] = useState<{
     isOpen: boolean;
     task: AssemblyAssignment | null;
@@ -80,15 +93,21 @@ export const CompletedAssembly = () => {
     isOpen: false,
     task: null,
   });
-  const { openSidebar } = useSidebar();
 
   useEffect(() => {
-    fetchCompletedTasks();
-  }, [currentPage]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 350);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchInput]);
 
-  const openReleaseSideBar = (id: any) => {
-    openSidebar(<ReleaseContent id={id} />, `Releases ORD-${id}`);
-  };
+  useEffect(() => {
+    fetchCompletedTasks(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const openReleaseOverlay = (task: AssemblyAssignment) => {
     setReleaseOverlay({
@@ -104,12 +123,16 @@ export const CompletedAssembly = () => {
     });
   };
 
-  const fetchCompletedTasks = async () => {
+  const fetchCompletedTasks = async (pageNum = 1, append = false) => {
     try {
-      setLoading(true);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setSearching(true);
+        if (tasks.length === 0) setLoading(true);
+      }
       setError(null);
 
-      // Get user data from localStorage
       const userData = localStorage.getItem('user_data');
       if (!userData) {
         throw new Error('User data not found');
@@ -118,15 +141,34 @@ export const CompletedAssembly = () => {
       const user = JSON.parse(userData);
       const userId = user.id;
 
-      const response = await api.get(`/api/assembly-assign/?status=COMPLATED&assigned_to=${userId}&ordering=-date&page=${currentPage}`);
-      setTasks(response.data.results || []);
-      setTotalPages(Math.ceil(response.data.count / 10));
+      const params = new URLSearchParams({
+        status: 'COMPLATED',
+        assigned_to: String(userId),
+        ordering: '-date',
+        p: String(pageNum),
+      });
+      if (searchQuery) {
+        params.set('search', searchQuery);
+      }
+
+      const response = await api.get(`/api/assembly-assign/?${params.toString()}`);
+      const results = response.data.results || [];
+      setTasks((prev) => (append ? [...prev, ...results] : results));
+      setPage(pageNum);
+      setHasMore(!!response.data.next);
     } catch (err: any) {
       setError('Failed to fetch completed assembly tasks');
       console.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setSearching(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    fetchCompletedTasks(page + 1, true);
   };
 
   const formatDateTime = (dateString: string | null) => {
@@ -169,28 +211,52 @@ export const CompletedAssembly = () => {
     return `${sign}${minutes}m`;
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  if (loading) {
+  if (loading && tasks.length === 0) {
     return (
-      <div className="bg-white dark:bg-zinc-800 rounded-lg p-8 border border-gray-200 dark:border-zinc-700 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="text-gray-600 dark:text-gray-400 mt-3">Loading completed assembly tasks...</p>
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280] dark:text-[#94A3B8]" />
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by order code or name…"
+            className="w-full h-11 pl-10 pr-4 text-base rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-[#111827] dark:text-[#F1F5F9] placeholder:text-[#6B7280]"
+          />
+        </div>
+        <div className="bg-white dark:bg-zinc-800 rounded-xl p-8 border border-gray-200 dark:border-zinc-700 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400 mt-3">Loading completed assembly tasks...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* View Toggle */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280] dark:text-[#94A3B8]" />
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search by order code or name…"
+          className="w-full h-11 pl-10 pr-4 text-base rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-[#111827] dark:text-[#F1F5F9] placeholder:text-[#6B7280]"
+        />
+        {searching && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#2563EB]" />
+          </div>
+        )}
+      </div>
+
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
           Completed Assembly Tasks ({tasks.length})
         </h2>
         <div className="bg-gray-100 dark:bg-zinc-700 rounded-lg p-1 flex">
           <button
+            type="button"
             onClick={() => setViewMode('card')}
             className={`p-2 rounded-md transition-colors ${viewMode === 'card'
               ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
@@ -201,6 +267,7 @@ export const CompletedAssembly = () => {
             <Grid className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={() => setViewMode('list')}
             className={`p-2 rounded-md transition-colors ${viewMode === 'list'
               ? 'bg-white dark:bg-zinc-600 text-blue-600 shadow-sm'
@@ -221,8 +288,12 @@ export const CompletedAssembly = () => {
       )}
 
       {tasks.length === 0 ? (
-        <div className="bg-white dark:bg-zinc-800 rounded-lg p-8 border border-gray-200 dark:border-zinc-700 text-center">
-          <p className="text-gray-600 dark:text-gray-400">No completed assembly tasks found</p>
+        <div className="bg-white dark:bg-zinc-800 rounded-xl p-8 border border-gray-200 dark:border-zinc-700 text-center">
+          <p className="text-base text-gray-600 dark:text-gray-400">
+            {searchQuery
+              ? 'No completed tasks match your search'
+              : 'No completed assembly tasks found'}
+          </p>
         </div>
       ) : (
         <div className={viewMode === 'card' ? 'space-y-4' : 'space-y-2'}>
@@ -250,30 +321,22 @@ export const CompletedAssembly = () => {
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center space-x-2 mt-6">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300'
-                }`}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
+      {hasMore && (
+        <button
+          type="button"
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+          className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-base font-medium text-[#111827] dark:text-[#F1F5F9] disabled:opacity-50"
+        >
+          {loadingMore ? 'Loading…' : 'Load more'}
+        </button>
       )}
 
-      {/* Release Overlay */}
       {releaseOverlay.isOpen && releaseOverlay.task && (
         <ReleaseOverlay
           task={releaseOverlay.task}
           onClose={closeReleaseOverlay}
-          onSuccess={fetchCompletedTasks}
+          onSuccess={() => fetchCompletedTasks(1, false)}
         />
       )}
     </div>
@@ -426,8 +489,10 @@ const CompletedAssemblyCard = ({
         </div>
       )}
 
+      <AssemblyBomList boms={task.order?.boms as any} />
+
       {/* Action Buttons */}
-      <div className="flex space-x-3">
+      <div className="flex space-x-3 mt-4">
         <button
           onClick={() => openReleaseSideBar(task.order.order_code)}
           className="flex-1 flex items-center justify-center space-x-2 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
@@ -511,6 +576,7 @@ const CompletedAssemblyListItem = ({
             <span className="shrink-0">Completed: {formatDateTime(task.complate_date)}</span>
             <span className="shrink-0">Team: {task.assigned_to.length} members</span>
           </div>
+          <AssemblyBomList boms={task.order?.boms as any} className="mt-2" />
         </div>
 
         <div className="flex items-center space-x-2 ml-4 shrink-0">

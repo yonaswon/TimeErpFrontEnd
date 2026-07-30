@@ -129,4 +129,29 @@ export interface BomFormData {
   amount: string;
   width: string;
   height: string;
+  /** Existing BOM id — required for append-only edit after assembly started */
+  bom_id?: number;
+  /** Locked existing row in add_only mode */
+  locked?: boolean;
+}
+
+export type BomEditMode = 'free' | 'add_only' | 'locked';
+
+const BOM_STATUS_RANK: Record<string, number> = {
+  'PRE-ACCEPTED': 0,
+  'PRE-CONFIRMED': 1,
+  'CNC-STARTED': 2,
+  'CNC-COMPLETED': 3,
+  'ASSEMBLY-STARTED': 4,
+  'ASSEMBLY-COMPLETED': 5,
+  'DANDI-STARTED': 6,
+  'REM-ACCEPTED': 7,
+  'REM-CONFIRMED': 8,
+};
+
+export function getBomEditMode(orderStatus: string): BomEditMode {
+  const rank = BOM_STATUS_RANK[orderStatus] ?? -1;
+  if (rank >= BOM_STATUS_RANK['ASSEMBLY-COMPLETED']) return 'locked';
+  if (rank === BOM_STATUS_RANK['ASSEMBLY-STARTED']) return 'add_only';
+  return 'free';
 }

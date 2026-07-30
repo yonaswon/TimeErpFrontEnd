@@ -71,6 +71,10 @@ interface AssemblyAssignment {
 }
 import { ReleaseOverlay } from "./ReleaseOverlay";
 import ReleaseContent from "./Release/ReleaseContent";
+import CompleteReleaseOverlay, {
+  type UnreleasedBomRow,
+} from "./CompleteReleaseOverlay";
+import AssemblyBomList from "@/Components/shared/AssemblyBomList";
 
 type TaskView = "card" | "list";
 
@@ -78,10 +82,15 @@ export const StartedAssembly = () => {
   const [viewMode, setViewMode] = useState<TaskView>("card");
   const [tasks, setTasks] = useState<AssemblyAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [completingTask, setCompletingTask] = useState<number | null>(null);
+  const [completeRelease, setCompleteRelease] = useState<{
+    assemblyId: number;
+    unreleasedBoms: UnreleasedBomRow[];
+  } | null>(null);
   const [releaseOverlay, setReleaseOverlay] = useState<{
     isOpen: boolean;
     task: AssemblyAssignment | null;
@@ -96,15 +105,15 @@ export const StartedAssembly = () => {
   };
 
   useEffect(() => {
-    fetchStartedTasks();
-  }, [currentPage]);
+    fetchStartedTasks(1, false);
+  }, []);
 
-  const fetchStartedTasks = async () => {
+  const fetchStartedTasks = async (pageNum = 1, append = false) => {
     try {
-      setLoading(true);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       setError(null);
 
-      // Get user data from localStorage
       const userData = localStorage.getItem("user_data");
       if (!userData) {
         throw new Error("User data not found");
@@ -114,16 +123,24 @@ export const StartedAssembly = () => {
       const userId = user.id;
 
       const response = await api.get(
-        `/api/assembly-assign/?status=STARTED&assigned_to=${userId}&p=${currentPage}`
+        `/api/assembly-assign/?status=STARTED&assigned_to=${userId}&p=${pageNum}`
       );
-      setTasks(response.data.results || []);
-      setTotalPages(Math.ceil(response.data.count / 10));
+      const results = response.data.results || [];
+      setTasks((prev) => (append ? [...prev, ...results] : results));
+      setPage(pageNum);
+      setHasMore(!!response.data.next);
     } catch (err: any) {
       setError("Failed to fetch started assembly tasks");
       console.error("Error fetching tasks:", err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    fetchStartedTasks(page + 1, true);
   };
 
   const handleComplete = async (assemblyId: number) => {
@@ -131,13 +148,22 @@ export const StartedAssembly = () => {
       setCompletingTask(assemblyId);
       setError(null);
 
-      await api.post(`/api/assembly-assign/${assemblyId}/complete/`);
+      const res = await api.post(`/api/assembly-assign/${assemblyId}/complete/`);
+      if (res.data?.release_prompt_needed) {
+        setCompleteRelease({
+          assemblyId,
+          unreleasedBoms: res.data.unreleased_boms || [],
+        });
+        return;
+      }
 
-      // Refresh the task list
-      fetchStartedTasks();
+      fetchStartedTasks(1, false);
     } catch (err: any) {
       console.error("Error completing task:", err);
-      setError("Failed to complete task. Please try again.");
+      setError(
+        err.response?.data?.error ||
+          "Failed to complete task. Please try again."
+      );
     } finally {
       setCompletingTask(null);
     }
@@ -176,10 +202,6 @@ export const StartedAssembly = () => {
       return `${hours}h ${minutes}m`;
     }
     return `${minutes}m`;
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
   };
 
   if (loading) {
@@ -262,29 +284,32 @@ export const StartedAssembly = () => {
           )}
         </div>
       )}
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center space-x-2 mt-6">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-lg text-sm ${currentPage === page
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300"
-                }`}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
+      {hasMore && (
+        <button
+          type="button"
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+          className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-base font-medium text-[#111827] dark:text-[#F1F5F9] disabled:opacity-50"
+        >
+          {loadingMore ? "Loading…" : "Load more"}
+        </button>
       )}
-      {/* Release Overlay */}
       {releaseOverlay.isOpen && releaseOverlay.task && (
         <ReleaseOverlay
           task={releaseOverlay.task}
           onClose={closeReleaseOverlay}
-          onSuccess={fetchStartedTasks} // Refresh the task list on success
+          onSuccess={() => fetchStartedTasks(1, false)}
+        />
+      )}
+      {completeRelease && (
+        <CompleteReleaseOverlay
+          assemblyId={completeRelease.assemblyId}
+          unreleasedBoms={completeRelease.unreleasedBoms}
+          onClose={() => setCompleteRelease(null)}
+          onSuccess={() => {
+            setCompleteRelease(null);
+            fetchStartedTasks(1, false);
+          }}
         />
       )}
     </div>
@@ -443,8 +468,10 @@ const StartedAssemblyCard = ({
         </div>
       )}
 
+      <AssemblyBomList boms={task.order?.boms as any} />
+
       {/* Action Buttons */}
-      <div className="flex space-x-3">
+      <div className="flex space-x-3 mt-4">
         <button
           onClick={() => openReleaseSideBar(task.order.order_code)}
           className="flex-1 flex items-center justify-center space-x-2 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
@@ -545,6 +572,7 @@ const StartedAssemblyListItem = ({
             </span>
             <span className="shrink-0">Design: {task.order.design_type}</span>
           </div>
+          <AssemblyBomList boms={task.order?.boms as any} className="mt-2" />
         </div>
 
         <div className="flex items-center space-x-2 ml-4 shrink-0">
