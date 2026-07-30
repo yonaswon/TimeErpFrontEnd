@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Search, X } from "lucide-react";
 import api from "@/api";
 import OrderCard from "./OrderCard";
 import { Order, OrdersResponse } from "./types";
@@ -11,11 +12,17 @@ const OrderList = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   type FilterType = "ALL" | "ASSIGNED" | "FILLED" | "PENDING";
   const [activeFilter, setActiveFilter] = useState<FilterType>("ASSIGNED");
 
-  // Get user data
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const getUserData = () => {
     try {
       return JSON.parse(localStorage.getItem('user_data') || '{}');
@@ -24,9 +31,9 @@ const OrderList = () => {
     }
   };
   const userData = getUserData();
-  const userId = userData.user_id; // Assuming user_id is active user ID
+  const userId = userData.user_id;
 
-  const fetchOrders = async (pageNum: number = 1, isLoadMore: boolean = false) => {
+  const fetchOrders = useCallback(async (pageNum: number = 1, isLoadMore: boolean = false) => {
     try {
       if (isLoadMore) {
         setLoadingMore(true);
@@ -36,7 +43,6 @@ const OrderList = () => {
 
       let query = `/api/orders/?ordering=-created_at&p=${pageNum}`;
 
-      // Apply filters
       if (activeFilter === "ASSIGNED" && userId) {
         query += `&designer=${userId}`;
       } else if (activeFilter === "FILLED") {
@@ -44,7 +50,10 @@ const OrderList = () => {
       } else if (activeFilter === "PENDING") {
         query += `&is_filled=false&hide_duplicate_siblings=true`;
       }
-      // "ALL" doesn't need extra params
+
+      if (debouncedSearch) {
+        query += `&search=${encodeURIComponent(debouncedSearch)}`;
+      }
 
       const response: any = await api.get(query);
       const data: OrdersResponse = response.data;
@@ -63,14 +72,13 @@ const OrderList = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [activeFilter, debouncedSearch, userId]);
 
-  // Reset and fetch when filter changes
   useEffect(() => {
-    setOrders([]); // Clear old orders to show the loading spinner
+    setOrders([]);
     setPage(1);
     fetchOrders(1, false);
-  }, [activeFilter]);
+  }, [activeFilter, debouncedSearch, fetchOrders]);
 
   const handleLoadMore = () => {
     if (hasNext) {
@@ -87,33 +95,35 @@ const OrderList = () => {
     { id: "PENDING", label: "Pending" },
   ];
 
-  if (loading && !loadingMore && orders.length === 0) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error && orders.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-red-600 dark:text-red-400 mb-4">
-          Error: {error}
-        </div>
-        <button
-          onClick={() => fetchOrders(1, false)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
+  const isSearching = search.trim() !== debouncedSearch;
 
   return (
     <div className="space-y-4">
-      {/* Filter Tabs */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name or order code…"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-10 pr-10 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {isSearching && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">Searching…</p>
+      )}
+
       <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
         {tabs.map((tab) => (
           <button
@@ -129,41 +139,61 @@ const OrderList = () => {
         ))}
       </div>
 
-      {/* Orders List */}
-      <div className="space-y-3">
-        {orders.map((order) => (
-          <OrderCard
-            key={order.order_code}
-            order={order}
-            onRefresh={() => fetchOrders(1, false)} // Refresh resets list
-          />
-        ))}
-      </div>
-
-      {/* Load More Button */}
-      {hasNext && (
-        <div className="flex justify-center pt-4 pb-8">
+      {loading && !loadingMore && orders.length === 0 ? (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : error && orders.length === 0 ? (
+        <div className="text-center py-8">
+          <div className="text-red-600 dark:text-red-400 mb-4">
+            Error: {error}
+          </div>
           <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="px-6 py-2 bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            onClick={() => fetchOrders(1, false)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {loadingMore ? (
-              <>
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                Loading...
-              </>
-            ) : (
-              "Load More"
-            )}
+            Retry
           </button>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="space-y-3">
+            {orders.map((order) => (
+              <OrderCard
+                key={order.order_code}
+                order={order}
+                onRefresh={() => fetchOrders(1, false)}
+              />
+            ))}
+          </div>
 
-      {!loading && orders.length === 0 && (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-zinc-800 rounded-lg border border-dashed border-gray-300 dark:border-zinc-700">
-          No orders found for this filter.
-        </div>
+          {hasNext && (
+            <div className="flex justify-center pt-4 pb-8">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="px-6 py-2 bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    Loading...
+                  </>
+                ) : (
+                  "Load More"
+                )}
+              </button>
+            </div>
+          )}
+
+          {!loading && orders.length === 0 && (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-zinc-800 rounded-lg border border-dashed border-gray-300 dark:border-zinc-700">
+              {debouncedSearch
+                ? `No orders found for "${debouncedSearch}".`
+                : "No orders found for this filter."}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
