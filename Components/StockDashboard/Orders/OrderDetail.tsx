@@ -129,7 +129,8 @@ export default function OrderDetail({
 
     const [behalfUser, setBehalfUser] = useState<BehalfAssignee | null>(null);
     const [behalfMaterials, setBehalfMaterials] = useState<PreviewMaterial[]>([]);
-    const [behalfCanRelease, setBehalfCanRelease] = useState(false);
+    const [behalfSelectedIds, setBehalfSelectedIds] = useState<Set<number>>(new Set());
+    const [behalfInventoryName, setBehalfInventoryName] = useState<string | null>(null);
     const [behalfError, setBehalfError] = useState<string | null>(null);
     const [behalfStep, setBehalfStep] = useState<'closed' | 'preview' | 'code'>('closed');
     const [behalfCode, setBehalfCode] = useState('');
@@ -231,10 +232,50 @@ export default function OrderDetail({
         setBehalfStep('closed');
         setBehalfUser(null);
         setBehalfMaterials([]);
+        setBehalfSelectedIds(new Set());
+        setBehalfInventoryName(null);
         setBehalfError(null);
         setBehalfCode('');
         setBehalfMsg(null);
         setBehalfBusy(false);
+    };
+
+    const selectedMaterials = useMemo(
+        () => behalfMaterials.filter((m) => behalfSelectedIds.has(m.bom_id)),
+        [behalfMaterials, behalfSelectedIds]
+    );
+
+    const selectedCanRelease = useMemo(() => {
+        if (selectedMaterials.length === 0) return false;
+        return selectedMaterials.every((m) => m.sufficient);
+    }, [selectedMaterials]);
+
+    const allSelected =
+        behalfMaterials.length > 0 &&
+        behalfMaterials.every((m) => behalfSelectedIds.has(m.bom_id));
+
+    const toggleBehalfBom = (bomId: number) => {
+        if (behalfStep !== 'preview') return;
+        setBehalfSelectedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(bomId)) next.delete(bomId);
+            else next.add(bomId);
+            return next;
+        });
+        setBehalfError(null);
+        setBehalfMsg(null);
+    };
+
+    const selectAllBehalf = () => {
+        if (behalfStep !== 'preview') return;
+        setBehalfSelectedIds(new Set(behalfMaterials.map((m) => m.bom_id)));
+        setBehalfError(null);
+    };
+
+    const clearBehalfSelection = () => {
+        if (behalfStep !== 'preview') return;
+        setBehalfSelectedIds(new Set());
+        setBehalfError(null);
     };
 
     const openBehalf = async (user: BehalfAssignee) => {
@@ -243,48 +284,73 @@ export default function OrderDetail({
         setBehalfError(null);
         setBehalfMsg(null);
         setBehalfCode('');
+        setBehalfInventoryName(null);
+        setBehalfSelectedIds(new Set());
         setBehalfBusy(true);
         try {
             const res = await api.post(
                 `/stock-dashboard/orders/${orderCode}/release-behalf/preview/`,
                 { assembly_user_id: user.id }
             );
-            setBehalfMaterials(res.data.materials || []);
-            setBehalfCanRelease(!!res.data.can_release);
-            if (!res.data.can_release && res.data.shortages?.length) {
-                const msg = (res.data.shortages as PreviewMaterial[])
-                    .map(
-                        (s) =>
-                            `${s.material_name}: need ${s.amount} ${s.unit}, have ${s.available}`
-                    )
-                    .join('; ');
-                setBehalfError(`Insufficient personal stock — ${msg}`);
-            } else if (!(res.data.materials || []).length) {
+            const materials: PreviewMaterial[] = res.data.materials || [];
+            setBehalfMaterials(materials);
+            setBehalfSelectedIds(new Set(materials.map((m) => m.bom_id)));
+            setBehalfInventoryName(res.data.inventory_name || null);
+            if (!materials.length) {
                 setBehalfError('No unreleased Length/Piece materials.');
             }
+            // Shortages stay visible per-line (have/need); selection can exclude them.
         } catch (e: unknown) {
             const err = e as { response?: { data?: { error?: string; detail?: string } } };
             setBehalfError(
                 err.response?.data?.error || err.response?.data?.detail || 'Preview failed'
             );
-            setBehalfCanRelease(false);
             setBehalfMaterials([]);
+            setBehalfSelectedIds(new Set());
         } finally {
             setBehalfBusy(false);
         }
     };
 
-    const sendBehalfCode = async () => {
+    const sendBehalfCode = async (mode: 'all' | 'selected' | number) => {
         if (!behalfUser) return;
+
+        let bomIds: number[];
+        if (mode === 'all') {
+            bomIds = behalfMaterials.map((m) => m.bom_id);
+        } else if (mode === 'selected') {
+            bomIds = Array.from(behalfSelectedIds);
+        } else {
+            bomIds = [mode];
+            setBehalfSelectedIds(new Set([mode]));
+        }
+
+        if (bomIds.length === 0) {
+            setBehalfError('Select at least one material to release.');
+            return;
+        }
+
+        const selected = behalfMaterials.filter((m) => bomIds.includes(m.bom_id));
+        const short = selected.filter((m) => !m.sufficient);
+        if (short.length) {
+            setBehalfError(
+                `Insufficient stock in ${atName(behalfUser.username || String(behalfUser.id))}'s inventory for: ` +
+                    short.map((s) => s.material_name).join(', ')
+            );
+            return;
+        }
+
         setBehalfBusy(true);
         setBehalfError(null);
         setBehalfMsg(null);
         try {
             const res = await api.post(
                 `/stock-dashboard/orders/${orderCode}/release-behalf/request-code/`,
-                { assembly_user_id: behalfUser.id }
+                { assembly_user_id: behalfUser.id, bom_ids: bomIds }
             );
             setBehalfStep('code');
+            setBehalfSelectedIds(new Set(res.data.bom_ids || bomIds));
+            setBehalfInventoryName(res.data.inventory_name || behalfInventoryName);
             setBehalfMsg(res.data.message || 'Code sent on Telegram.');
             if (res.data.materials) setBehalfMaterials(res.data.materials);
         } catch (e: unknown) {
@@ -620,16 +686,87 @@ export default function OrderDetail({
                             </button>
                         </div>
                         <p className="stock-detail-meta">
-                            These Length/Piece materials will be deducted from their personal stock
-                            after they approve with a Telegram code.
+                            Deduct from {atName(behalfUser.username || String(behalfUser.id))}
+                            {behalfInventoryName ? ` · ${behalfInventoryName}` : ' · personal stock'}
+                            {behalfStep === 'preview'
+                                ? '. Select materials, then send a Telegram approval code.'
+                                : '. Enter the Telegram code to confirm the selection below.'}
                         </p>
+
+                        {behalfStep === 'preview' && behalfMaterials.length > 0 && (
+                            <div className="stock-order-behalf-select-bar">
+                                <button
+                                    type="button"
+                                    className="stock-order-behalf-link"
+                                    onClick={selectAllBehalf}
+                                    disabled={behalfBusy || allSelected}
+                                >
+                                    Select all
+                                </button>
+                                <button
+                                    type="button"
+                                    className="stock-order-behalf-link"
+                                    onClick={clearBehalfSelection}
+                                    disabled={behalfBusy || behalfSelectedIds.size === 0}
+                                >
+                                    Clear
+                                </button>
+                                <span className="stock-order-behalf-select-count">
+                                    {behalfSelectedIds.size} / {behalfMaterials.length} selected
+                                </span>
+                            </div>
+                        )}
 
                         {behalfBusy && !behalfMaterials.length ? (
                             <div className="stock-empty">Loading…</div>
-                        ) : (
+                        ) : behalfStep === 'preview' ? (
                             <ul className="stock-order-behalf-list">
-                                {behalfMaterials.map((m) => (
-                                    <li key={m.bom_id}>
+                                {behalfMaterials.map((m) => {
+                                    const checked = behalfSelectedIds.has(m.bom_id);
+                                    return (
+                                        <li
+                                            key={m.bom_id}
+                                            className={`stock-order-behalf-row ${checked ? 'selected' : ''} ${!m.sufficient ? 'short' : ''}`}
+                                        >
+                                            <label className="stock-order-behalf-check">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    disabled={behalfBusy}
+                                                    onChange={() => toggleBehalfBom(m.bom_id)}
+                                                />
+                                                <span className="stock-order-line-name">
+                                                    {m.material_name}
+                                                </span>
+                                            </label>
+                                            <span className={`stock-type-badge ${m.material_type}`}>
+                                                {m.material_type}
+                                            </span>
+                                            <span className="stock-order-line-qty">
+                                                need {m.amount} {m.unit}
+                                            </span>
+                                            <span
+                                                className={`stock-order-avail ${m.sufficient ? 'ok' : 'no'}`}
+                                            >
+                                                have {m.available} {m.unit}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                className="stock-order-behalf-one"
+                                                disabled={behalfBusy || !m.sufficient}
+                                                onClick={() => sendBehalfCode(m.bom_id)}
+                                                title="Release this material only"
+                                            >
+                                                Release this
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : (
+                            <ul className="stock-order-behalf-list code-only">
+                                {selectedMaterials.map((m) => (
+                                    <li key={`code-${m.bom_id}`} className="stock-order-behalf-row selected">
                                         <span className="stock-order-line-name">{m.material_name}</span>
                                         <span className={`stock-type-badge ${m.material_type}`}>
                                             {m.material_type}
@@ -637,11 +774,6 @@ export default function OrderDetail({
                                         <span className="stock-order-line-qty">
                                             {m.amount} {m.unit}
                                         </span>
-                                        {!m.sufficient && (
-                                            <span className="stock-order-release-badge no">
-                                                short ({m.available})
-                                            </span>
-                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -651,16 +783,28 @@ export default function OrderDetail({
                         {behalfMsg && <p className="stock-order-behalf-ok">{behalfMsg}</p>}
 
                         {behalfStep === 'preview' && (
-                            <div className="stock-order-modal-actions">
+                            <div className="stock-order-modal-actions dual">
                                 <button
                                     type="button"
-                                    className="stock-order-apply"
-                                    disabled={!behalfCanRelease || behalfBusy}
-                                    onClick={sendBehalfCode}
+                                    className="stock-order-apply secondary"
+                                    disabled={!selectedCanRelease || behalfBusy}
+                                    onClick={() => sendBehalfCode('selected')}
                                 >
                                     {behalfBusy
                                         ? 'Sending…'
-                                        : `Send code to ${atName(behalfUser.username || String(behalfUser.id))}`}
+                                        : `Release selected (${behalfSelectedIds.size})`}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="stock-order-apply"
+                                    disabled={
+                                        behalfBusy ||
+                                        behalfMaterials.length === 0 ||
+                                        !behalfMaterials.every((m) => m.sufficient)
+                                    }
+                                    onClick={() => sendBehalfCode('all')}
+                                >
+                                    {behalfBusy ? 'Sending…' : 'Release all'}
                                 </button>
                             </div>
                         )}
@@ -668,7 +812,9 @@ export default function OrderDetail({
                         {behalfStep === 'code' && (
                             <div className="stock-order-modal-actions code">
                                 <label className="stock-order-meta-label">
-                                    4-digit code (expires in 5 minutes)
+                                    4-digit code from{' '}
+                                    {atName(behalfUser.username || String(behalfUser.id))}{' '}
+                                    (expires in 5 minutes)
                                 </label>
                                 <input
                                     className="stock-search stock-order-code-input"
@@ -686,7 +832,9 @@ export default function OrderDetail({
                                     disabled={behalfCode.length !== 4 || behalfBusy}
                                     onClick={confirmBehalf}
                                 >
-                                    {behalfBusy ? 'Releasing…' : 'Confirm release'}
+                                    {behalfBusy
+                                        ? 'Releasing…'
+                                        : `Confirm release (${selectedMaterials.length})`}
                                 </button>
                             </div>
                         )}
