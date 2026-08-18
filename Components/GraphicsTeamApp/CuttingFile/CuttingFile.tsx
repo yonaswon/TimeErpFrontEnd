@@ -23,6 +23,7 @@ export const CuttingFileComponent = () => {
   const [editingFile, setEditingFile] = useState<CuttingFile | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [showSearchFit, setShowSearchFit] = useState(false);
+  const [nestPrefill, setNestPrefill] = useState<import('@/types/cutting').NestingApplyPrefill | null>(null);
   const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
@@ -302,7 +303,10 @@ export const CuttingFileComponent = () => {
                 Search & Fit
               </button>
               <button
-                onClick={() => setShowCreateOverlay(true)}
+                onClick={() => {
+                  setNestPrefill(null);
+                  setShowCreateOverlay(true);
+                }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 active:scale-[0.97] transition-all"
               >
                 <Plus className="w-4 h-4" />
@@ -466,7 +470,10 @@ export const CuttingFileComponent = () => {
               <h3 className="text-base font-semibold text-gray-900 dark:text-white">No Cutting Files</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Get started by creating your first cutting file</p>
               <button
-                onClick={() => setShowCreateOverlay(true)}
+                onClick={() => {
+                  setNestPrefill(null);
+                  setShowCreateOverlay(true);
+                }}
                 className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 Create Cutting File
@@ -526,9 +533,14 @@ export const CuttingFileComponent = () => {
           {/* Create Overlay */}
           {showCreateOverlay && (
             <CreateCuttingFileOverlay
-              onClose={() => setShowCreateOverlay(false)}
+              nestPrefill={nestPrefill}
+              onClose={() => {
+                setShowCreateOverlay(false);
+                setNestPrefill(null);
+              }}
               onSuccess={() => {
                 setShowCreateOverlay(false);
+                setNestPrefill(null);
                 fetchCuttingFiles();
               }}
             />
@@ -585,6 +597,11 @@ export const CuttingFileComponent = () => {
             isOpen={showSearchFit}
             onClose={() => setShowSearchFit(false)}
             materials={materials as any[]}
+            onApplyPrefill={(prefill) => {
+              setNestPrefill(prefill);
+              setShowSearchFit(false);
+              setShowCreateOverlay(true);
+            }}
           />
         </>
       )}

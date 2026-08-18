@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, Package, Wallet, Wrench } from 'lucide-react';
+import { LayoutDashboard, Package, Scissors, Wallet, Wrench } from 'lucide-react';
 import type { WebDashboardChoice } from '@/lib/webDashboardAuth';
 
 interface WebDashboardRolePickerProps {
@@ -53,6 +53,15 @@ const ALL_OPTIONS: Array<{
         hoverBorder: 'hover:border-teal-500',
         bg: 'bg-teal-50 dark:bg-teal-900/20',
         Icon: Wrench,
+    },
+    {
+        choice: 'cnc',
+        title: 'Time CNC',
+        description: 'CNC, manufacturing cutting files, areal, and assign cutting',
+        color: '#84CC16',
+        hoverBorder: 'hover:border-lime-500',
+        bg: 'bg-lime-50 dark:bg-lime-900/20',
+        Icon: Scissors,
     },
 ];
 

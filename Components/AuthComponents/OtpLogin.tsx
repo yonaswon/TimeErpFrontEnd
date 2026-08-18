@@ -5,13 +5,14 @@ import api from '@/api'
 import {
     applyWebDashboardChoice,
     getWebDashboardRoles,
+    pathToWebDashboardChoice,
     resolvePostLoginRoute,
     type WebDashboardChoice,
     type WebUserData,
 } from '@/lib/webDashboardAuth'
 import { WebDashboardRolePicker } from './WebDashboardRolePicker'
 
-type OtpClient = 'web' | 'finance' | 'stock' | 'workshop'
+type OtpClient = 'web' | 'finance' | 'stock' | 'workshop' | 'cnc'
 
 interface OtpLoginProps {
     client?: OtpClient
@@ -22,6 +23,7 @@ const CLIENT_META: Record<OtpClient, { title: string; letter: string; color: str
     finance: { title: 'Finance & Accounting', letter: 'F', color: '#7C3AED' },
     stock: { title: 'Time Stock', letter: 'S', color: '#84CC16' },
     workshop: { title: 'Time Workshop', letter: 'W', color: '#0D9488' },
+    cnc: { title: 'Time CNC', letter: 'C', color: '#84CC16' },
 }
 
 export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
@@ -64,15 +66,7 @@ export const OtpLogin = ({ client = 'web' }: OtpLoginProps) => {
             setStep(3)
             return
         }
-        const choice: WebDashboardChoice =
-            destination === '/admin'
-                ? 'admin'
-                : destination === '/finance'
-                  ? 'finance'
-                  : destination === '/workshop'
-                    ? 'workshop'
-                    : 'stock'
-        router.push(applyWebDashboardChoice(choice))
+        router.push(applyWebDashboardChoice(pathToWebDashboardChoice(destination)))
     }
 
     const handleVerifyOtp = async (e: React.FormEvent) => {

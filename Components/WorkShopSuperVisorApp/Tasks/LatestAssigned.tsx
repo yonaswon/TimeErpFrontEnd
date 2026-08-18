@@ -68,7 +68,12 @@ interface Role {
   Name: string;
 }
 
-export const LatestAssigned = () => {
+interface LatestAssignedProps {
+  /** When true, only show the cutting assigns list (no Assembly/D&I/Maintenance tabs). */
+  cuttingOnly?: boolean;
+}
+
+export const LatestAssigned = ({ cuttingOnly = false }: LatestAssignedProps) => {
   const [activeTab, setActiveTab] = useState<TaskType>("cutting");
   const [cuttingFiles, setCuttingFiles] = useState<CuttingFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,10 +81,10 @@ export const LatestAssigned = () => {
   const [editingFile, setEditingFile] = useState<CuttingFile | null>(null);
 
   useEffect(() => {
-    if (activeTab === "cutting") {
+    if (activeTab === "cutting" || cuttingOnly) {
       fetchCuttingFiles();
     }
-  }, [activeTab]);
+  }, [activeTab, cuttingOnly]);
 
   const fetchCuttingFiles = async () => {
     try {
@@ -132,6 +137,30 @@ export const LatestAssigned = () => {
         );
     }
   };
+
+  if (cuttingOnly) {
+    return (
+      <div className="space-y-4">
+        <CuttingTasks
+          files={cuttingFiles}
+          loading={loading}
+          error={error}
+          onEdit={setEditingFile}
+          onRefresh={fetchCuttingFiles}
+        />
+        {editingFile && (
+          <EditAssignmentOverlay
+            file={editingFile}
+            onClose={() => setEditingFile(null)}
+            onSuccess={() => {
+              setEditingFile(null);
+              fetchCuttingFiles();
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

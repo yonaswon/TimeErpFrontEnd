@@ -5,6 +5,7 @@ export interface DxfFileType {
   id: number;
   dxf: string;
   date: string;
+  preview_image?: string | null;
 }
 
 // DXF Layer types for layer selection UI
@@ -38,6 +39,7 @@ export interface PlacementSuggestion {
   sheet_code: number;
   material_name: string;
   cutting_file_id: number;
+  is_blank_sheet: boolean;
   position: { x: number; y: number };
   rotation: number;
   waste_reduction_pct: number;
@@ -58,6 +60,7 @@ export interface NestingResult {
   sheet_code: number;
   material_name: string;
   cutting_file_id: number;
+  is_blank_sheet: boolean;
   position: { x: number; y: number };
   rotation: number;
   design_width: number;
@@ -69,7 +72,67 @@ export interface NestingResult {
   compactness_score: number;
   edge_score: number;
   fragmentation_score: number;
+  geometry_valid: boolean;
+  outside_area_mm2: number;
+  overlap_area_mm2: number;
+  minimum_boundary_clearance_mm: number;
+  minimum_occupied_clearance_mm: number;
+  free_components_after: number;
+  new_scrap_area_mm2: number;
+  sliver_area_mm2: number;
+  largest_reusable_area_mm2: number;
+  largest_usable_rectangle_mm2: number;
+  minimum_neck_width_mm: number;
+  future_fit_probability: number;
+  future_value_before: number;
+  future_value_after: number;
+  placed_parts?: number[][][];
+  placed_geometry?: Array<{ outer: number[][]; holes: number[][][] }>;
   preview_image: string | null;
+}
+
+export interface NewSheetInfo {
+  required: boolean;
+  reason?: string | null;
+  suggested_stock_size_cm?: [number, number] | null;
+}
+
+export interface NestingResultMeta {
+  status?: 'ok' | 'new_sheet_required' | 'failed' | string;
+  sheets_searched?: number;
+  new_sheet?: NewSheetInfo;
+  elapsed_ms?: number;
+  error?: string | null;
+  ranking_explanation?: string;
+  mode?: 'fast' | 'accurate' | 'thorough' | string;
+  rotation_policy?: 'free' | 'orthogonal' | 'step' | string;
+  material_priority?: 'remnant_first' | 'speed_first' | 'perfect_fit' | string;
+  cache_misses?: number;
+  area_prefiltered?: number;
+  screened_sheets?: number;
+  refined_sheets?: number;
+  search_phase?: 'screen' | 'refine' | 'search' | string;
+  phase_completed?: number;
+  phase_total?: number;
+  candidates_found?: number;
+  incomplete_chunks?: number;
+  screen_elapsed_ms?: number;
+  refine_elapsed_ms?: number;
+  incomplete?: boolean;
+  ai_review?: {
+    status: 'completed' | 'failed' | 'skipped' | string;
+    model?: string;
+    review?: {
+      summary?: string;
+      candidates?: Array<{
+        candidate_id: number;
+        suspected_visual_violation: boolean;
+        unusable_sliver_warning: boolean;
+        ranking_observation: string;
+        confidence: number;
+      }>;
+    };
+  };
 }
 
 export interface NestingProgressUpdate {
@@ -80,6 +143,9 @@ export interface NestingProgressUpdate {
   sheets_analyzed: number;
   total_sheets: number;
   results: NestingResult[] | null;
+  result_meta?: NestingResultMeta | null;
+  new_sheet?: NewSheetInfo | null;
+  fit_status?: string | null;
   error_message: string | null;
 }
 
@@ -88,6 +154,38 @@ export interface StartNestingResponse {
   status: string;
   message: string;
   ws_url: string;
+  config?: {
+    order_dxf_ids?: number[];
+    kerf_mm?: number;
+    edge_margin_mm?: number;
+    part_gap_mm?: number;
+    future_optimization?: boolean;
+    rotation_step_deg?: number;
+    mode?: 'fast' | 'accurate' | 'thorough';
+    rotation_policy?: 'free' | 'orthogonal' | 'step';
+    material_priority?: 'remnant_first' | 'speed_first' | 'perfect_fit';
+    max_results?: number;
+  };
+}
+
+export interface NestingApplyPrefill {
+  material_id: number;
+  sheet_id: number;
+  sheet_code: number;
+  cutting_file_id?: number;
+  order_codes: number[];
+  order_dxf_ids: number[];
+  recommended_position_mm?: { x: number; y: number };
+  recommended_rotation_deg?: number;
+  use_existing_sheet?: boolean;
+}
+
+export interface ApplyNestingResponse {
+  ok: boolean;
+  session_id: number;
+  applied_result: NestingResult;
+  prefill: NestingApplyPrefill;
+  message: string;
 }
 
 export interface CuttingFileOrderDxf {

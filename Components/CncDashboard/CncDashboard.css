@@ -1,0 +1,122 @@
+.cnc-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cnc-panel-inner {
+  animation: cnc-panel-enter 180ms ease-out;
+}
+
+@keyframes cnc-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cnc-show-subtitle .stock-greeting p.cnc-subtitle {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--stock-text-secondary);
+  font-weight: 400;
+}
+
+.cnc-desktop-wrap {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.cnc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .cnc-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cnc-kpi-card {
+  border-radius: var(--stock-radius-md);
+  padding: 16px;
+  background: var(--stock-pastel-sky);
+}
+
+.cnc-kpi-card.mint {
+  background: var(--stock-pastel-mint);
+}
+
+.cnc-kpi-card.peach {
+  background: var(--stock-pastel-peach);
+}
+
+.cnc-kpi-card.lavender {
+  background: var(--stock-pastel-lavender);
+}
+
+.cnc-kpi-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--stock-text);
+  line-height: 1.1;
+}
+
+.cnc-kpi-label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--stock-text-secondary);
+}
+
+.cnc-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cnc-filter-pill {
+  border: none;
+  background: var(--stock-panel-muted);
+  color: var(--stock-text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: var(--stock-radius-pill);
+  cursor: pointer;
+}
+
+.cnc-filter-pill.active {
+  background: var(--stock-accent);
+  color: var(--stock-accent-ink);
+  font-weight: 600;
+}
+
+.cnc-filter-pill:focus-visible {
+  outline: 2px solid var(--stock-text);
+  outline-offset: 2px;
+}
+
+.cnc-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--stock-text-secondary);
+  font-size: 14px;
+}
+
+.cnc-empty strong {
+  display: block;
+  color: var(--stock-text);
+  font-size: 16px;
+  margin-bottom: 6px;
+}

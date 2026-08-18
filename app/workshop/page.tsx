@@ -43,6 +43,10 @@ export default function WorkshopPage() {
                 router.replace('/stock');
                 return;
             }
+            if (availableChoices.includes('cnc')) {
+                router.replace('/cnc');
+                return;
+            }
             router.replace('/workshop/login');
             return;
         }

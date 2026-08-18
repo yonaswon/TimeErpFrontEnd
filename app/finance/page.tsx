@@ -44,6 +44,10 @@ export default function FinancePage() {
                 router.replace('/workshop');
                 return;
             }
+            if (availableChoices.includes('cnc')) {
+                router.replace('/cnc');
+                return;
+            }
             router.replace('/finance/login');
             return;
         }

@@ -55,10 +55,12 @@ interface TeamMember { id: number; telegram_id: number; telegram_user_name: stri
 interface Role { id: number; Name: string; date: string; }
 
 interface AssignCuttingOverlayProps {
-  onClose: () => void;
+  onClose?: () => void;
+  /** Render inline in desktop dashboard instead of a modal overlay */
+  embedded?: boolean;
 }
 
-export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => {
+export const AssignCuttingOverlay = ({ onClose, embedded = false }: AssignCuttingOverlayProps) => {
   const [cuttingFiles, setCuttingFiles] = useState<CuttingFile[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [selectedFile, setSelectedFile] = useState<CuttingFile | null>(null);
@@ -201,11 +203,10 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white dark:bg-zinc-800 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto overscroll-contain">
+  const body = (
+        <>
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-zinc-800 flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-zinc-700 z-10">
+        <div className={`${embedded ? '' : 'sticky top-0 z-10'} bg-white dark:bg-zinc-800 flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-zinc-700`}>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20">
               <Scissors className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -215,9 +216,11 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
               <p className="text-sm text-gray-500 dark:text-gray-400">{cuttingFiles.length} unassigned file(s)</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          </button>
+          {!embedded && onClose && (
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors" aria-label="Close">
+              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -387,6 +390,21 @@ export const AssignCuttingOverlay = ({ onClose }: AssignCuttingOverlayProps) => 
             </div>
           )}
         </div>
+        </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="bg-white dark:bg-zinc-800 w-full rounded-2xl border border-gray-200 dark:border-zinc-700 overflow-hidden">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white dark:bg-zinc-800 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto overscroll-contain">
+        {body}
       </div>
     </div>
   );

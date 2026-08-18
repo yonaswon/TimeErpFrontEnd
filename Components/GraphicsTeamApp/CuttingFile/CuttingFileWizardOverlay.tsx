@@ -20,6 +20,7 @@ export interface CuttingFileWizardOverlayProps {
   initialFile?: CuttingFile;
   onClose: () => void;
   onSuccess: () => void;
+  nestPrefill?: import('@/types/cutting').NestingApplyPrefill | null;
 }
 
 export const CuttingFileWizardOverlay = ({
@@ -27,8 +28,13 @@ export const CuttingFileWizardOverlay = ({
   initialFile,
   onClose,
   onSuccess,
+  nestPrefill,
 }: CuttingFileWizardOverlayProps) => {
   const isEdit = mode === 'edit';
+  const normalizeOrder = (order: Order): Order => ({
+    ...order,
+    boms: Array.isArray(order?.boms) ? order.boms : [],
+  });
 
   const existingCrv3dName = useMemo(
     () => (initialFile?.crv3d ? initialFile.crv3d.split('/').pop() || 'file.crv3d' : null),
@@ -40,7 +46,8 @@ export const CuttingFileWizardOverlay = ({
   );
   const hasExistingFiles = Boolean(existingCrv3dName && existingDxfName);
 
-  const [step, setStep] = useState(1);
+  // If Search & Fit applied a remnant placement, jump to sheet/orders with prefill
+  const [step, setStep] = useState(nestPrefill ? 2 : 1);
   const [crv3dFile, setCrv3dFile] = useState<File | null>(null);
   const [dxfFile, setDxfFile] = useState<File | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -106,17 +113,26 @@ export const CuttingFileWizardOverlay = ({
       try {
         setLoadingStates(prev => ({ ...prev, materials: true }));
         const response = await api.get('/materials/?type=A');
-        setMaterials(response.data.results);
+        const mats: Material[] = response.data.results || response.data || [];
+        setMaterials(mats);
 
-        if (isEdit && initialFile && !materialInitializedRef.current) {
-          const currentMaterialId = initialFile.on?.material || initialFile.old_material?.id;
-          const currentMaterial = response.data.results.find(
-            (m: Material) => m.id === currentMaterialId
-          );
-          if (currentMaterial) {
-            setSelectedMaterial(currentMaterial);
+        if (!materialInitializedRef.current) {
+          if (nestPrefill?.material_id) {
+            const pre = mats.find((m) => m.id === nestPrefill.material_id);
+            if (pre) setSelectedMaterial(pre);
+            if (nestPrefill.order_codes?.length) {
+              setSelectedOrders(nestPrefill.order_codes);
+            }
+            if (nestPrefill.use_existing_sheet === false) {
+              setIsOutsideMaterial(true);
+            }
+            materialInitializedRef.current = true;
+          } else if (isEdit && initialFile) {
+            const currentMaterialId = initialFile.on?.material || initialFile.old_material?.id;
+            const currentMaterial = mats.find((m: Material) => m.id === currentMaterialId);
+            if (currentMaterial) setSelectedMaterial(currentMaterial);
+            materialInitializedRef.current = true;
           }
-          materialInitializedRef.current = true;
         }
       } catch {
         setError('Failed to fetch materials');
@@ -125,7 +141,7 @@ export const CuttingFileWizardOverlay = ({
       }
     };
     fetchMaterials();
-  }, [initialFile, isEdit]);
+  }, [initialFile, isEdit, nestPrefill]);
 
   useEffect(() => {
     if (selectedMaterial) {
@@ -135,16 +151,18 @@ export const CuttingFileWizardOverlay = ({
           const response = await api.get(
             `/each-areal-materials/?finished=false&material=${selectedMaterial.id}&ordering=-date`
           );
-          setEachArealMaterials(response.data);
+          const sheets: EachArealMaterial[] = response.data.results || response.data || [];
+          setEachArealMaterials(Array.isArray(sheets) ? sheets : []);
 
-          if (isEdit && initialFile?.on) {
-            const currentEam = response.data.find(
+          if (nestPrefill?.sheet_id && nestPrefill.use_existing_sheet !== false) {
+            const preSheet = sheets.find((eam) => eam.id === nestPrefill.sheet_id);
+            if (preSheet) setSelectedEachArealMaterial(preSheet);
+          } else if (isEdit && initialFile?.on) {
+            const currentEam = sheets.find(
               (eam: EachArealMaterial) => eam.id === initialFile.on?.id
             );
-            if (currentEam) {
-              setSelectedEachArealMaterial(currentEam);
-            }
-          } else if (!isEdit) {
+            if (currentEam) setSelectedEachArealMaterial(currentEam);
+          } else if (!isEdit && !nestPrefill) {
             setSelectedEachArealMaterial(null);
           }
         } catch {
@@ -155,7 +173,7 @@ export const CuttingFileWizardOverlay = ({
       };
       fetchEachArealMaterials();
     }
-  }, [selectedMaterial, initialFile, isEdit]);
+  }, [selectedMaterial, initialFile, isEdit, nestPrefill]);
 
   useEffect(() => {
     if ((selectedEachArealMaterial || oldMaterialNumber.trim() !== '' || isOutsideMaterial) && selectedMaterial) {
@@ -173,13 +191,13 @@ export const CuttingFileWizardOverlay = ({
           }
 
           const response = await api.get(url);
-          const fetched: Order[] = response.data.results || [];
+          const fetched: Order[] = (response.data.results || []).map((order: Order) => normalizeOrder(order));
 
           const merged = [...fetched];
           const seen = new Set(fetched.map(o => o.order_code));
           for (const linked of linkedOrdersRef.current) {
             if (!seen.has(linked.order_code)) {
-              merged.push(linked as Order);
+              merged.push(normalizeOrder(linked as Order));
               seen.add(linked.order_code);
             }
           }
@@ -195,10 +213,11 @@ export const CuttingFileWizardOverlay = ({
   }, [selectedEachArealMaterial, oldMaterialNumber, isOutsideMaterial, selectedMaterial, orderTab, debouncedOrderSearchQuery]);
 
   useEffect(() => {
-    if (!isEdit) {
+    // Don't wipe Search & Fit prefilled orders when sheet/material changes
+    if (!isEdit && !nestPrefill) {
       setSelectedOrders([]);
     }
-  }, [selectedEachArealMaterial, oldMaterialNumber, isOutsideMaterial, selectedMaterial, isEdit]);
+  }, [selectedEachArealMaterial, oldMaterialNumber, isOutsideMaterial, selectedMaterial, isEdit, nestPrefill]);
 
   const handleCrv3dFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -247,7 +266,6 @@ export const CuttingFileWizardOverlay = ({
     try {
       const res = await api.post('/api/cuttingfiles/upload-temp/', formData, {
         signal: controller.signal,
-        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (e) => {
           setUploadProgress(Math.round((e.loaded * 100) / (e.total || 1)));
         },
@@ -266,20 +284,26 @@ export const CuttingFileWizardOverlay = ({
     }
   };
 
+  const cleanupTempUpload = () => {
+    abortRef.current?.abort();
+    const pendingTempId = tempIdRef.current;
+    if (pendingTempId) {
+      api.delete(`/api/cuttingfiles/${pendingTempId}/delete-temp/`).catch(() => {});
+      tempIdRef.current = null;
+      setTempId(null);
+    }
+  };
+
+  const handleClose = () => {
+    cleanupTempUpload();
+    onClose();
+  };
+
   useEffect(() => {
     if (crv3dFile && dxfFile) {
       uploadPromiseRef.current = startBackgroundUpload();
     }
   }, [crv3dFile, dxfFile]);
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      if (tempIdRef.current) {
-        api.delete(`/api/cuttingfiles/${tempIdRef.current}/delete-temp/`).catch(() => {});
-      }
-    };
-  }, []);
 
   const handleOrderToggle = (orderCode: number) => {
     setSelectedOrders(prev => {
@@ -346,6 +370,78 @@ export const CuttingFileWizardOverlay = ({
   const displayDxfName = dxfFile?.name || existingDxfName;
   const filesChanged = crv3dFile !== null || dxfFile !== null;
 
+  const appendMaterialAndOrders = (formData: FormData) => {
+    if (isOutsideMaterial && selectedMaterial) {
+      formData.append('is_outside_material', 'true');
+      formData.append('old_material', selectedMaterial.id.toString());
+      formData.append('old_material_number', outsideNote.trim());
+      formData.append('on', '');
+    } else if (selectedEachArealMaterial) {
+      formData.append('on', selectedEachArealMaterial.id.toString());
+      formData.append('is_outside_material', 'false');
+      if (isEdit) {
+        formData.append('old_material_number', '');
+        formData.append('old_material', '');
+      }
+    } else if (oldMaterialNumber.trim() !== '' && selectedMaterial) {
+      formData.append('old_material_number', oldMaterialNumber.trim());
+      formData.append('old_material', selectedMaterial.id.toString());
+      formData.append('is_outside_material', 'false');
+      if (isEdit) {
+        formData.append('on', '');
+      }
+    } else if (isEdit) {
+      formData.append('on', '');
+      formData.append('old_material_number', '');
+      formData.append('is_outside_material', 'false');
+    }
+
+    selectedOrders.forEach(orderCode => {
+      formData.append('orders', orderCode.toString());
+    });
+
+    if (isMassMode && !isEdit) {
+      formData.append('mass_order_range_start', massRangeStart.toString());
+      formData.append('mass_order_range_end', massRangeEnd.toString());
+    }
+
+    if (selectedLayerNumber !== null) {
+      formData.append('selected_layer_number', selectedLayerNumber.toString());
+    }
+  };
+
+  const buildSubmitFormData = async (options: { useTempId: boolean }) => {
+    const formData = new FormData();
+
+    if (filesChanged) {
+      let finalTempId: number | null = null;
+      if (options.useTempId) {
+        finalTempId = tempId;
+        if (!finalTempId && uploading && uploadPromiseRef.current) {
+          finalTempId = await uploadPromiseRef.current;
+        }
+      }
+
+      if (finalTempId) {
+        formData.append('temp_id', finalTempId.toString());
+      } else if (crv3dFile && dxfFile) {
+        formData.append('crv3d', crv3dFile);
+        formData.append('dxf_file', dxfFile);
+      }
+    }
+
+    appendMaterialAndOrders(formData);
+    return formData;
+  };
+
+  const submitCuttingFile = async (formData: FormData) => {
+    if (isEdit && initialFile) {
+      await api.patch(`/api/cuttingfiles/${initialFile.id}/`, formData);
+    } else {
+      await api.post('/api/cuttingfiles/', formData);
+    }
+  };
+
   const handleSubmit = async () => {
     if (
       !filesReady ||
@@ -376,69 +472,19 @@ export const CuttingFileWizardOverlay = ({
       setLoading(true);
       setError(null);
 
-      const formData = new FormData();
+      let formData = await buildSubmitFormData({ useTempId: true });
 
-      if (filesChanged) {
-        let finalTempId = tempId;
-        if (!finalTempId && uploading && uploadPromiseRef.current) {
-          finalTempId = await uploadPromiseRef.current;
+      try {
+        await submitCuttingFile(formData);
+      } catch (err: unknown) {
+        const apiErr = err as { response?: { status?: number } };
+        const tempMissing = apiErr.response?.status === 404 && formData.has('temp_id');
+        if (tempMissing && crv3dFile && dxfFile) {
+          formData = await buildSubmitFormData({ useTempId: false });
+          await submitCuttingFile(formData);
+        } else {
+          throw err;
         }
-
-        if (finalTempId) {
-          formData.append('temp_id', finalTempId.toString());
-        } else if (crv3dFile && dxfFile) {
-          formData.append('crv3d', crv3dFile);
-          formData.append('dxf_file', dxfFile);
-        }
-      }
-
-      if (isOutsideMaterial && selectedMaterial) {
-        formData.append('is_outside_material', 'true');
-        formData.append('old_material', selectedMaterial.id.toString());
-        formData.append('old_material_number', outsideNote.trim());
-        formData.append('on', '');
-      } else if (selectedEachArealMaterial) {
-        formData.append('on', selectedEachArealMaterial.id.toString());
-        formData.append('is_outside_material', 'false');
-        if (isEdit) {
-          formData.append('old_material_number', '');
-          formData.append('old_material', '');
-        }
-      } else if (oldMaterialNumber.trim() !== '' && selectedMaterial) {
-        formData.append('old_material_number', oldMaterialNumber.trim());
-        formData.append('old_material', selectedMaterial.id.toString());
-        formData.append('is_outside_material', 'false');
-        if (isEdit) {
-          formData.append('on', '');
-        }
-      } else if (isEdit) {
-        formData.append('on', '');
-        formData.append('old_material_number', '');
-        formData.append('is_outside_material', 'false');
-      }
-
-      selectedOrders.forEach(orderCode => {
-        formData.append('orders', orderCode.toString());
-      });
-
-      // Mass cutting file params
-      if (isMassMode && !isEdit) {
-        formData.append('mass_order_range_start', massRangeStart.toString());
-        formData.append('mass_order_range_end', massRangeEnd.toString());
-      }
-
-      if (selectedLayerNumber !== null) {
-        formData.append('selected_layer_number', selectedLayerNumber.toString());
-      }
-
-      if (isEdit && initialFile) {
-        await api.patch(`/api/cuttingfiles/${initialFile.id}/`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      } else {
-        await api.post('/api/cuttingfiles/', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
       }
 
       tempIdRef.current = null;
@@ -473,7 +519,7 @@ export const CuttingFileWizardOverlay = ({
       <div className="bg-white dark:bg-zinc-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-zinc-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+          <button onClick={handleClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -618,6 +664,22 @@ export const CuttingFileWizardOverlay = ({
           {step === 2 && (
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Select Material Type</h3>
+              {nestPrefill && (
+                <div className="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 text-sm text-emerald-800 dark:text-emerald-200">
+                  Prefill from Search &amp; Fit
+                  {nestPrefill.recommended_position_mm && (
+                    <span className="block text-xs mt-1 opacity-90">
+                      Recommended placement: ({nestPrefill.recommended_position_mm.x}, {nestPrefill.recommended_position_mm.y}) mm
+                      {nestPrefill.recommended_rotation_deg != null
+                        ? ` @ ${nestPrefill.recommended_rotation_deg}°`
+                        : ''}
+                      {nestPrefill.sheet_code
+                        ? ` on sheet #${nestPrefill.sheet_code}`
+                        : ' — new sheet'}
+                    </span>
+                  )}
+                </div>
+              )}
               {loadingStates.materials ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
@@ -795,7 +857,7 @@ export const CuttingFileWizardOverlay = ({
               ) : (
                 <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                   {orders.map((order) => {
-                    const bom = order.boms[0];
+                    const bom = order.boms?.[0] ?? null;
                     return (
                       <label key={order.order_code} className="flex items-start space-x-3 p-4 rounded-lg border border-gray-200 dark:border-zinc-700 hover:border-blue-600 cursor-pointer transition-colors">
                         <input type="checkbox" checked={selectedOrders.includes(order.order_code)} onChange={() => handleOrderToggle(order.order_code)} className="mt-1 text-blue-600 rounded" />
@@ -948,6 +1010,16 @@ export const CuttingFileWizardOverlay = ({
           {step === 6 && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Review Cutting File</h3>
+              {nestPrefill?.recommended_position_mm && (
+                <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 text-sm text-emerald-800 dark:text-emerald-200">
+                  Nest recommendation: place at ({nestPrefill.recommended_position_mm.x},{' '}
+                  {nestPrefill.recommended_position_mm.y}) mm
+                  {nestPrefill.recommended_rotation_deg != null
+                    ? `, rotate ${nestPrefill.recommended_rotation_deg}°`
+                    : ''}
+                  . CNC should follow this when laying out the cut.
+                </div>
+              )}
               <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
                 <Loader2 className="w-5 h-5 text-blue-600 shrink-0" />
                 <div>
@@ -1009,7 +1081,7 @@ export const CuttingFileWizardOverlay = ({
         </div>
 
         <div className="flex justify-between p-6 border-t border-gray-200 dark:border-zinc-700">
-          <button onClick={() => step > 1 ? setStep(step - 1) : onClose()} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
+          <button onClick={() => step > 1 ? setStep(step - 1) : handleClose()} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
             {step > 1 ? 'Back' : 'Cancel'}
           </button>
           <button
