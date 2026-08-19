@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw, AlertTriangle, FileText, CheckCircle2, ChevronRight,
   X, Calendar, MapPin, Phone, Loader2, Package, Palette, BarChart2,
-  ShoppingBag, Wrench, Filter, Users, Camera, DollarSign
+  ShoppingBag, Wrench, Filter, Users, Camera, DollarSign, MessageSquare
 } from "lucide-react";
 import api from "@/api";
 
@@ -15,6 +15,7 @@ interface OrderRow {
   advance_payment: number; remaining_payment: number; full_payment: number;
   is_delayed: boolean;
   today_status_image: string | null;
+  today_status_note: string | null;
   status_duration_seconds: number | null;
 }
 interface MockupRow {
@@ -179,6 +180,17 @@ function OrderSheet({ order, onClose }: { order: OrderRow; onClose: () => void }
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Today's note */}
+        {isActive && order.today_status_note && (
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Today's Note</h3>
+            <div className="flex items-start gap-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800/50">
+              <MessageSquare size={14} className="text-blue-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{order.today_status_note}</p>
+            </div>
           </div>
         )}
       </div>
@@ -398,6 +410,7 @@ function OutstandingPaymentsSheet({ onClose, onSelectOrder }: { onClose: () => v
                   full_payment: parseFloat(c.full_payment || 0),
                   is_delayed: c.is_delayed === true,
                   today_status_image: o.today_status_image || null,
+                  today_status_note: o.today_status_note || null,
                   status_duration_seconds: o.status_duration_seconds ?? null,
                 };
                 return (
@@ -649,6 +662,7 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
               full_payment: parseFloat(c.full_payment || 0),
               is_delayed: c.is_delayed === true,
               today_status_image: o.today_status_image || null,
+              today_status_note: o.today_status_note || null,
               status_duration_seconds: o.status_duration_seconds ?? null,
             };
             allRows.push(row);
@@ -870,6 +884,12 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
                         {dur && <span className="shrink-0 text-gray-300">·</span>}
                         {dur && <span className="shrink-0 font-medium text-gray-500 dark:text-gray-400">{dur}</span>}
                       </div>
+                      {isActive && o.today_status_note && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <MessageSquare size={10} className="text-blue-400 shrink-0" />
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{o.today_status_note}</span>
+                        </div>
+                      )}
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLOR[o.order_status] || "bg-gray-100 text-gray-600"}`}>{STATUS_LABEL[o.order_status] || o.order_status}</span>
                     <ChevronRight size={13} className="text-gray-300 shrink-0" />
@@ -959,6 +979,7 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
                       full_payment: parseFloat(c.full_payment || 0),
                       is_delayed: c.is_delayed === true,
                       today_status_image: o.today_status_image || null,
+                      today_status_note: o.today_status_note || null,
                       status_duration_seconds: o.status_duration_seconds ?? null,
                     };
                     return (

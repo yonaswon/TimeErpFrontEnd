@@ -7,6 +7,9 @@ import {
     Camera,
     X,
     ImageIcon,
+    MessageSquare,
+    Send,
+    Edit3,
 } from "lucide-react";
 
 const STATUS_ORDER = [
@@ -102,6 +105,10 @@ const ProgressContent = () => {
     const [uploadingOrders, setUploadingOrders] = useState<Record<number, boolean>>({});
     const [detailImage, setDetailImage] = useState<DetailImage | null>(null);
     const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+    const [noteTexts, setNoteTexts] = useState<Record<number, string>>({});
+    const [submittingNotes, setSubmittingNotes] = useState<Record<number, boolean>>({});
+    const [noteErrors, setNoteErrors] = useState<Record<number, string>>({});
+    const [editingNotes, setEditingNotes] = useState<Record<number, boolean>>({});
 
     useEffect(() => {
         const initialStates: Record<string, StatusState> = {};
@@ -186,6 +193,41 @@ const ProgressContent = () => {
             setUploadErrors((prev) => ({ ...prev, [orderId]: msg }));
         } finally {
             setUploadingOrders((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
+        }
+    };
+
+    const handleNoteSubmit = async (orderId: number, orderStatus: string) => {
+        const text = (noteTexts[orderId] || "").trim();
+        if (!text) return;
+
+        setSubmittingNotes((prev) => ({ ...prev, [orderId]: true }));
+        setNoteErrors((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
+
+        try {
+            await api.post("/api/order-status-notes/submit/", { order: orderId, note: text });
+
+            setStatusData((prev) => {
+                const statusState = prev[orderStatus];
+                if (!statusState) return prev;
+                return {
+                    ...prev,
+                    [orderStatus]: {
+                        ...statusState,
+                        orders: statusState.orders.map((o) =>
+                            o.order_code === orderId
+                                ? { ...o, today_status_note: text }
+                                : o
+                        ),
+                    },
+                };
+            });
+            setNoteTexts((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
+            setEditingNotes((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
+        } catch (err: any) {
+            const msg = err?.response?.data?.error || "Failed to submit note.";
+            setNoteErrors((prev) => ({ ...prev, [orderId]: msg }));
+        } finally {
+            setSubmittingNotes((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
         }
     };
 
@@ -346,6 +388,63 @@ const ProgressContent = () => {
                                                         {/* Upload error */}
                                                         {uploadError && (
                                                             <p className="mt-1 text-[10px] text-red-500 dark:text-red-400">{uploadError}</p>
+                                                        )}
+
+                                                        {/* Note section for active statuses */}
+                                                        {isActiveStatus && (
+                                                            <div className="mt-2">
+                                                                {order.today_status_note && !editingNotes[order.order_code] ? (
+                                                                    <div className="flex items-start gap-1.5 bg-blue-50/80 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                                                                        <MessageSquare className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />
+                                                                        <p className="text-[10px] text-gray-700 dark:text-slate-300 flex-1 whitespace-pre-wrap">{order.today_status_note}</p>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setNoteTexts((prev) => ({ ...prev, [order.order_code]: order.today_status_note }));
+                                                                                setEditingNotes((prev) => ({ ...prev, [order.order_code]: true }));
+                                                                            }}
+                                                                            className="shrink-0 p-0.5 hover:bg-blue-100 dark:hover:bg-blue-800/50 rounded"
+                                                                            title="Edit note"
+                                                                        >
+                                                                            <Edit3 className="w-3 h-3 text-blue-400" />
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Add a note..."
+                                                                            value={noteTexts[order.order_code] || ""}
+                                                                            onChange={(e) => setNoteTexts((prev) => ({ ...prev, [order.order_code]: e.target.value }))}
+                                                                            onKeyDown={(e) => { if (e.key === "Enter") handleNoteSubmit(order.order_code, order.order_status); }}
+                                                                            className="flex-1 text-[11px] px-2 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => handleNoteSubmit(order.order_code, order.order_status)}
+                                                                            disabled={!!submittingNotes[order.order_code] || !(noteTexts[order.order_code] || "").trim()}
+                                                                            className="shrink-0 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-slate-600 text-white transition-colors"
+                                                                        >
+                                                                            {submittingNotes[order.order_code]
+                                                                                ? <Loader className="w-3 h-3 animate-spin" />
+                                                                                : <Send className="w-3 h-3" />
+                                                                            }
+                                                                        </button>
+                                                                        {editingNotes[order.order_code] && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setEditingNotes((prev) => { const n = { ...prev }; delete n[order.order_code]; return n; });
+                                                                                    setNoteTexts((prev) => { const n = { ...prev }; delete n[order.order_code]; return n; });
+                                                                                }}
+                                                                                className="shrink-0 p-1.5 rounded-lg bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-600 dark:text-slate-300 transition-colors"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {noteErrors[order.order_code] && (
+                                                                    <p className="mt-1 text-[10px] text-red-500 dark:text-red-400">{noteErrors[order.order_code]}</p>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 );
