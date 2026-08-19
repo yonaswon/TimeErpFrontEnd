@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw, AlertTriangle, FileText, CheckCircle2, ChevronRight,
   X, Calendar, MapPin, Phone, Loader2, Package, Palette, BarChart2,
-  ShoppingBag, Wrench, Filter, Users, Camera
+  ShoppingBag, Wrench, Filter, Users, Camera, DollarSign
 } from "lucide-react";
 import api from "@/api";
 
@@ -319,8 +319,277 @@ function PaymentSheet({ reason, dateRange, title, totalAmount, onClose }: { reas
   );
 }
 
+// ─── Outstanding Payments Sheet ──────────────────────────────────────────────
+function OutstandingPaymentsSheet({ onClose, onSelectOrder }: { onClose: () => void; onSelectOrder: (o: OrderRow) => void }) {
+  const [containers, setContainers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nextPage, setNextPage] = useState<string | null>(null);
+
+  const fetchData = useCallback(async (url: string, append = false) => {
+    setLoading(true);
+    try {
+      const res = await api.get(url);
+      const results = res.data?.results || res.data || [];
+      setContainers(prev => append ? [...prev, ...results] : results);
+      setNextPage(res.data?.next || null);
+    } catch (e) {
+      console.error('Failed to fetch outstanding payments', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData('/api/admin/orders-table/?is_expected_remaining=true');
+  }, [fetchData]);
+
+  let totalOutstanding = 0;
+  let totalOrders = 0;
+  containers.forEach(c => {
+    totalOutstanding += parseFloat(c.remaining_payment || 0);
+    totalOrders += (c.orders || []).length;
+  });
+
+  return (
+    <Sheet
+      title={
+        <span className="flex items-center gap-2">
+          <DollarSign size={16} className="text-amber-500" />
+          Outstanding Payments
+        </span>
+      }
+      onClose={onClose}
+    >
+      <div className="p-4 bg-gray-50 dark:bg-zinc-800/60 border-b border-gray-100 dark:border-zinc-800 grid grid-cols-2 gap-2">
+        <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl border border-gray-100 dark:border-zinc-700">
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Remaining</div>
+          <div className="text-base font-bold text-amber-600 dark:text-amber-400 mt-0.5">{fmtBirr(totalOutstanding)}</div>
+        </div>
+        <div className="bg-white dark:bg-zinc-800 p-3 rounded-xl border border-gray-100 dark:border-zinc-700">
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Containers / Orders</div>
+          <div className="text-base font-bold text-blue-600 dark:text-blue-400 mt-0.5">{containers.length} Conts ({totalOrders} Ords)</div>
+        </div>
+      </div>
+
+      {loading && containers.length === 0 && (
+        <div className="px-5 py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
+      )}
+      {!loading && containers.length === 0 && (
+        <div className="px-5 py-8 text-center text-sm text-gray-400">No outstanding payments to collect</div>
+      )}
+
+      <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+        {containers.map((c: any) => (
+          <div key={c.id} className="px-5 py-3">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-sm font-bold text-gray-900 dark:text-white">{c.client || 'Unknown Client'}</span>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{fmtBirr(parseFloat(c.remaining_payment || 0))}</span>
+            </div>
+            <div className="text-xs text-gray-400 mb-2">{c.contact || '-'} · {c.location || '-'}</div>
+
+            <div className="space-y-1">
+              {(c.orders || []).map((o: any) => {
+                const row: OrderRow = {
+                  order_code: o.order_code, order_name: o.order_name, order_status: o.order_status,
+                  price: o.price || 0, client: c.client, contact: c.contact, location: c.location,
+                  delivery_date: c.delivery_date, container_id: c.id, mockup_url: o.mockup_image || null,
+                  advance_payment: parseFloat(c.advance_payment || 0),
+                  remaining_payment: parseFloat(c.remaining_payment || 0),
+                  full_payment: parseFloat(c.full_payment || 0),
+                  is_delayed: c.is_delayed === true,
+                  today_status_image: o.today_status_image || null,
+                  status_duration_seconds: o.status_duration_seconds ?? null,
+                };
+                return (
+                  <button
+                    key={o.order_code}
+                    onClick={() => { onClose(); onSelectOrder(row); }}
+                    className="w-full flex items-center gap-2 py-1 px-2 rounded-lg bg-gray-50 dark:bg-zinc-800/80 text-left hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">ORD-{o.order_code}</span>
+                    {o.order_name && <span className="text-xs text-gray-500 truncate">{o.order_name}</span>}
+                    <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[o.order_status] || 'bg-gray-100 text-gray-600'}`}>{STATUS_LABEL[o.order_status] || o.order_status}</span>
+                    <ChevronRight size={12} className="text-gray-300 shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-1 border-t border-gray-100 dark:border-zinc-800/60">
+              <span>Full: {fmtBirr(parseFloat(c.full_payment || 0))}</span>
+              <span className="text-green-600 dark:text-green-400">Adv: {fmtBirr(parseFloat(c.advance_payment || 0))}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {nextPage && !loading && (
+        <button
+          onClick={() => fetchData(nextPage, true)}
+          className="w-full py-3 text-sm text-blue-600 dark:text-blue-400 font-medium text-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+        >
+          Load more
+        </button>
+      )}
+    </Sheet>
+  );
+}
+
+// ─── Maintenance & Product Sales Sheet ────────────────────────────────────────
+function MaintenanceAndSalesSheet({ initialTab = 'maintenance', onClose }: { initialTab?: 'maintenance' | 'sales'; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<'maintenance' | 'sales'>(initialTab);
+  
+  const [maintRows, setMaintRows] = useState<any[]>([]);
+  const [maintLoading, setMaintLoading] = useState(false);
+  const [maintNext, setMaintNext] = useState<string | null>(null);
+
+  const [salesRows, setSalesRows] = useState<any[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [salesNext, setSalesNext] = useState<string | null>(null);
+
+  const fetchMaint = useCallback(async (url: string, append = false) => {
+    setMaintLoading(true);
+    try {
+      const res = await api.get(url);
+      const results = res.data?.results || res.data || [];
+      setMaintRows(prev => append ? [...prev, ...results] : results);
+      setMaintNext(res.data?.next || null);
+    } catch (e) {
+      console.error('Failed to fetch maintenance records', e);
+    } finally {
+      setMaintLoading(false);
+    }
+  }, []);
+
+  const fetchSales = useCallback(async (url: string, append = false) => {
+    setSalesLoading(true);
+    try {
+      const res = await api.get(url);
+      const results = res.data?.results || res.data || [];
+      setSalesRows(prev => append ? [...prev, ...results] : results);
+      setSalesNext(res.data?.next || null);
+    } catch (e) {
+      console.error('Failed to fetch sales records', e);
+    } finally {
+      setSalesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'maintenance' && maintRows.length === 0) {
+      fetchMaint('/api/admin/finance-tables/?type=maintenance');
+    } else if (activeTab === 'sales' && salesRows.length === 0) {
+      fetchSales('/api/admin/finance-tables/?type=material_sales');
+    }
+  }, [activeTab, fetchMaint, fetchSales, maintRows.length, salesRows.length]);
+
+  return (
+    <Sheet
+      title={
+        <div className="flex items-center gap-2">
+          {activeTab === 'maintenance' ? <Wrench size={16} className="text-orange-500" /> : <ShoppingBag size={16} className="text-indigo-500" />}
+          <span>Maintenance & Product Sales</span>
+        </div>
+      }
+      onClose={onClose}
+    >
+      <div className="p-3 border-b border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/40">
+        <div className="flex bg-gray-200 dark:bg-zinc-800 p-1 rounded-xl">
+          <button
+            onClick={() => setActiveTab('maintenance')}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === 'maintenance' ? 'bg-white dark:bg-zinc-700 text-orange-600 dark:text-orange-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+          >
+            <Wrench size={13} /> Maintenance
+          </button>
+          <button
+            onClick={() => setActiveTab('sales')}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === 'sales' ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+          >
+            <ShoppingBag size={13} /> Product Sales
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'maintenance' ? (
+        <div>
+          {maintLoading && maintRows.length === 0 && (
+            <div className="px-5 py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
+          )}
+          {!maintLoading && maintRows.length === 0 && (
+            <div className="px-5 py-8 text-center text-sm text-gray-400">No maintenance records found</div>
+          )}
+          <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+            {maintRows.map((m: any) => (
+              <div key={m.id} className="px-5 py-3 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{m.client_name || 'Client'}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${m.under_warranty ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'}`}>
+                    {m.under_warranty ? 'Warranty' : 'Non-Warranty'}
+                  </span>
+                </div>
+                {m.client_contact && <div className="text-xs text-gray-400">{m.client_contact}</div>}
+                {m.reported_issue && <div className="text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-zinc-800/60 p-2 rounded-lg mt-1">{m.reported_issue}</div>}
+                <div className="flex items-center justify-between text-xs text-gray-400 pt-1">
+                  <span>Assigned: {m.assigned_to || '-'}</span>
+                  <span>{fmtDate(m.created_at)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {maintNext && !maintLoading && (
+            <button onClick={() => fetchMaint(maintNext, true)} className="w-full py-3 text-sm text-blue-600 dark:text-blue-400 font-medium text-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+              Load more
+            </button>
+          )}
+        </div>
+      ) : (
+        <div>
+          {salesLoading && salesRows.length === 0 && (
+            <div className="px-5 py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
+          )}
+          {!salesLoading && salesRows.length === 0 && (
+            <div className="px-5 py-8 text-center text-sm text-gray-400">No product sales records found</div>
+          )}
+          <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+            {salesRows.map((sr: any) => (
+              <div key={sr.id} className="px-5 py-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{sr.customer_name || 'Customer'}</span>
+                  <span className="text-xs text-gray-400">{fmtDate(sr.date)}</span>
+                </div>
+                {sr.customer_contact && <div className="text-xs text-gray-400">{sr.customer_contact}</div>}
+                
+                <div className="space-y-1 pt-1">
+                  {(sr.releases || []).map((r: any) => (
+                    <div key={r.id} className="flex items-center justify-between text-xs bg-gray-50 dark:bg-zinc-800/60 p-2 rounded-lg">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">{r.material_name}</span>
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">{r.amount} pcs ({r.inventory})</span>
+                    </div>
+                  ))}
+                </div>
+
+                {(sr.payments || []).length > 0 && (
+                  <div className="flex items-center justify-between text-xs pt-1 text-green-600 dark:text-green-400 font-medium">
+                    <span>Paid: {fmtBirr((sr.payments || []).reduce((a: number, b: any) => a + (b.amount || 0), 0))}</span>
+                    <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full">Confirmed</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {salesNext && !salesLoading && (
+            <button onClick={() => fetchSales(salesNext, true)} className="w-full py-3 text-sm text-blue-600 dark:text-blue-400 font-medium text-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+              Load more
+            </button>
+          )}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { onShowFullDashboard: () => void; onShowCRM?: () => void }) {
+
   const [dashData, setDashData] = useState<any>(null);
   const [productionOrders, setProductionOrders] = useState<OrderRow[]>([]);
   const [delayedOrders, setDelayedOrders] = useState<OrderRow[]>([]);
@@ -342,6 +611,8 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
   const [delayedSheet, setDelayedSheet] = useState(false);
   const [newOrdersSheet, setNewOrdersSheet] = useState(false);
   const [missingImageSheet, setMissingImageSheet] = useState(false);
+  const [outstandingSheet, setOutstandingSheet] = useState(false);
+  const [maintSalesSheet, setMaintSalesSheet] = useState<{ open: boolean; initialTab: 'maintenance' | 'sales' }>({ open: false, initialTab: 'maintenance' });
 
   const getRange = useCallback(() => {
     if (datePreset === "custom") return { from: appliedCustomRange.from, to: appliedCustomRange.to };
@@ -501,17 +772,30 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
               <div><div className={`text-base font-bold ${delayedOrders.length > 0 ? "text-red-600 dark:text-red-400" : "text-gray-400"}`}>{delayedOrders.length}</div><div className="text-xs text-gray-500">Delayed</div></div>
             </button>
           </div>
-          {/* Sales & Maintenance row */}
+          {/* Outstanding Payments & Combined Maintenance + Sales row */}
           <div className="grid grid-cols-2 gap-2 mt-2">
-            <button onClick={() => openPaymentSheet("SALES", "Sales", salesTotal)}
-              className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
-              <ShoppingBag size={18} className="text-indigo-600 dark:text-indigo-400" />
-              <div><div className="text-base font-bold text-indigo-600 dark:text-indigo-400">{fmtBirr(salesTotal)}</div><div className="text-xs text-gray-500">Sales</div></div>
+            <button onClick={() => setOutstandingSheet(true)}
+              className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
+              <DollarSign size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <div>
+                <div className="text-base font-bold text-amber-600 dark:text-amber-400">
+                  {fmtBirr(dashData?.orders?.outstanding_payments?.total_remaining ?? dashData?.finance?.expected_remaining ?? 0)}
+                </div>
+                <div className="text-xs text-gray-500">Outstanding Payments</div>
+              </div>
             </button>
-            <button onClick={() => openPaymentSheet("MAINTENANCE", "Maintenance", maintTotal)}
-              className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex items-center gap-3 text-left active:opacity-70">
-              <Wrench size={18} className="text-orange-600 dark:text-orange-400" />
-              <div><div className="text-base font-bold text-orange-600 dark:text-orange-400">{fmtBirr(maintTotal)}</div><div className="text-xs text-gray-500">Maintenance</div></div>
+            <button onClick={() => setMaintSalesSheet({ open: true, initialTab: 'maintenance' })}
+              className="bg-gradient-to-br from-indigo-50 to-orange-50 dark:from-indigo-900/20 dark:to-orange-900/20 border border-indigo-100 dark:border-indigo-800/40 rounded-xl p-3 flex items-center gap-2 text-left active:opacity-70">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <Wrench size={14} className="text-orange-500" />
+                  <ShoppingBag size={14} className="text-indigo-500" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white">Maint. & Sales</div>
+                  <div className="text-[10px] text-gray-500 dark:text-gray-400">{fmtBirr(salesTotal + maintTotal)}</div>
+                </div>
+              </div>
             </button>
           </div>
         </section>
@@ -630,6 +914,16 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
       {/* ── Sheets ── */}
       {delayedSheet && (
         <Sheet title={<span className="flex items-center gap-2"><AlertTriangle size={14} className="text-red-500" /> Delayed Orders ({delayedOrders.length})</span>} onClose={() => setDelayedSheet(false)}>
+          <div className="px-5 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/40 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-wider">Total Overdue Remaining Unpaid</div>
+              <div className="text-xs text-red-700 dark:text-red-300 font-medium mt-0.5">{delayedOrders.length} delayed orders pending delivery</div>
+            </div>
+            <div className="text-base font-bold text-red-600 dark:text-red-400">
+              {fmtBirr(dashData?.orders?.delayed_summary?.overdue_remaining_total ?? delayedOrders.reduce((a, b) => a + b.remaining_payment, 0))}
+            </div>
+          </div>
+
           <div className="divide-y divide-gray-100 dark:divide-zinc-800">
             {delayedOrders.map(o => (
               <button key={o.order_code} onClick={() => { setDelayedSheet(false); setSelectedOrder(o); }}
@@ -637,6 +931,7 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5"><span className="text-sm font-semibold text-gray-900 dark:text-white">ORD-{o.order_code}</span>{o.order_name && <span className="text-sm text-gray-500 truncate">{o.order_name}</span>}</div>
                   <div className="text-xs text-red-500 mt-0.5">{o.client} · Due {fmtDate(o.delivery_date)}</div>
+                  <div className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-0.5">Remaining Unpaid: {fmtBirr(o.remaining_payment)}</div>
                 </div>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLOR[o.order_status] || ""}`}>{STATUS_LABEL[o.order_status]}</span>
                 <ChevronRight size={13} className="text-gray-300 shrink-0" />
@@ -707,6 +1002,20 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
               ))}
           </div>
         </Sheet>
+      )}
+
+      {outstandingSheet && (
+        <OutstandingPaymentsSheet
+          onClose={() => setOutstandingSheet(false)}
+          onSelectOrder={(o) => setSelectedOrder(o)}
+        />
+      )}
+
+      {maintSalesSheet.open && (
+        <MaintenanceAndSalesSheet
+          initialTab={maintSalesSheet.initialTab}
+          onClose={() => setMaintSalesSheet({ open: false, initialTab: 'maintenance' })}
+        />
       )}
     </div>
   );
