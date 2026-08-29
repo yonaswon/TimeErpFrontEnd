@@ -5,8 +5,8 @@ import api from '@/api'
 interface StatisticsData {
   totalLeads: number
   convertedToday: number
-  newLeads: number
-  warmLeads: number
+  needsDetails: number
+  lostLeads: number
 }
 
 interface StatisticsCardProps {
@@ -18,8 +18,8 @@ const StatisticsCard = ({ userId, filters }: StatisticsCardProps) => {
   const [stats, setStats] = useState<StatisticsData>({
     totalLeads: 0,
     convertedToday: 0,
-    newLeads: 0,
-    warmLeads: 0
+    needsDetails: 0,
+    lostLeads: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -70,8 +70,8 @@ const StatisticsCard = ({ userId, filters }: StatisticsCardProps) => {
         lead.converted_at && 
         new Date(lead.converted_at).toDateString() === today
       ).length,
-      newLeads: leads.filter(lead => lead.status === 'NEW').length,
-      warmLeads: leads.filter(lead => lead.status === 'WARM').length
+      needsDetails: leads.filter(lead => lead.pipeline_stage_detail?.code === 'NEEDS_DETAILS').length,
+      lostLeads: leads.filter(lead => lead.pipeline_stage_detail?.code === 'LOST').length
     }
 
     setStats(statistics)
@@ -89,13 +89,13 @@ const StatisticsCard = ({ userId, filters }: StatisticsCardProps) => {
       color: 'green',
     },
     {
-      title: 'New',
-      value: stats.newLeads,
+      title: 'Needs Details',
+      value: stats.needsDetails,
       color: 'purple',
     },
     {
-      title: 'Warm',
-      value: stats.warmLeads,
+      title: 'Lost',
+      value: stats.lostLeads,
       color: 'orange',
     }
   ]

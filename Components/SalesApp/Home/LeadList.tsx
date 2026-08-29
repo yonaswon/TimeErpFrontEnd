@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import api from "@/api";
-import { Loader2, Check, X, Flame, Snowflake } from "lucide-react";
+import { Loader2, RefreshCw, Snowflake, XCircle } from "lucide-react";
 
 interface Lead {
   id: number;
@@ -15,6 +15,7 @@ interface Lead {
   sales: number;
   note?: string;
   customer_telegram?: string;
+  pipeline_stage_detail?: { id: number; code: string; name: string; color: string };
 }
 
 interface LeadListProps {
@@ -43,28 +44,18 @@ const LeadList = ({
   const [updatingLeadId, setUpdatingLeadId] = useState<number | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleStatusChange = async (
-    e: React.MouseEvent,
-    leadId: number,
-    newStatus: string
-  ) => {
+  const handlePipelineAction = async (e: React.MouseEvent, lead: Lead, action: 'cold' | 'lost' | 'revive') => {
     e.stopPropagation();
     if (updatingLeadId) return;
-
+    const reason = window.prompt(action === 'cold' ? 'Why is this lead cold?' : action === 'lost' ? 'Why was this lead lost?' : 'Why are you reopening this lead?')?.trim();
+    if (!reason) return;
     try {
-      setUpdatingLeadId(leadId);
-      // Optimistic update
-      setLeads((prev) =>
-        prev.map((lead) =>
-          lead.id === leadId ? { ...lead, status: newStatus } : lead
-        )
-      );
-
-      await api.patch(`/lead/leads/${leadId}/`, { status: newStatus });
+      setUpdatingLeadId(lead.id);
+      const endpoint = action === 'cold' ? 'mark-cold' : action === 'lost' ? 'mark-lost' : 'revive';
+      await api.post(`/lead/leads/${lead.id}/${endpoint}/`, { reason });
+      await fetchLeads(true);
     } catch (error) {
-      console.error("Failed to update status:", error);
-      // Revert on failure
-      fetchLeads(true);
+      console.error("Failed to update pipeline:", error);
     } finally {
       setUpdatingLeadId(null);
     }
@@ -126,8 +117,8 @@ const LeadList = ({
         }
       }
 
-      if (filters.status) {
-        params.status = filters.status;
+      if (filters.pipelineStage) {
+        params.pipeline_stage_code = filters.pipelineStage;
       }
 
       if (searchQuery.trim()) {
@@ -328,11 +319,10 @@ const LeadList = ({
               </div>
 
               <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(
-                  lead.status
-                )}`}
+                className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border"
+                style={{ color: lead.pipeline_stage_detail?.color || '#64748B', borderColor: `${lead.pipeline_stage_detail?.color || '#64748B'}55`, backgroundColor: `${lead.pipeline_stage_detail?.color || '#64748B'}12` }}
               >
-                {lead.status}
+                {lead.pipeline_stage_detail?.name || 'Needs Details'}
               </span>
             </div>
 
@@ -388,66 +378,9 @@ const LeadList = ({
 
               {/* Action Buttons (Professional Outline Style) */}
               <div className="flex gap-2">
-                {lead.status === "NEW" && (
-                  <>
-                    <button
-                      onClick={(e) => handleStatusChange(e, lead.id, "WARM")}
-                      disabled={updatingLeadId === lead.id}
-                      className="px-3 py-1 rounded-md border border-orange-200 dark:border-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-medium tracking-wide hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors flex items-center gap-1.5"
-                    >
-                      {updatingLeadId === lead.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Flame className="w-3 h-3" />
-                      )}
-                      WARM
-                    </button>
-                    <button
-                      onClick={(e) => handleStatusChange(e, lead.id, "COLD")}
-                      disabled={updatingLeadId === lead.id}
-                      className="px-3 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[11px] font-medium tracking-wide hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-                    >
-                      {updatingLeadId === lead.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Snowflake className="w-3 h-3" />
-                      )}
-                      COLD
-                    </button>
-                  </>
-                )}
-
-                {lead.status === "WARM" && (
-                  <>
-                    <button
-                      onClick={(e) => handleStatusChange(e, lead.id, "COLD")}
-                      disabled={updatingLeadId === lead.id}
-                      className="px-3 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[11px] font-medium tracking-wide hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-                    >
-                      {updatingLeadId === lead.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Snowflake className="w-3 h-3" />
-                      )}
-                      MARK COLD
-                    </button>
-                  </>
-                )}
-
-                {lead.status === "COLD" && (
-                  <button
-                    onClick={(e) => handleStatusChange(e, lead.id, "WARM")}
-                    disabled={updatingLeadId === lead.id}
-                    className="px-3 py-1 rounded-md border border-orange-200 dark:border-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-medium tracking-wide hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors flex items-center gap-1.5"
-                  >
-                    {updatingLeadId === lead.id ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Flame className="w-3 h-3" />
-                    )}
-                    REVIVE
-                  </button>
-                )}
+                {['NEEDS_DETAILS', 'NEW_LEAD'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'cold')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Snowflake className="w-3 h-3" />} MARK COLD</button>}
+                {['MOCKUP_REQUESTED', 'MOCKUP_IN_PROGRESS', 'MOCKUP_RETURNED'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'lost')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-red-200 text-red-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />} MARK LOST</button>}
+                {['COLD', 'LOST'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'revive')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-blue-200 text-blue-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} REOPEN</button>}
               </div>
             </div>
           </div>

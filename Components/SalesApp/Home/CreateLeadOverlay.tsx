@@ -56,7 +56,6 @@ export default function CreateLeadOverlay({ onClose, onSuccess }: CreateLeadOver
         customer_phonenumber: formData.customer_phonenumber.trim(),
         customer_telegram: formData.customer_telegram.trim() || null,
         note: formData.note.trim() || null,
-        status: 'NEW' // Default status
       }
 
       await api.post('/lead/leads/', payload)

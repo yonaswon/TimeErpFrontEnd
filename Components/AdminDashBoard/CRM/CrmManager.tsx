@@ -25,8 +25,8 @@ export default function CrmManager({ initialMode }: { initialMode?: 'leads' | 'c
         try {
             const res = await api.get(`/lead/crm/leads/${id}/conversation/`);
             setLead(res.data.lead);
-            setEvents(res.data.events || []);
-            setStats(res.data.stats);
+            setEvents(res.data.results || res.data.events || []);
+            setStats(res.data.counts || res.data.stats);
         } catch (err) {
             console.error('Failed to load conversation', err);
             setLead(null); setEvents([]); setStats(null);
@@ -196,7 +196,7 @@ export default function CrmManager({ initialMode }: { initialMode?: 'leads' | 'c
                 </div>
             ) : empty}
 
-            <LeadDetailsPanel lead={lead} events={events} />
+            {selectedLeadId ? <LeadDetailsPanel leadId={selectedLeadId} /> : empty}
         </div>
     );
 }

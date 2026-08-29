@@ -9,7 +9,11 @@ export type CrmEventType =
     | 'lead.merged'
     | 'lead.created'
     | 'followup.due'
-    | 'transcript.updated';
+    | 'transcript.updated'
+    | 'communication.committed'
+    | 'communication.created'
+    | 'communication.updated'
+    | 'communication.attachment_updated';
 
 export interface CrmEvent {
     type: CrmEventType;

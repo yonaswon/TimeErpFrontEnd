@@ -8,15 +8,19 @@ interface FilterBarProps {
 const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   const [filters, setFilters] = useState({
     dateRange: '',
-    status: ''
+    pipelineStage: ''
   })
 
   // Tabs for Status
   const statusTabs = [
     { value: '', label: 'All' },
-    { value: 'NEW', label: 'New' },
-    { value: 'WARM', label: 'Warm' },
+    { value: 'NEEDS_DETAILS', label: 'Needs Details' },
+    { value: 'NEW_LEAD', label: 'New Lead' },
+    { value: 'MOCKUP_REQUESTED', label: 'Mockup Requested' },
+    { value: 'MOCKUP_IN_PROGRESS', label: 'In Progress' },
+    { value: 'MOCKUP_RETURNED', label: 'Returned' },
     { value: 'COLD', label: 'Cold' },
+    { value: 'LOST', label: 'Lost' },
     { value: 'CONVERTED', label: 'Converted' }
   ]
 
@@ -60,11 +64,11 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
       {/* Status Tabs (Formal Design) */}
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar border-b border-gray-200 dark:border-gray-800">
         {statusTabs.map((tab) => {
-          const isActive = filters.status === tab.value;
+          const isActive = filters.pipelineStage === tab.value;
           return (
             <button
               key={tab.value}
-              onClick={() => handleFilterChange('status', tab.value)}
+              onClick={() => handleFilterChange('pipelineStage', tab.value)}
               className={`
                 relative px-4 py-3 text-sm font-medium transition-all whitespace-nowrap
                 ${isActive

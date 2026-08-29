@@ -13,7 +13,7 @@ const Home = () => {
   >("your");
   const [filters, setFilters] = useState({
     dateRange: "",
-    status: "",
+    pipelineStage: "",
   });
   const [userId, setUserId] = useState<number | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);

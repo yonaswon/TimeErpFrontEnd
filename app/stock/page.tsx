@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import StockDashboard from '@/Components/StockDashboard/StockDashboard';
 import { WebDashboardRolePicker } from '@/Components/AuthComponents/WebDashboardRolePicker';
+import { LoadingScreen } from '@/Components/AuthComponents/LoadingScreen';
 import {
     applyWebDashboardChoice,
     getWebDashboardChoice,
@@ -78,19 +79,7 @@ export default function StockPage() {
     };
 
     if (state === 'loading') {
-        return (
-            <div style={{
-                minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'linear-gradient(135deg, #E8EEF5, #DDE5F0, #E4E0EC)',
-            }}>
-                <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    border: '4px solid #E5E7EB', borderTopColor: '#84CC16',
-                    animation: 'spin 0.8s linear infinite',
-                }} />
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-        );
+        return <LoadingScreen label="Loading..." />;
     }
 
     if (state === 'picker' && userData) {

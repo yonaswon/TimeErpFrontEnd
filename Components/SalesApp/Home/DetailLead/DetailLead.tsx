@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import api from "@/api";
-import { X, Loader2, Check, Flame, Snowflake, RefreshCw } from "lucide-react";
+import { X, Loader2, Check, Snowflake, RefreshCw, XCircle } from "lucide-react";
 import LeadInfo from "./Components/LeadInfo";
 import MockUpDisplayer from "./Components/MockUpDisplayer";
 import CreateOrderButton from './CreateOrderFromLead/CreateOrderButton'
@@ -19,6 +19,7 @@ interface Lead {
   created_at: string;
   converted_at: string | null;
   mark_cold_at: string | null;
+  pipeline_stage_detail?: { id: number; code: string; name: string; color: string };
 }
 
 interface DetailLeadProps {
@@ -80,13 +81,16 @@ export default function DetailLead({ leadId, onClose }: DetailLeadProps) {
 
   const [updating, setUpdating] = useState(false);
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handlePipelineAction = async (action: 'cold' | 'lost' | 'revive') => {
     if (!lead) return;
+    const reason = window.prompt(action === 'cold' ? 'Why is this lead cold?' : action === 'lost' ? 'Why was this lead lost?' : 'Why are you reopening this lead?')?.trim();
+    if (!reason) return;
     try {
       setUpdating(true);
-      // Optimistic update
-      setLead({ ...lead, status: newStatus });
-      await api.patch(`/lead/leads/${leadId}/`, { status: newStatus });
+      const endpoint = action === 'cold' ? 'mark-cold' : action === 'lost' ? 'mark-lost' : 'revive';
+      const response = await api.post(`/lead/leads/${leadId}/${endpoint}/`, { reason });
+      setLead(response.data);
+      setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error("Failed to update status:", error);
       fetchLeadDetails(); // Revert
@@ -161,7 +165,7 @@ export default function DetailLead({ leadId, onClose }: DetailLeadProps) {
               {lead.customer_name || "Lead Details"}
             </h1>
             <p className="text-[10px] text-gray-500 dark:text-gray-400">
-              #{leadId} • {lead.status}
+              #{leadId} • {lead.pipeline_stage_detail?.name || 'Needs Details'}
             </p>
           </div>
 
@@ -195,7 +199,7 @@ export default function DetailLead({ leadId, onClose }: DetailLeadProps) {
           </div>
 
           {/* 2. Mockup/Modification Section (The core redesign) */}
-          <MockUpDisplayer leadId={leadId} refreshKey={refreshKey} />
+          <MockUpDisplayer leadId={leadId} refreshKey={refreshKey} canCreate={lead.pipeline_stage_detail?.code !== 'NEEDS_DETAILS'} />
         </div>
       </div>
 
@@ -203,53 +207,19 @@ export default function DetailLead({ leadId, onClose }: DetailLeadProps) {
       {/* Bottom Status Action Bar */}
       <div className="p-3 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 safe-area-bottom">
         <div className="flex gap-3">
-          {lead.status === 'NEW' && (
-            <>
-              <button
-                onClick={() => handleStatusChange('WARM')}
-                disabled={updating}
-                className="flex-1 py-3 rounded-xl border border-orange-200 dark:border-orange-500/30 text-orange-600 dark:text-orange-400 font-medium tracking-wide hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4" />}
-                MARK WARM
-              </button>
-              <button
-                onClick={() => handleStatusChange('COLD')}
-                disabled={updating}
-                className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium tracking-wide hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Snowflake className="w-4 h-4" />}
-                MARK COLD
-              </button>
-            </>
-          )}
-
-          {lead.status === 'WARM' && (
-            <>
-              {/* No Convert Button */}
-              <button
-                onClick={() => handleStatusChange('COLD')}
-                disabled={updating}
-                className="w-full py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium tracking-wide hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Snowflake className="w-4 h-4" />}
-                MARK COLD
-              </button>
-            </>
-          )}
-
-          {lead.status === 'COLD' && (
+          {['NEEDS_DETAILS', 'NEW_LEAD'].includes(lead.pipeline_stage_detail?.code || '') && (
             <button
-              onClick={() => handleStatusChange('WARM')}
+              onClick={() => handlePipelineAction('cold')}
               disabled={updating}
-              className="flex-1 py-3 rounded-xl border border-orange-200 dark:border-orange-500/30 text-orange-600 dark:text-orange-400 font-medium tracking-wide hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium flex items-center justify-center gap-2"
             >
-              {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4" />}
-              REVIVE LEAD
+              {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Snowflake className="w-4 h-4" />} MARK COLD
             </button>
           )}
+          {['MOCKUP_REQUESTED', 'MOCKUP_IN_PROGRESS', 'MOCKUP_RETURNED'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={() => handlePipelineAction('lost')} disabled={updating} className="flex-1 py-3 rounded-xl border border-red-200 text-red-600 font-medium flex items-center justify-center gap-2">{updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />} MARK LOST</button>}
+          {['COLD', 'LOST'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={() => handlePipelineAction('revive')} disabled={updating} className="flex-1 py-3 rounded-xl border border-blue-200 text-blue-600 font-medium flex items-center justify-center gap-2">{updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} REOPEN LEAD</button>}
 
-          {lead.status === 'CONVERTED' && (
+          {lead.pipeline_stage_detail?.code === 'CONVERTED' && (
             <div className="w-full py-3 bg-green-50 text-green-700 dark:bg-green-900/10 dark:text-green-400 rounded-xl font-medium text-sm flex items-center justify-center gap-2 border border-green-100 dark:border-green-900/20">
               <Check className="w-4 h-4" />
               Lead Converted

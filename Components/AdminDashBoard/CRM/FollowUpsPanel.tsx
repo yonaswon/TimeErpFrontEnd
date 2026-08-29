@@ -2,21 +2,22 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '@/api';
-import { CalendarClock, CheckCircle2, X, AlertTriangle, RefreshCw, Phone } from 'lucide-react';
+import { CalendarClock, CheckCircle2, AlertTriangle, Phone } from 'lucide-react';
 
 interface FollowUp {
     id: number;
     lead_id: number;
     lead_name: string;
     lead_phone: string;
-    lead_temperature: string;
-    reason: string;
-    headline: string;
+    lead_temperature?: string;
+    reason?: string;
+    headline?: string;
     note: string;
     scheduled_at: string;
-    priority: 'LOW' | 'MED' | 'HIGH';
-    status: string;
-    is_due: boolean;
+    priority?: 'LOW' | 'MED' | 'HIGH';
+    status?: string;
+    is_due?: boolean;
+    completed_at?: string | null;
     created_at: string;
 }
 
@@ -53,18 +54,15 @@ function relativeTime(iso: string) {
 export default function FollowUpsPanel() {
     const [tasks, setTasks] = useState<FollowUp[]>([]);
     const [loading, setLoading] = useState(false);
-    const [filter, setFilter] = useState<'ALL' | 'HIGH' | 'DUE'>('ALL');
-    const [statusFilter, setStatusFilter] = useState<'PENDING' | 'DONE' | 'DISMISSED' | 'SUPERSEDED' | 'ALL'>('PENDING');
+    const [statusFilter, setStatusFilter] = useState<'PENDING' | 'DONE' | 'ALL'>('PENDING');
 
     const fetchTasks = async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (statusFilter !== 'ALL') params.set('status', statusFilter);
-            if (filter === 'HIGH') params.set('priority', 'HIGH');
-            if (filter === 'DUE') params.set('due', '1');
-            const res = await api.get(`/crm/followups/?${params.toString()}`);
-            setTasks(res.data?.results || []);
+            if (statusFilter !== 'ALL') params.set('state', statusFilter);
+            const res = await api.get(`/lead/follow-up-entries/?${params.toString()}`);
+            setTasks((res.data?.results || res.data || []).map((item: any) => ({ ...item, headline: item.note, priority: 'MED', is_due: !item.completed_at && new Date(item.scheduled_at).getTime() <= Date.now() })));
         } catch (e) {
             console.error('Failed to load follow-ups', e);
             setTasks([]);
@@ -73,27 +71,11 @@ export default function FollowUpsPanel() {
         }
     };
 
-    useEffect(() => { fetchTasks(); /* eslint-disable-next-line */ }, [filter, statusFilter]);
-
-    const replanNow = async () => {
-        try {
-            await api.post('/crm/followups/replan-now/');
-            setTimeout(fetchTasks, 1500);
-        } catch (e) {
-            console.error(e);
-        }
-    };
+    useEffect(() => { fetchTasks(); /* eslint-disable-next-line */ }, [statusFilter]);
 
     const markDone = async (id: number) => {
         try {
-            await api.post(`/crm/followups/${id}/done/`);
-            setTasks(prev => prev.filter(t => t.id !== id));
-        } catch (e) { console.error(e); }
-    };
-
-    const dismiss = async (id: number) => {
-        try {
-            await api.post(`/crm/followups/${id}/dismiss/`);
+            await api.post(`/lead/follow-up-entries/${id}/complete/`);
             setTasks(prev => prev.filter(t => t.id !== id));
         } catch (e) { console.error(e); }
     };
@@ -120,7 +102,7 @@ export default function FollowUpsPanel() {
         <div style={{ padding: 20, maxWidth: 1100 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
                 <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <CalendarClock size={22} /> AI Follow-up Tasks
+                    <CalendarClock size={22} /> Manual Follow-ups
                 </h2>
                 <span style={{ color: '#6b7280', fontSize: 13 }}>{tasks.length} task(s)</span>
                 <div style={{ flex: 1 }} />
@@ -128,20 +110,8 @@ export default function FollowUpsPanel() {
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db' }}>
                     <option value="PENDING">Pending</option>
                     <option value="DONE">Done</option>
-                    <option value="DISMISSED">Dismissed</option>
-                    <option value="SUPERSEDED">Superseded</option>
                     <option value="ALL">All</option>
                 </select>
-                <select value={filter} onChange={e => setFilter(e.target.value as any)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db' }}>
-                    <option value="ALL">All priorities</option>
-                    <option value="HIGH">High priority</option>
-                    <option value="DUE">Due now</option>
-                </select>
-                <button onClick={replanNow} disabled={loading}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: '#2563eb', color: 'white', borderRadius: 6, border: 'none', cursor: 'pointer' }}>
-                    <RefreshCw size={16} /> Replan now
-                </button>
             </div>
 
             {loading && <div style={{ color: '#6b7280' }}>Loading…</div>}
@@ -164,7 +134,7 @@ export default function FollowUpsPanel() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {section.list.map(t => (
                             <div key={t.id} style={{ background: 'white', padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                                <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: priorityColor[t.priority] || '#6b7280' }} />
+                                <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: priorityColor[t.priority || 'MED'] || '#6b7280' }} />
                                 <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                                         <strong style={{ fontSize: 15 }}>{t.lead_name || `Lead #${t.lead_id}`}</strong>
@@ -176,7 +146,7 @@ export default function FollowUpsPanel() {
                                     <div style={{ fontSize: 14, marginBottom: 4 }}>{t.headline}</div>
                                     {t.note && <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{t.note}</div>}
                                     <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                        {reasonLabel[t.reason] || t.reason}
+                                        {t.reason ? reasonLabel[t.reason] || t.reason : 'Salesperson-created follow-up'}
                                         {t.lead_phone && <> · {t.lead_phone}</>}
                                     </div>
                                 </div>
@@ -190,10 +160,6 @@ export default function FollowUpsPanel() {
                                     <button onClick={() => markDone(t.id)} title="Mark done"
                                         style={{ padding: '5px 8px', borderRadius: 5, background: '#f3f4f6', border: '1px solid #d1d5db', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                                         <CheckCircle2 size={12} /> Done
-                                    </button>
-                                    <button onClick={() => dismiss(t.id)} title="Dismiss"
-                                        style={{ padding: '5px 8px', borderRadius: 5, background: 'white', border: '1px solid #d1d5db', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6b7280' }}>
-                                        <X size={12} /> Dismiss
                                     </button>
                                 </div>
                             </div>

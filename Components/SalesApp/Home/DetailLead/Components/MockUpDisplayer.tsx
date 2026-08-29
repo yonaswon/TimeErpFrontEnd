@@ -58,6 +58,7 @@ interface Mockup {
 interface MockUpDisplayerProps {
   leadId: number;
   refreshKey?: number; // Added refreshKey prop
+  canCreate?: boolean;
 }
 
 // --- UTILITY COMPONENTS & FUNCTIONS ---
@@ -103,7 +104,7 @@ const getStatusVariant = (status: string) => {
   }
 };
 
-export default function MockUpDisplayer({ leadId, refreshKey }: MockUpDisplayerProps) {
+export default function MockUpDisplayer({ leadId, refreshKey, canCreate = true }: MockUpDisplayerProps) {
   const [mockups, setMockups] = useState<Mockup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -184,11 +185,12 @@ export default function MockUpDisplayer({ leadId, refreshKey }: MockUpDisplayerP
             No Mockups Yet
           </h3>
           <p className="text-gray-500 dark:text-gray-400">
-            Create your first mockup to get started
+            {canCreate ? 'Create your first mockup to get started' : 'Complete customer details before requesting a mockup.'}
           </p>
           <button
             onClick={() => setShowCreateOverlay(true)}
-            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
+            disabled={!canCreate}
+            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-lg font-medium flex items-center gap-2 mx-auto"
           >
             <Plus className="w-4 h-4" />
             Create First Mockup
@@ -215,7 +217,9 @@ export default function MockUpDisplayer({ leadId, refreshKey }: MockUpDisplayerP
           </h3>
           <button
             onClick={() => setShowCreateOverlay(true)}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
+            disabled={!canCreate}
+            title={canCreate ? 'Request another mockup' : 'Complete customer details first'}
+            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded text-xs font-medium"
           >
             <Plus className="w-3 h-3" />
             New

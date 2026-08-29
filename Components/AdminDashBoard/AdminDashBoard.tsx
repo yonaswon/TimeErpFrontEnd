@@ -22,10 +22,12 @@ import CallLogList from './CallLogs/CallLogList';
 import CallRecordingsList from './CallRecordings/CallRecordingsList';
 import CrmManager from './CRM/CrmManager';
 import FollowUpsPanel from './CRM/FollowUpsPanel';
+import CrmAdminDashboard from './CRM/CrmAdminDashboard';
+import CrmSetup from './CRM/CrmSetup';
 import AttendanceDashboard from './Attendance/AttendanceDashboard';
 import { DashboardData, Filters } from './types';
 
-
+const CRM_ADMIN_DASHBOARD_V2 = process.env.NEXT_PUBLIC_CRM_ADMIN_DASHBOARD_V2 !== '0';
 
 export default function AdminDashBoard() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -88,10 +90,11 @@ export default function AdminDashBoard() {
         'material-usage': 'Material Usage Progress',
         'call-logs': 'Call Logs Dashboard',
         'call-recordings': 'Call Recordings & Transcripts',
-        crm: 'CRM Manager',
+        crm: 'CRM Overview',
         'crm-leads': 'CRM · Leads',
         'crm-conversations': 'CRM · Conversations',
-        'crm-followups': 'CRM · AI Follow-ups',
+        'crm-followups': 'CRM · Follow-ups',
+        'crm-setup': 'CRM · Setup',
         attendance: 'Attendance Dashboard',
         ai: 'AI Assistant',
     };
@@ -102,10 +105,11 @@ export default function AdminDashBoard() {
         if (activeSection === 'material-usage') return <MaterialUsageProgress />;
         if (activeSection === 'call-logs') return <CallLogList />;
         if (activeSection === 'call-recordings') return <CallRecordingsList />;
-        if (activeSection === 'crm') return <CrmManager />;
+        if (activeSection === 'crm') return CRM_ADMIN_DASHBOARD_V2 ? <CrmAdminDashboard /> : <CrmManager />;
         if (activeSection === 'crm-leads') return <CrmManager initialMode="leads" />;
         if (activeSection === 'crm-conversations') return <CrmManager initialMode="conversations" />;
         if (activeSection === 'crm-followups') return <FollowUpsPanel />;
+        if (activeSection === 'crm-setup') return <CrmSetup />;
         if (activeSection === 'attendance') return <AttendanceDashboard />;
         if (activeSection === 'ai') return <AiChat onBack={() => setActiveSection('overview')} />;
 
@@ -169,7 +173,7 @@ export default function AdminDashBoard() {
                         </div>
                     </div>
                 )}
-                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && activeSection !== 'attendance' && activeSection !== 'call-recordings' && activeSection !== 'call-logs' && activeSection !== 'crm' && activeSection !== 'crm-leads' && activeSection !== 'crm-conversations' && activeSection !== 'crm-followups' && (
+                {activeSection !== 'ai' && activeSection !== 'orders' && activeSection !== 'finance' && activeSection !== 'attendance' && activeSection !== 'call-recordings' && activeSection !== 'call-logs' && activeSection !== 'crm' && activeSection !== 'crm-leads' && activeSection !== 'crm-conversations' && activeSection !== 'crm-followups' && activeSection !== 'crm-setup' && (
                     <FilterBar
                         filters={filters}
                         onApply={handleApplyFilters}

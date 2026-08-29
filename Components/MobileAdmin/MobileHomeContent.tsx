@@ -601,6 +601,106 @@ function MaintenanceAndSalesSheet({ initialTab = 'maintenance', onClose }: { ini
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+const MobileHomeSkeleton = () => {
+  const glassBlock = "relative overflow-hidden rounded-xl border border-gray-200/70 bg-white/60 backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40";
+
+  return (
+    <div className="relative pb-4">
+      <div className="sticky top-0 z-10 border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className={`${glassBlock} h-4 w-28`} />
+            <div className={`${glassBlock} h-3 w-20`} />
+          </div>
+          <div className={`${glassBlock} h-9 w-9 !rounded-full`} />
+        </div>
+      </div>
+
+      <div className="flex gap-2 overflow-hidden px-4 pt-3">
+        {["w-14", "w-20", "w-14", "w-20", "w-16"].map((width, index) => (
+          <div key={index} className={`${glassBlock} h-8 shrink-0 !rounded-full ${width}`} />
+        ))}
+      </div>
+
+      <div className="space-y-5 px-4 pt-4">
+        <section>
+          <div className={`${glassBlock} h-3 w-24`} />
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {["bg-blue-50 dark:bg-blue-900/20", "bg-green-50 dark:bg-green-900/20", "bg-purple-50 dark:bg-purple-900/20", "bg-gray-50 dark:bg-zinc-800", "bg-amber-50 dark:bg-amber-900/20", "bg-gradient-to-br from-indigo-50 to-orange-50 dark:from-indigo-900/20 dark:to-orange-900/20"].map((background, index) => (
+              <div key={index} className={`${glassBlock} ${background} h-16 p-3`}>
+                <div className="flex h-full items-center gap-3">
+                  <div className="h-[18px] w-[18px] shrink-0 rounded-md bg-gray-200/80 dark:bg-zinc-700/70" />
+                  <div className="space-y-1.5">
+                    <div className="h-4 w-16 rounded bg-gray-200/80 dark:bg-zinc-700/70" />
+                    <div className="h-3 w-12 rounded bg-gray-200/70 dark:bg-zinc-700/50" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <div className={`${glassBlock} h-3 w-20`} />
+          <div className="mt-2 flex gap-2 overflow-hidden">
+            {Array.from({ length: 7 }).map((_, index) => (
+              <div key={index} className={`${glassBlock} h-[70px] w-[68px] shrink-0`}>
+                <div className="flex h-full flex-col items-center justify-center gap-1.5">
+                  <div className="h-5 w-8 rounded bg-gray-200/80 dark:bg-zinc-700/70" />
+                  <div className="h-2.5 w-10 rounded bg-gray-200/70 dark:bg-zinc-700/50" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <div className="rounded-xl bg-gray-100 p-1 dark:bg-zinc-800">
+            <div className="grid grid-cols-2 gap-1">
+              <div className={`${glassBlock} h-8 !rounded-lg`} />
+              <div className={`${glassBlock} h-8 !rounded-lg`} />
+            </div>
+          </div>
+
+          <div className="mt-3 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-zinc-700 dark:bg-zinc-800">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="flex items-center gap-2 border-b border-gray-100 px-3 py-2.5 last:border-b-0 dark:border-zinc-700">
+                <div className="h-8 w-8 shrink-0 rounded-md bg-gray-200/80 dark:bg-zinc-700/70" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 w-2/5 rounded bg-gray-200/80 dark:bg-zinc-700/70" />
+                  <div className="h-3 w-3/5 rounded bg-gray-200/70 dark:bg-zinc-700/50" />
+                </div>
+                <div className="h-5 w-12 shrink-0 rounded-full bg-gray-200/70 dark:bg-zinc-700/50" />
+                <div className="h-3.5 w-3.5 shrink-0 rounded-sm bg-gray-200/50 dark:bg-zinc-700/40" />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className={`${glassBlock} flex h-12 items-center justify-center`}>
+          <div className="h-3.5 w-44 rounded bg-gray-200/80 dark:bg-zinc-700/70" />
+        </div>
+      </div>
+
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+        <div
+          className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/5"
+          style={{ animation: "mobileHomeSkeletonShimmer 1.6s ease-in-out infinite" }}
+        />
+      </div>
+
+      <style>{`
+        @keyframes mobileHomeSkeletonShimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(300%); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+const contentTransition = "opacity-100 transition-opacity duration-300 ease-out";
+
 export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { onShowFullDashboard: () => void; onShowCRM?: () => void }) {
 
   const [dashData, setDashData] = useState<any>(null);
@@ -714,14 +814,11 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      <p className="text-sm text-gray-400">Loading...</p>
-    </div>
+    <MobileHomeSkeleton />
   );
 
   return (
-    <div className="pb-4">
+    <div className={`pb-4 ${contentTransition}`}>
       {/* ── Top Bar ── */}
       <div className="sticky top-0 z-10 bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-4 py-3 flex items-center justify-between">
         <div>
@@ -812,6 +909,18 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
               </div>
             </button>
           </div>
+
+          {onShowCRM && (
+            <button onClick={onShowCRM}
+              className="mt-3 w-full min-h-14 flex items-center gap-3 px-4 py-3 rounded-xl border border-blue-100 dark:border-blue-800/50 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/25 dark:to-indigo-900/20 text-left active:scale-[0.99] transition-all">
+              <span className="w-9 h-9 rounded-lg bg-blue-600 text-white grid place-items-center shrink-0"><Users size={18} /></span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-bold text-gray-900 dark:text-white">Manage CRM</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">Customers, calls, pipeline and conversations</span>
+              </span>
+              <ChevronRight size={17} className="text-blue-500 shrink-0" />
+            </button>
+          )}
         </section>
 
         {/* ── Pipeline ── */}
@@ -922,13 +1031,6 @@ export default function MobileHomeContent({ onShowFullDashboard, onShowCRM }: { 
           <BarChart2 size={16} /> Full Dashboard & Analytics <ChevronRight size={13} />
         </button>
 
-        {/* ── Manage CRM ── */}
-        {onShowCRM && (
-          <button onClick={onShowCRM}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mt-2">
-            <Users size={16} /> Manage CRM <ChevronRight size={13} />
-          </button>
-        )}
       </div>
 
       {/* ── Sheets ── */}

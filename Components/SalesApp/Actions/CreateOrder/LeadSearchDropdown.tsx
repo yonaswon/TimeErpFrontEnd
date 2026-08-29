@@ -7,6 +7,7 @@ interface Lead {
     id: number
     name: string
     status: string
+    pipeline_stage_detail?: { code: string; name: string; color: string }
     customer_name: string
     customer_phonenumber: string
     customer_telegram: string
@@ -88,15 +89,7 @@ export default function LeadSearchDropdown({ selectedLead, onSelectLead }: LeadS
         setSearchQuery('')
     }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'HOT': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-            case 'WARM': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-            case 'COLD': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-            case 'CONVERTED': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-            default: return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-        }
-    }
+    const pipelineName = (lead: Lead) => lead.pipeline_stage_detail?.name || 'Needs Details'
 
     return (
         <div ref={dropdownRef} className="relative">
@@ -112,8 +105,8 @@ export default function LeadSearchDropdown({ selectedLead, onSelectLead }: LeadS
                             <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
                                 {selectedLead.name}
                             </span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${getStatusColor(selectedLead.status)}`}>
-                                {selectedLead.status}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: selectedLead.pipeline_stage_detail?.color || '#D97706' }}>
+                                {pipelineName(selectedLead)}
                             </span>
                         </div>
                         <div className="flex items-center gap-3 mt-0.5">
@@ -185,8 +178,8 @@ export default function LeadSearchDropdown({ selectedLead, onSelectLead }: LeadS
                                             <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                                 {lead.name}
                                             </span>
-                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${getStatusColor(lead.status)}`}>
-                                                {lead.status}
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium text-white" style={{ backgroundColor: lead.pipeline_stage_detail?.color || '#D97706' }}>
+                                                {pipelineName(lead)}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-3 mt-0.5">

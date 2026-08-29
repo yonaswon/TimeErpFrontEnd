@@ -1,161 +1,127 @@
 'use client';
-import React, { useState } from 'react';
-import { Phone, Send, Package, Edit3, User } from 'lucide-react';
 
-interface Props {
-    lead: any | null;
-    events: any[];
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, ArrowDown, FileText, Loader2, MessageCircle, Pause, Phone, Play, RefreshCw, Send } from 'lucide-react';
+import api from '@/api';
+import { useCrmEvents } from './useCrmEvents';
+
+type Channel = 'ALL' | 'CALL' | 'SMS' | 'TELEGRAM';
+type Attachment = { media_type: string; mime_type?: string; filename?: string; processing_state: string; content_url?: string; thumbnail_url?: string; transcript?: string };
+type Event = { event_id: number; channel: string; direction: string; occurred_at: string; preview?: string; duration_seconds?: number; salesperson?: { full_name?: string; username?: string }; identity?: { type: string; value: string }; call?: { status: string; duration_seconds: number }; attachments?: Attachment[] };
+type Conversation = { lead: any; results: Event[]; next_cursor: string | null; counts: Record<string, number> };
+
+const time = (value: string) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const day = (value: string) => new Date(value).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+const duration = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+
+function AuthenticatedImage({ attachment }: { attachment: Attachment }) {
+  const [source, setSource] = useState('');
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let active = true; let objectUrl = '';
+    if (!attachment.content_url) return;
+    api.get(attachment.thumbnail_url || attachment.content_url, { responseType: 'blob' })
+      .then(response => { if (active) { objectUrl = URL.createObjectURL(response.data); setSource(objectUrl); } })
+      .catch(() => active && setFailed(true));
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [attachment.content_url, attachment.thumbnail_url]);
+  if (failed) return <div className="crm-media-state">Image could not be loaded.</div>;
+  if (!source) return <div className="crm-sk" style={{ width: 180, height: 120, marginTop: 6 }} />;
+  return <button className="crm-chat-image" onClick={() => window.open(source, '_blank')}><img src={source} alt={attachment.filename || 'Shared image'} /></button>;
 }
 
-export default function LeadDetailsPanel({ lead, events }: Props) {
-    const [tab, setTab] = useState<'profile' | 'mockups' | 'mods' | 'phones'>('profile');
+export default function LeadDetailsPanel({ leadId, showProfileHeader = true }: { leadId: number; showProfileHeader?: boolean }) {
+  const [data, setData] = useState<Conversation | null>(null);
+  const [channel, setChannel] = useState<Channel>('ALL');
+  const [loading, setLoading] = useState(true);
+  const [olderLoading, setOlderLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [playing, setPlaying] = useState<number | null>(null);
+  const [buffering, setBuffering] = useState<number | null>(null);
+  const [position, setPosition] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [expandedTranscript, setExpandedTranscript] = useState<number | null>(null);
+  const [newActivity, setNewActivity] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-    if (!lead) {
-        return (
-            <div className="crm-right">
-                <div className="crm-empty"><User size={32} /><div>Select a lead to see details.</div></div>
-            </div>
-        );
-    }
+  const load = useCallback(async (cursor?: string, append = false) => {
+    append ? setOlderLoading(true) : setLoading(true); setError('');
+    const beforeHeight = scrollRef.current?.scrollHeight || 0;
+    if (!append) abortRef.current?.abort();
+    const controller = new AbortController();
+    if (!append) abortRef.current = controller;
+    try {
+      const response = await api.get(`/lead/crm/leads/${leadId}/conversation/`, { params: { page_size: 30, channel: channel === 'ALL' ? undefined : channel, cursor }, signal: controller.signal });
+      setData(previous => append && previous ? { ...response.data, lead: previous.lead, results: [...previous.results, ...response.data.results] } : response.data);
+      requestAnimationFrame(() => { const element = scrollRef.current; if (!element) return; if (append) element.scrollTop += element.scrollHeight - beforeHeight; else element.scrollTop = element.scrollHeight; });
+    } catch (requestError: any) {
+      if (requestError?.code !== 'ERR_CANCELED') setError(requestError?.response?.data?.detail || 'Conversation could not be loaded.');
+    } finally { setLoading(false); setOlderLoading(false); }
+  }, [leadId, channel]);
 
-    const mockups = (events || []).filter((e) => e.type === 'mockup');
-    const mods = (events || []).filter((e) => e.type === 'modification');
+  useEffect(() => { setData(null); load(); return () => abortRef.current?.abort(); }, [load]);
+  useEffect(() => () => { audioRef.current?.pause(); if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); }, []);
+  useCrmEvents(event => {
+    if (!['communication.committed', 'communication.created', 'communication.updated', 'communication.attachment_updated'].includes(event.type)) return;
+    if (Number(event.payload?.lead_id) !== leadId) return;
+    const element = scrollRef.current;
+    const nearBottom = element ? element.scrollHeight - element.scrollTop - element.clientHeight < 100 : true;
+    if (nearBottom) load(); else setNewActivity(true);
+  });
 
-    return (
-        <div className="crm-right">
-            <div className="crm-right-tabs">
-                <button className={tab === 'profile' ? 'active' : ''} onClick={() => setTab('profile')}>Profile</button>
-                <button className={tab === 'mockups' ? 'active' : ''} onClick={() => setTab('mockups')}>Mockups ({mockups.length})</button>
-                <button className={tab === 'mods' ? 'active' : ''} onClick={() => setTab('mods')}>Mods ({mods.length})</button>
-                <button className={tab === 'phones' ? 'active' : ''} onClick={() => setTab('phones')}>Contacts</button>
-            </div>
-            <div className="crm-right-content">
-                {tab === 'profile' && (
-                    <>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Name</span>
-                            <span className="crm-info-value">{lead.name || lead.customer_name || '-'}</span>
-                        </div>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Customer</span>
-                            <span className="crm-info-value">{lead.customer_name || '-'}</span>
-                        </div>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Status</span>
-                            <span className="crm-info-value">
-                                <span className={`crm-status-badge crm-status-${lead.status}`}>{lead.status}</span>
-                            </span>
-                        </div>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Temperature</span>
-                            <span className="crm-info-value">
-                                <span className={`crm-status-badge crm-status-${lead.temperature}`}>{lead.temperature}</span>
-                            </span>
-                        </div>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Source</span>
-                            <span className="crm-info-value">{lead.source || '-'}</span>
-                        </div>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Sales</span>
-                            <span className="crm-info-value">{lead.sales?.full_name || '-'}</span>
-                        </div>
-                        <div className="crm-info-row">
-                            <span className="crm-info-label">Created</span>
-                            <span className="crm-info-value" style={{ fontSize: 12 }}>
-                                {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '-'}
-                            </span>
-                        </div>
-                        {lead.note && (
-                            <div style={{ marginTop: 14 }}>
-                                <div className="crm-info-label" style={{ marginBottom: 6 }}>Note</div>
-                                <div style={{ fontSize: 13, padding: 10, background: 'var(--admin-bg, #f7f8fa)', borderRadius: 6, border: '1px solid var(--admin-border)' }}>
-                                    {lead.note}
-                                </div>
-                            </div>
-                        )}
-                        {lead.interest_note && (
-                            <div style={{ marginTop: 14 }}>
-                                <div className="crm-info-label" style={{ marginBottom: 6 }}>Interest</div>
-                                <div style={{ fontSize: 13, padding: 10, background: 'var(--admin-bg, #f7f8fa)', borderRadius: 6, border: '1px solid var(--admin-border)' }}>
-                                    {lead.interest_note}
-                                </div>
-                            </div>
-                        )}
-                    </>
-                )}
+  const play = async (eventId: number, attachment: Attachment) => {
+    if (playing === eventId) { audioRef.current?.pause(); setPlaying(null); return; }
+    setBuffering(eventId); setError('');
+    try {
+      audioRef.current?.pause(); if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      if (!attachment.content_url) throw new Error('unavailable');
+      const response = await api.get(attachment.content_url, { responseType: 'blob' });
+      const objectUrl = URL.createObjectURL(response.data); objectUrlRef.current = objectUrl;
+      const audio = new Audio(objectUrl); audioRef.current = audio;
+      audio.ontimeupdate = () => setPosition(audio.currentTime);
+      audio.onloadedmetadata = () => setAudioDuration(audio.duration || 0);
+      audio.onended = () => { setPlaying(null); setPosition(0); };
+      audio.onerror = () => { setPlaying(null); setError('This recording could not be played.'); };
+      await audio.play(); setPlaying(eventId);
+    } catch { setError('This recording could not be played or is no longer available.'); }
+    finally { setBuffering(null); }
+  };
 
-                {tab === 'mockups' && (
-                    <>
-                        {mockups.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: 20, color: 'var(--admin-text-secondary)' }}>No mockups.</div>
-                        ) : mockups.map((m) => (
-                            <div key={m.id} style={{ border: '1px solid var(--admin-border)', borderRadius: 8, padding: 10, marginBottom: 10 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                    <strong style={{ fontSize: 13 }}><Package size={12} style={{ display: 'inline' }} /> Mockup #{m.id}</strong>
-                                    <span className={`crm-status-badge crm-status-${m.request_status}`}>{m.request_status}</span>
-                                </div>
-                                {m.image && <img src={m.image} alt="mockup" style={{ width: '100%', borderRadius: 6 }} />}
-                                <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)', marginTop: 4 }}>
-                                    {m.designer?.full_name || '-'} • {m.price ? `${Number(m.price).toLocaleString()} ETB` : '-'}
-                                </div>
-                            </div>
-                        ))}
-                    </>
-                )}
+  const events = useMemo(() => [...(data?.results || [])].reverse(), [data?.results]);
+  const channels: { id: Channel; label: string; count: number }[] = [
+    { id: 'ALL', label: 'All', count: (data?.counts?.call || 0) + (data?.counts?.sms || 0) + (data?.counts?.telegram || 0) },
+    { id: 'CALL', label: 'Calls', count: data?.counts?.call || 0 }, { id: 'SMS', label: 'SMS', count: data?.counts?.sms || 0 }, { id: 'TELEGRAM', label: 'Telegram', count: data?.counts?.telegram || 0 },
+  ];
+  let previousDay = '';
 
-                {tab === 'mods' && (
-                    <>
-                        {mods.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: 20, color: 'var(--admin-text-secondary)' }}>No modifications.</div>
-                        ) : mods.map((m) => (
-                            <div key={m.id} style={{ border: '1px solid var(--admin-border)', borderRadius: 8, padding: 10, marginBottom: 10 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                    <strong style={{ fontSize: 13 }}><Edit3 size={12} style={{ display: 'inline' }} /> Mod #{m.id}</strong>
-                                    <span className={`crm-status-badge crm-status-${m.request_status}`}>{m.request_status}</span>
-                                </div>
-                                {m.image && <img src={m.image} alt="mod" style={{ width: '100%', borderRadius: 6 }} />}
-                                <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)', marginTop: 4 }}>
-                                    Mockup #{m.mockup_id} • {m.price ? `${Number(m.price).toLocaleString()} ETB` : '-'}
-                                </div>
-                                {m.note && <div style={{ fontSize: 12, marginTop: 4 }}>{m.note}</div>}
-                            </div>
-                        ))}
-                    </>
-                )}
-
-                {tab === 'phones' && (
-                    <>
-                        <div className="crm-info-label" style={{ marginBottom: 8, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            <Phone size={11} style={{ display: 'inline', marginRight: 4 }} /> Phones
-                        </div>
-                        {(lead.phones || []).length === 0 ? (
-                            <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)' }}>No linked phones.</div>
-                        ) : (
-                            (lead.phones || []).map((p: any) => (
-                                <div key={p.id} className="crm-info-row">
-                                    <span className="crm-info-value">{p.phone_number}</span>
-                                    <span className="crm-info-label">{p.label || (p.is_primary ? 'primary' : '')}</span>
-                                </div>
-                            ))
-                        )}
-
-                        <div className="crm-info-label" style={{ marginTop: 16, marginBottom: 8, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            <Send size={11} style={{ display: 'inline', marginRight: 4 }} /> Telegram
-                        </div>
-                        {(lead.telegrams || []).length === 0 ? (
-                            <div style={{ fontSize: 12, color: 'var(--admin-text-secondary)' }}>No linked Telegram accounts.</div>
-                        ) : (
-                            (lead.telegrams || []).map((t: any) => (
-                                <div key={t.id} className="crm-info-row">
-                                    <span className="crm-info-value">{t.telegram_username || t.telegram_phone || `id:${t.telegram_user_id}`}</span>
-                                    <span className="crm-info-label">{t.is_primary ? 'primary' : ''}</span>
-                                </div>
-                            ))
-                        )}
-                    </>
-                )}
-            </div>
-        </div>
-    );
+  return <div className="crm-conversation">
+    {showProfileHeader && data?.lead && <div className="crm-conversation-profile"><div className="crm-conversation-avatar">{data.lead.display_name.split(/\s+/).slice(0, 2).map((part: string) => part[0]).join('').toUpperCase()}</div><div><strong>{data.lead.display_name}</strong><span>{data.lead.identities?.find((identity: any) => identity.is_primary)?.value || data.lead.identities?.[0]?.value || 'No primary identity'}</span></div><div className="crm-conversation-state"><b>{data.lead.profile_state === 'PROVISIONAL' ? 'Needs details' : data.lead.profile_state?.toLowerCase()}</b>{data.lead.pipeline_stage?.name && <span>{data.lead.pipeline_stage.name}</span>}</div></div>}
+    <div className="crm-channel-tabs">{channels.map(item => <button key={item.id} className={channel === item.id ? 'active' : ''} onClick={() => setChannel(item.id)}>{item.label}<span>{item.count}</span></button>)}</div>
+    {error && <div className="crm-conversation-error"><AlertCircle size={16} />{error}<button onClick={() => load()}>Retry</button></div>}
+    <div className="crm-message-list" ref={scrollRef}>
+      {loading && !data && <div className="crm-bubble-skeletons">{Array.from({ length: 7 }).map((_, index) => <i key={index} />)}</div>}
+      {data?.next_cursor && <button className="crm-load-older" onClick={() => load(data.next_cursor!, true)} disabled={olderLoading}>{olderLoading ? <Loader2 className="spin" /> : <RefreshCw />} Load older activity</button>}
+      {!loading && data && !events.length && <div className="crm-conversation-empty"><MessageCircle /><strong>No communication recorded</strong><span>No eligible activity exists since TimeCRM tracking started.</span></div>}
+      {events.map(event => {
+        const eventDay = day(event.occurred_at); const showDay = eventDay !== previousDay; previousDay = eventDay;
+        const incoming = event.direction.toUpperCase() === 'INCOMING';
+        const audio = event.attachments?.find(item => ['CALL_RECORDING', 'VOICE', 'AUDIO'].includes(item.media_type));
+        const transcript = audio?.transcript || event.attachments?.find(item => item.transcript)?.transcript;
+        return <React.Fragment key={event.event_id}>{showDay && <div className="crm-day-separator"><span>{eventDay}</span></div>}<article className={`crm-message ${incoming ? 'incoming' : 'outgoing'}`}><div className="crm-message-bubble">
+          <header>{event.channel === 'CALL' ? <Phone /> : event.channel === 'TELEGRAM' ? <Send /> : <MessageCircle />}<b>{event.channel === 'CALL' ? (event.call?.status || 'Call').toLowerCase().replace('_', ' ') : event.channel === 'TELEGRAM' ? 'Telegram' : 'SMS'}</b>{event.identity?.value && <span className="crm-event-identity">{event.identity.type === 'TELEGRAM_USERNAME' && !event.identity.value.startsWith('@') ? '@' : ''}{event.identity.value}</span>}</header>
+          {event.preview && <p>{event.preview}</p>}
+          {event.attachments?.filter(item => item.mime_type?.startsWith('image/')).map((item, index) => item.content_url && <AuthenticatedImage attachment={item} key={index} />)}
+          {event.attachments?.filter(item => item.mime_type && !item.mime_type.startsWith('image/') && !['CALL_RECORDING', 'VOICE', 'AUDIO'].includes(item.media_type)).map((item, index) => <div className="crm-document" key={index}><FileText /><span>{item.filename || 'Attachment'}</span><small>{item.processing_state?.toLowerCase()}</small></div>)}
+          {audio && <div className="crm-audio-row"><button onClick={() => play(event.event_id, audio)} disabled={buffering === event.event_id || !audio.content_url}>{buffering === event.event_id ? <Loader2 className="spin" /> : playing === event.event_id ? <Pause /> : <Play />}</button><input type="range" min="0" max={playing === event.event_id ? audioDuration || 1 : event.duration_seconds || event.call?.duration_seconds || 1} value={playing === event.event_id ? position : 0} onChange={e => { if (audioRef.current) audioRef.current.currentTime = Number(e.target.value); }} disabled={playing !== event.event_id} /><span>{duration(playing === event.event_id ? Math.floor(position) : event.duration_seconds || event.call?.duration_seconds || 0)}</span></div>}
+          {audio && !audio.content_url && <small className="crm-media-state">{audio.processing_state === 'EXPIRED' ? 'Recording expired' : audio.processing_state === 'FAILED' ? 'Upload failed' : 'Recording is not ready'}</small>}
+          {transcript && <div className="crm-transcript"><button onClick={() => setExpandedTranscript(expandedTranscript === event.event_id ? null : event.event_id)}>Transcript</button>{expandedTranscript === event.event_id && <p>{transcript}</p>}</div>}
+          <footer>{!incoming && <span>{event.salesperson?.full_name || event.salesperson?.username}</span>}<time>{time(event.occurred_at)}</time></footer>
+        </div></article></React.Fragment>;
+      })}
+    </div>
+    {newActivity && <button className="crm-new-activity" onClick={() => { setNewActivity(false); load(); }}><ArrowDown /> New activity</button>}
+  </div>;
 }

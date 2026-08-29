@@ -13,7 +13,8 @@ import {
     Phone,
     Mic,
     MessageSquare,
-    CalendarCheck
+    CalendarCheck,
+    Settings
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -35,6 +36,7 @@ const sections: Array<{ id: string; label: string; icon: any; parent?: string }>
     { id: 'call-logs', label: 'Call Logs', icon: Phone, parent: 'crm' },
     { id: 'call-recordings', label: 'Call Recordings', icon: Mic, parent: 'crm' },
     { id: 'crm-followups', label: 'Follow-ups', icon: CalendarCheck, parent: 'crm' },
+    { id: 'crm-setup', label: 'Setup', icon: Settings, parent: 'crm' },
     // ── rest ──
     { id: 'production', label: 'Production', icon: Factory },
     { id: 'finance', label: 'Finance', icon: DollarSign },
