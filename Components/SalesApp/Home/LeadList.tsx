@@ -266,12 +266,12 @@ const LeadList = ({
               <div className="flex items-center gap-3 overflow-hidden">
                 {/* Avatar Placeholder */}
                 <div className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-gray-500 dark:text-gray-300 font-bold text-lg shadow-inner">
-                  {(lead.customer_name || lead.name || "?")[0].toUpperCase()}
+                  {((lead.customer_name || lead.name || "?").replace('[Unregistered]', '').trim())[0]?.toUpperCase() || '?'}
                 </div>
 
                 <div className="min-w-0">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-[15px] leading-tight">
-                    {lead.customer_name || lead.name || "Unnamed Lead"}
+                    {(lead.customer_name || lead.name || "Unnamed Lead").replace('[Unregistered]', '').trim() || "Unnamed Lead"}
                   </h3>
                   <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
                     <span className="font-medium">{lead.design_type?.name}</span>
@@ -342,7 +342,7 @@ const LeadList = ({
               {/* Action Buttons (Professional Outline Style) */}
               <div className="flex gap-2">
                 {['NEEDS_DETAILS', 'NEW_LEAD'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'cold')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Snowflake className="w-3 h-3" />} MARK COLD</button>}
-                {['MOCKUP_REQUESTED', 'MOCKUP_IN_PROGRESS', 'MOCKUP_RETURNED'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'lost')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-red-200 text-red-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />} MARK LOST</button>}
+                {['MOCKUP_REQUESTED', 'MOCKUP_IN_PROGRESS', 'MOCKUP_RETURNED', 'MODIFICATION_REQUESTED', 'MODIFICATION_IN_PROGRESS', 'MODIFICATION_RETURNED'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'lost')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-red-200 text-red-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />} MARK LOST</button>}
                 {['COLD', 'LOST'].includes(lead.pipeline_stage_detail?.code || '') && <button onClick={(e) => handlePipelineAction(e, lead, 'revive')} disabled={updatingLeadId === lead.id} className="px-3 py-1 rounded-md border border-blue-200 text-blue-600 text-[11px] font-medium flex items-center gap-1.5">{updatingLeadId === lead.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} REOPEN</button>}
               </div>
             </div>

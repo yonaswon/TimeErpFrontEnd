@@ -9,13 +9,15 @@ import { LeadListFilters } from "./leadListQuery";
 
 type LeadScope = "all" | "your" | "converted" | "allLeads";
 
-const getStoredUserId = () => {
+const getStoredUserId = (): number | null => {
   if (typeof window === "undefined") return null;
   const userData = localStorage.getItem("user_data");
   if (!userData) return null;
   try {
-    const parsedData: { id?: number } = JSON.parse(userData);
-    return typeof parsedData.id === "number" ? parsedData.id : null;
+    const parsedData: any = JSON.parse(userData);
+    const rawId = parsedData?.id ?? parsedData?.pk ?? parsedData?.user_id ?? parsedData?.user?.id;
+    const num = Number(rawId);
+    return !isNaN(num) && num > 0 ? num : null;
   } catch (error) {
     console.error("Error parsing user data:", error);
     return null;
