@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "@/api";
 import { Loader2, RefreshCw, Snowflake, XCircle } from "lucide-react";
+import { buildLeadListParams, LeadListFilters } from "./leadListQuery";
+
+const PAGE_SIZE = 20;
 
 interface Lead {
   id: number;
@@ -20,12 +23,32 @@ interface Lead {
 
 interface LeadListProps {
   activeTab: string;
-  filters: any;
+  filters: LeadListFilters;
   userId: number | null;
   onLeadClick?: (leadId: number) => void;
-  showCreateOverlay: any;
+  showCreateOverlay: boolean;
   searchQuery: string;
 }
+
+const LoadingSkeleton = () => (
+  <div className="space-y-3">
+    {[...Array(5)].map((_, index) => (
+      <div
+        key={index}
+        className="animate-pulse rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+      >
+        <div className="mb-3 flex items-center space-x-3">
+          <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-zinc-800" />
+          <div className="flex-1">
+            <div className="mb-2 h-4 w-1/2 rounded bg-gray-200 dark:bg-zinc-800" />
+            <div className="h-3 w-1/4 rounded bg-gray-200 dark:bg-zinc-800" />
+          </div>
+        </div>
+        <div className="h-10 w-full rounded-lg bg-gray-100 dark:bg-zinc-800" />
+      </div>
+    ))}
+  </div>
+);
 
 const LeadList = ({
   activeTab,
@@ -37,12 +60,26 @@ const LeadList = ({
 }: LeadListProps) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nextPage, setNextPage] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const [leadCount, setLeadCount] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [updatingLeadId, setUpdatingLeadId] = useState<number | null>(null);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const criteriaKey = [
+    activeTab,
+    debouncedSearch,
+    filters.dateRange,
+    filters.pipelineStage,
+    userId ?? "",
+    showCreateOverlay ? "create-open" : "create-closed",
+  ].join("|");
+  const [pagination, setPagination] = useState({ criteriaKey, page: 1 });
+  const page = pagination.criteriaKey === criteriaKey ? pagination.page : 1;
+  const totalPages = Math.max(1, Math.ceil(leadCount / PAGE_SIZE));
+
+  const changePage = (nextPage: number) => {
+    setPagination({ criteriaKey, page: nextPage });
+  };
 
   const handlePipelineAction = async (e: React.MouseEvent, lead: Lead, action: 'cold' | 'lost' | 'revive') => {
     e.stopPropagation();
@@ -53,7 +90,7 @@ const LeadList = ({
       setUpdatingLeadId(lead.id);
       const endpoint = action === 'cold' ? 'mark-cold' : action === 'lost' ? 'mark-lost' : 'revive';
       await api.post(`/lead/leads/${lead.id}/${endpoint}/`, { reason });
-      await fetchLeads(true);
+      setRefreshKey((current) => current + 1);
     } catch (error) {
       console.error("Failed to update pipeline:", error);
     } finally {
@@ -62,129 +99,76 @@ const LeadList = ({
   };
 
   useEffect(() => {
-    setLeads([]);
-    setNextPage(null);
-    setHasMore(false);
-    fetchLeads(true);
-  }, [activeTab, filters, userId, showCreateOverlay]);
-
-  // Debounce searchQuery changes
-  useEffect(() => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      setLeads([]);
-      setNextPage(null);
-      setHasMore(false);
-      fetchLeads(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
     }, 300);
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchLeads = async (reset: boolean = false) => {
+  useEffect(() => {
     if (!userId && activeTab === "your") {
-      setLoading(false);
       return;
     }
 
-    try {
-      if (reset) {
+    const controller = new AbortController();
+
+    const fetchLeads = async () => {
+      try {
         setLoading(true);
         setError(null);
-      } else {
-        setLoadingMore(true);
-      }
-
-      let url = "/lead/leads/?ordering=-created_at";
-      let params: any = {};
-
-      if (activeTab === "your") {
-        params.sales = userId?.toString();
-      } else if (activeTab === "converted") {
-        params.status = "CONVERTED";
-      }
-
-      if (filters.dateRange) {
-        if (filters.dateRange === "today") {
-          params.created_today = "true";
-        } else if (filters.dateRange === "yesterday") {
-          params.created_yesterday = "true";
-        } else if (filters.dateRange === "last_7_days") {
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          params.created_after = sevenDaysAgo.toISOString().split("T")[0];
-        }
-      }
-
-      if (filters.pipelineStage) {
-        params.pipeline_stage_code = filters.pipelineStage;
-      }
-
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
-
-      if (!reset && nextPage) {
-        url = nextPage;
-
-        // 🔍 FIX: Extract relative path if URL is absolute
-        if (url.startsWith("http")) {
-          try {
-            const urlObj = new URL(url);
-            url = urlObj.pathname + urlObj.search;
-          } catch (e) {
-            console.error("Failed to parse pagination URL:", e);
-          }
-        }
-      } else {
-        const queryParams = new URLSearchParams();
-        Object.keys(params).forEach((key) => {
-          if (params[key]) {
-            queryParams.append(key, params[key]);
-          }
+        const params = buildLeadListParams({
+          activeTab,
+          filters: {
+            dateRange: filters.dateRange,
+            pipelineStage: filters.pipelineStage,
+          },
+          page,
+          pageSize: PAGE_SIZE,
+          search: debouncedSearch,
+          userId,
         });
-        if (queryParams.toString()) {
-          url += `&${queryParams.toString()}`;
-        }
-      }
+        const response = await api.get("/lead/leads/", {
+          params,
+          signal: controller.signal,
+        });
+        const leadsData = Array.isArray(response.data.results)
+          ? response.data.results
+          : Array.isArray(response.data)
+            ? response.data
+            : [];
 
-      const response = await api.get(url);
-      const leadsData = response.data.results || response.data;
-
-      if (reset) {
         setLeads(leadsData);
-      } else {
-        setLeads((prev) => [...prev, ...leadsData]);
+        setLeadCount(
+          typeof response.data.count === "number"
+            ? response.data.count
+            : leadsData.length,
+        );
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "ERR_CANCELED"
+        ) return;
+        console.error("Error fetching leads:", error);
+        setError("Failed to load leads.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-
-      setNextPage(response.data.next);
-      setHasMore(!!response.data.next);
-    } catch (error: any) {
-      console.error("Error fetching leads:", error);
-      setError("Failed to load leads.");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const handleLoadMore = () => {
-    if (hasMore && !loadingMore) {
-      fetchLeads(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      NEW: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200 border-blue-200 dark:border-blue-800",
-      WARM: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-200 border-orange-200 dark:border-orange-800",
-      COLD: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700",
-      CONVERTED:
-        "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-200 border-green-200 dark:border-green-800",
     };
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
-  };
+
+    fetchLeads();
+    return () => controller.abort();
+  }, [
+    activeTab,
+    debouncedSearch,
+    filters.dateRange,
+    filters.pipelineStage,
+    page,
+    refreshKey,
+    showCreateOverlay,
+    userId,
+  ]);
 
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -210,27 +194,6 @@ const LeadList = ({
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  // Skeleton Loader Component
-  const LoadingSkeleton = () => (
-    <div className="space-y-3">
-      {[...Array(5)].map((_, i) => (
-        <div
-          key={i}
-          className="bg-white dark:bg-zinc-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-zinc-800 animate-pulse"
-        >
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-10 h-10 bg-gray-200 dark:bg-zinc-800 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 dark:bg-zinc-800 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-200 dark:bg-zinc-800 rounded w-1/4"></div>
-            </div>
-          </div>
-          <div className="h-10 bg-gray-100 dark:bg-zinc-800 rounded-lg w-full"></div>
-        </div>
-      ))}
-    </div>
-  );
-
   if (loading) return <LoadingSkeleton />;
 
   if (error) {
@@ -255,7 +218,7 @@ const LeadList = ({
           Something went wrong
         </p>
         <button
-          onClick={() => fetchLeads(true)}
+          onClick={() => setRefreshKey((current) => current + 1)}
           className="text-blue-500 hover:text-blue-600 text-sm font-medium px-4 py-2"
         >
           Tap to retry
@@ -329,7 +292,7 @@ const LeadList = ({
             {/* Note Preview */}
             {lead.note && (
               <div className="mb-3 px-3 py-2 bg-gray-50 dark:bg-slate-900/50 rounded-lg text-xs text-gray-600 dark:text-slate-400 line-clamp-2 italic border border-gray-100 dark:border-slate-800">
-                "{lead.note}"
+                &ldquo;{lead.note}&rdquo;
               </div>
             )}
 
@@ -387,28 +350,33 @@ const LeadList = ({
         ))}
       </div>
 
-      {/* Load More Trigger */}
-      {
-        hasMore && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLoadMore();
-            }}
-            disabled={loadingMore}
-            className="w-full py-3 mt-4 text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-800 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
-          >
-            {loadingMore ? (
-              <>
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                <span>Loading more...</span>
-              </>
-            ) : (
-              <span>Load older leads</span>
-            )}
-          </button>
-        )
-      }
+      <nav
+        aria-label="Lead list pagination"
+        className="flex items-center justify-between gap-3 px-1"
+      >
+        <button
+          type="button"
+          onClick={() => changePage(Math.max(1, page - 1))}
+          disabled={page === 1 || loading}
+          className="min-w-20 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-gray-200"
+        >
+          Previous
+        </button>
+
+        <p className="text-center text-xs text-gray-500 dark:text-gray-400" aria-live="polite">
+          Page {page} of {totalPages}
+          <span className="block">{leadCount} {leadCount === 1 ? "lead" : "leads"}</span>
+        </p>
+
+        <button
+          type="button"
+          onClick={() => changePage(Math.min(totalPages, page + 1))}
+          disabled={page >= totalPages || loading}
+          className="min-w-20 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-gray-200"
+        >
+          Next
+        </button>
+      </nav>
     </div >
   );
 };

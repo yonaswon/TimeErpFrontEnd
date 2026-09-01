@@ -1,38 +1,39 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
-import StatisticsCard from "./StatisticsCard";
 import FilterBar from "./FilterBar";
 import LeadList from "./LeadList";
 import DetailLead from "./DetailLead/DetailLead";
 import CreateLeadOverlay from "./CreateLeadOverlay";
+import { LeadListFilters } from "./leadListQuery";
+
+type LeadScope = "all" | "your" | "converted" | "allLeads";
+
+const getStoredUserId = () => {
+  if (typeof window === "undefined") return null;
+  const userData = localStorage.getItem("user_data");
+  if (!userData) return null;
+  try {
+    const parsedData: { id?: number } = JSON.parse(userData);
+    return typeof parsedData.id === "number" ? parsedData.id : null;
+  } catch (error) {
+    console.error("Error parsing user data:", error);
+    return null;
+  }
+};
 
 const Home = () => {
-  const [activeTab, setActiveTab] = useState<
-    "all" | "your" | "converted" | "allLeads"
-  >("your");
-  const [filters, setFilters] = useState({
+  const [activeTab, setActiveTab] = useState<LeadScope>("your");
+  const [filters, setFilters] = useState<LeadListFilters>({
     dateRange: "",
     pipelineStage: "",
   });
-  const [userId, setUserId] = useState<number | null>(null);
+  const [userId] = useState<number | null>(getStoredUserId);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [showCreateOverlay, setShowCreateOverlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    const userData = localStorage.getItem("user_data");
-    if (userData) {
-      try {
-        const parsedData = JSON.parse(userData);
-        setUserId(parsedData.id);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
-  }, []);
-
-  const handleFilterChange = (newFilters: any) => {
+  const handleFilterChange = (newFilters: LeadListFilters) => {
     setFilters(newFilters);
   };
 
@@ -44,7 +45,7 @@ const Home = () => {
     setSelectedLeadId(null);
   };
 
-  const tabs = [
+  const tabs: { id: LeadScope; label: string }[] = [
     { id: "your", label: "Yours" },
     { id: "all", label: "Everyone" },
   ];
@@ -59,7 +60,7 @@ const Home = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
                   ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
@@ -78,7 +79,7 @@ const Home = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, phone, mockup or ID…"
+              placeholder="Search by name, phone, mockup or #ID…"
               aria-label="Search leads"
               className="w-full pl-4 pr-9 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border border-transparent focus:border-blue-400 dark:focus:border-blue-500 focus:outline-none transition-colors"
             />

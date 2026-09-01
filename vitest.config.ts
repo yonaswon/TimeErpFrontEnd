@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
     test: {
         environment: 'node',
-        include: ['**/*.payroll.test.ts'],
+        include: ['**/*.test.ts'],
     },
     resolve: {
         alias: {

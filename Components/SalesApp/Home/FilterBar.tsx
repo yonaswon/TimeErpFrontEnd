@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
+import { LeadListFilters } from './leadListQuery'
 
 interface FilterBarProps {
-  onFilterChange: (filters: any) => void
+  onFilterChange: (filters: LeadListFilters) => void
 }
 
 const FilterBar = ({ onFilterChange }: FilterBarProps) => {
