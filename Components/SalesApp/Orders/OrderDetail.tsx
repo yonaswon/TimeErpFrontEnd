@@ -92,6 +92,8 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
   const [sendingFinance, setSendingFinance] = useState(false);
   const [showFinanceConfirm, setShowFinanceConfirm] = useState(false);
   const [financeSendSuccess, setFinanceSendSuccess] = useState(false);
+  const [sendTargetFinance, setSendTargetFinance] = useState(true);
+  const [sendTargetOrder, setSendTargetOrder] = useState(true);
 
   // Suggestion Modals State
   const [editingPricing, setEditingPricing] = useState(false);
@@ -238,17 +240,28 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
     }
   };
 
-  const handleSendToFinance = async () => {
+  const handleSendTelegramNotification = async () => {
+    if (!sendTargetFinance && !sendTargetOrder) return;
+
     setSendingFinance(true);
     setFinanceSendSuccess(false);
     try {
-      await api.post(`/api/order-container/${order.id}/resend_finance_notification/`);
+      const targets: string[] = [];
+      if (sendTargetFinance) targets.push("finance");
+      if (sendTargetOrder) targets.push("order");
+
+      await api.post(`/api/order-container/${order.id}/resend_telegram_notification/`, {
+        targets,
+      });
       setFinanceSendSuccess(true);
       setShowFinanceConfirm(false);
-      setTimeout(() => setFinanceSendSuccess(false), 3000); // Hide success after 3s
+      setTimeout(() => setFinanceSendSuccess(false), 3000);
     } catch (err: any) {
-      console.error("Failed to resend finance notification", err);
-      alert("Failed to resend finance notification. Check console for details.");
+      console.error("Failed to resend telegram notification", err);
+      alert(
+        err.response?.data?.detail ||
+          "Failed to resend telegram notification. Check console for details."
+      );
     } finally {
       setSendingFinance(false);
     }
@@ -352,10 +365,14 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                     <Pencil size={14} />
                   </button>
                   <button
-                    onClick={() => setShowFinanceConfirm(true)}
+                    onClick={() => {
+                      setSendTargetFinance(true);
+                      setSendTargetOrder(true);
+                      setShowFinanceConfirm(true);
+                    }}
                     disabled={sendingFinance}
                     className="p-1.5 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-md transition-all disabled:opacity-50"
-                    title="Send manual notification to Finance Telegram group"
+                    title="Send Telegram notification"
                   >
                     {sendingFinance ? <Loader size={14} className="animate-spin" /> : (financeSendSuccess ? <CheckCircle size={14} className="text-emerald-500" /> : <Send size={14} />)}
                   </button>
@@ -1167,7 +1184,7 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
         </div>
       )}
 
-      {/* Finance Send Confirmation Overlay */}
+      {/* Telegram Send Target Overlay */}
       {showFinanceConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[80]">
           <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -1181,11 +1198,48 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                 </div>
               </div>
               <h3 className="text-lg font-bold text-center text-gray-900 dark:text-white mb-2">
-                Send to Finance?
+                Send Telegram notification
               </h3>
-              <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
-                Are you sure you want to manually trigger the Telegram notification for this container to the Finance group?
+              <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">
+                Choose where to send. Existing message IDs will be replaced with the new posts.
               </p>
+
+              <div className="space-y-2 mb-6">
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-zinc-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={sendTargetFinance}
+                    onChange={(e) => setSendTargetFinance(e.target.checked)}
+                    disabled={sendingFinance}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      Finance group
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Order confirmation with payments
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-zinc-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={sendTargetOrder}
+                    onChange={(e) => setSendTargetOrder(e.target.checked)}
+                    disabled={sendingFinance}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      Order group
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Production order post with BOM
+                    </div>
+                  </div>
+                </label>
+              </div>
 
               <div className="flex gap-3">
                 <button
@@ -1198,14 +1252,14 @@ const OrderDetail = ({ order, onClose, onOrderUpdate }: OrderDetailProps) => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSendToFinance}
-                  disabled={sendingFinance}
+                  onClick={handleSendTelegramNotification}
+                  disabled={sendingFinance || (!sendTargetFinance && !sendTargetOrder)}
                   className="flex-1 py-2.5 px-4 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {sendingFinance ? (
                     <Loader size={16} className="animate-spin" />
                   ) : (
-                    "Yes, Send"
+                    "Send"
                   )}
                 </button>
               </div>
