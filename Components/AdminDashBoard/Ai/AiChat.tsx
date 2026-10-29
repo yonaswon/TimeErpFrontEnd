@@ -877,9 +877,6 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
                             <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4</option>
                             <option value="deepseek-reasoner" style={{ background: '#2f2f2f', color: '#ececec' }}>DeepSeek Reasoner</option>
                             <option value="gpt-5-reasoning" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 Reasoning</option>
-                            <option value="o4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o4 Mini</option>
-                            <option value="o4" style={{ background: '#2f2f2f', color: '#ececec' }}>o4</option>
-                            <option value="o3-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>o3-mini</option>
                             <option value="o3" style={{ background: '#2f2f2f', color: '#ececec' }}>o3</option>
                             <option value="anthropic" style={{ background: '#2f2f2f', color: '#ececec' }}>Claude Sonnet 4</option>
                             <option value="gemini" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Flash</option>
