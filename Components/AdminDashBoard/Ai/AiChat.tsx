@@ -484,7 +484,7 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
     const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [input, setInput] = useState('');
-    const [modelProvider, setModelProvider] = useState('deepseek');
+    const [thinkingLevel, setThinkingLevel] = useState<'middle' | 'low' | 'high'>('middle');
     const [loading, setLoading] = useState(false);
     const [sessionsLoading, setSessionsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -626,7 +626,7 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
                 body: JSON.stringify({
                     message: text.trim(),
                     conversation_history: conversationHistory,
-                    model_provider: modelProvider,
+                    model_provider: thinkingLevel,
                     session_id: activeSessionId,
                     deep_think_mode: currentDeepThinkMode || undefined
                 })
@@ -867,20 +867,14 @@ export default function AiChat({ onBack, onClose }: { onBack?: () => void; onClo
                             </button>
                         )}
                         <select
-                            value={modelProvider}
-                            onChange={(e) => setModelProvider(e.target.value as any)}
+                            value={thinkingLevel}
+                            onChange={(e) => setThinkingLevel(e.target.value as 'middle' | 'low' | 'high')}
                             className="bg-transparent text-sm border-none focus:ring-0 font-medium cursor-pointer text-[#b4b4b4] hover:text-[#ececec] focus:outline-none"
                             style={{ backgroundImage: 'none', appearance: 'none', WebkitAppearance: 'none' }}
                         >
-                            <option value="deepseek" style={{ background: '#2f2f2f', color: '#ececec' }}>DeepSeek V3.2 ✦</option>
-                            <option value="gpt-5.4-mini" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4 Mini</option>
-                            <option value="gpt-5" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5.4</option>
-                            <option value="deepseek-reasoner" style={{ background: '#2f2f2f', color: '#ececec' }}>DeepSeek Reasoner</option>
-                            <option value="gpt-5-reasoning" style={{ background: '#2f2f2f', color: '#ececec' }}>GPT-5 Reasoning</option>
-                            <option value="o3" style={{ background: '#2f2f2f', color: '#ececec' }}>o3</option>
-                            <option value="anthropic" style={{ background: '#2f2f2f', color: '#ececec' }}>Claude Sonnet 4</option>
-                            <option value="gemini" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Flash</option>
-                            <option value="gemini-pro" style={{ background: '#2f2f2f', color: '#ececec' }}>Gemini 2.5 Pro</option>
+                            <option value="middle" style={{ background: '#2f2f2f', color: '#ececec' }}>Auto</option>
+                            <option value="low" style={{ background: '#2f2f2f', color: '#ececec' }}>Low</option>
+                            <option value="high" style={{ background: '#2f2f2f', color: '#ececec' }}>High</option>
                         </select>
                     </div>
                 </div>
